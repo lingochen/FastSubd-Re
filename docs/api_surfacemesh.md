@@ -1,4 +1,4 @@
-back to [api](api.md)
+[readme](../README.md) | [api](api.md)
 
 ## basics
 
@@ -30,25 +30,26 @@ traversal of vertex, edge, and face.
 
 ### circulator
 #### around a vertex
-v.faceAdjacent
-v.wEdgeAdjacent
-v.vertexRing
-v.inHalfEdgeAdjacent
-v.outHalfEdgeAdjacent
+v.faceAround
+v.wEdgeAround
+v.vertexAround
+v.inHalfEdgeAround
+v.outHalfEdgeAround
 
 #### around an edge
 h.left
 h.right
-h.origin
-h.destination
 h.leftFace
 h.rightFace
+h.origin
+h.destination
+
 
 #### around a face
 f.vertexLoop
 f.halfEdgeLoop
 f.wEdgeLoop
-f.faceAdjacent
+f.faceAround
 
 ### iterator
 *v

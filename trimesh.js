@@ -241,7 +241,7 @@ class TriangleMesh extends SurfaceMesh {
       let outPut = [];
       let fEdges = new Set;
       let dEdges = new Set;
-      for (let outEdge of this._vertices.outEdgeIter(vertex)) {
+      for (let outEdge of this._vertices.outHalfEdgeAround(vertex)) {
          let inEdge = this._hEdges.pair(outEdge);
          outPut.push( {out: outEdge, in: inEdge} );
          if (this._hEdges.isBoundary(outEdge)){

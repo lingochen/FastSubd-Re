@@ -93,7 +93,7 @@ class VertexArray {
       }
    }
    
-   * outEdgeIter(vert) {
+   * outHalfEdgeAround(vert) {
       if (this._array.valence.get(vert, 0) >= 0) { // initialized yet?
          const hEdgeContainer = this._mesh.h;
          const start = this._array.hEdge.get(vert, 0);
@@ -108,7 +108,7 @@ class VertexArray {
    }
    
    // ccw ordering
-   * inEdgeIter(vert) {
+   * inHalfEdgeAround(vert) {
       if (this._array.valence.get(vert, 0) >= 0) { // initialized yet?
          const hEdgeContainer = this._mesh.h;
          const start = this._array.hEdge.get(vert, 0);
@@ -120,6 +120,10 @@ class VertexArray {
          } while (current !== start);
       }
    }
+   
+   // faceAround(vert)
+   // vertexAround(vert)
+   // wEdgeAround(vert)
 
    createPositionTexture(gl) {
       return this._array.pt.createDataTexture(gl);
@@ -218,7 +222,7 @@ class VertexArray {
                   
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outEdgeIter(v)) {
+         for (let hEdge of this.outHalfEdgeAround(v)) {
             let p = this._mesh.h.destination(hEdge);
             let coseff = Math.cos(i*radStep);
             let sineff = Math.sin(i*radStep);
@@ -256,7 +260,7 @@ class VertexArray {
          
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outEdgeIter(v)) {
+         for (let hEdge of this.outHalfEdgeAround(v)) {
             const hEdges = [];
             for (let dEdge of this._mesh.h.faceIter(hEdge)) { 
                hEdges.push( dEdge );
@@ -342,7 +346,7 @@ class VertexArray {
    }
    
    findFreeInEdge(vert) {
-      for (let inEdge of this.inEdgeIter(vert)) {
+      for (let inEdge of this.inHalfEdgeAround(vert)) {
          if (hEdges.face(inEdge) < 0) {
             return inEdge;
          }
@@ -364,7 +368,7 @@ class VertexArray {
             sanity = false;
          } else { // check prev,next are the same. 
             let iterationCount = 0;    // make sure, no infinite loop
-            for (let outEdge of this.outEdgeIter(vertex)) {
+            for (let outEdge of this.outHalfEdgeAround(vertex)) {
                const orig = hEdgeContainer.origin(outEdge);
                if (orig !== vertex) {
                   console.log("vertex: " + vertex + "'s circulator is broken");
@@ -1034,7 +1038,7 @@ class FaceArray {
 
 
 /**
- * BoundaryLoop
+ * BoundaryLoop aka HoleArray
  */
 class HoleArray {
    constructor(holes) {
@@ -1341,7 +1345,7 @@ class SurfaceMesh {
    }
    
    findHalfEdge(v0, v1) {
-      for (let outEdge of this._vertices.outEdgeIter(v0)) {
+      for (let outEdge of this._vertices.outHalfEdgeAround(v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             return outEdge;
          }
@@ -1477,7 +1481,7 @@ class SurfaceMesh {
    */
    findFreeEdge(v0, v1) {
       let freeEdge = 0;
-      for (let outEdge of this._vertices.outEdgeIter(v0)) {
+      for (let outEdge of this._vertices.outHalfEdgeAround(v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             if (!this._hEdges.isBoundary(outEdge)) {  // non-free
                return [true, 1];

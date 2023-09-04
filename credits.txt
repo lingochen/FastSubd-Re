@@ -1,0 +1,10 @@
+Thanks 
+------------
+Bay Raitt for Bigguy and Monsterfrong
+Keenan Crane for Pig and Spot
+Morgan McGuire for Cube
+Nishad Gothoskar for decimated stanford Bunny
+Haldean Brown for Fox and Hua
+
+------------
+Jonathan Dupuy, Kenneth Vanhoey for "A Halfedge Refinement Rule for Parallel Catmull-Clark Subdivision"

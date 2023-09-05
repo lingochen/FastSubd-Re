@@ -148,6 +148,11 @@ class TriangleArray extends FaceArray {
       yield [2, face+2];
    }
    
+   halfEdgeLoopArray(tri) {   // static possible,
+      tri *= 3;
+      return [tri, tri+1, tri+2];
+   }
+   
    /*_allocEx(count) {
       //this.setHalfEdge(handle, -1);  // note: needs?
       return this._faces.allocEx(count);
@@ -157,11 +162,6 @@ class TriangleArray extends FaceArray {
       throw("not implemented");
       this._depot.releaseRef(this.material(handle));
       // this._faces.free(handle);
-   }
-   
-   halfLoop(tri) {   // static possible,
-      tri *= 3;
-      return [tri, tri+1, tri+2];
    }
    
    halfEdgeCount(_hEdges, _tri) {   // triangle is 3 side

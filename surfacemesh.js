@@ -1401,7 +1401,7 @@ class SurfaceMesh {
           
       // create Polygon directEdge
       const newPoly = this._allocPolygon(material, length);
-      const polyLoop = this._faces.halfLoop(newPoly);
+      const polyLoop = this._faces.halfEdgeLoopArray(newPoly);
       const boundaryLoop = this._hEdges.allocBoundaryEdge(polyLoop);
       
       let nextIndex = start;

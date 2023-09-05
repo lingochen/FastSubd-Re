@@ -305,7 +305,7 @@ class QuadArray extends FaceArray {
       }
    }
    
-   halfLoop(fHandle) {
+   halfEdgeLoopArray(fHandle) {
       if (fHandle >= 0) {
          fHandle *= 4;
          return [fHandle, fHandle+1, fHandle+2, fHandle+3];

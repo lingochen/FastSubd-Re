@@ -1191,6 +1191,22 @@ class HoleArray {
 
 
 
+/**
+ * name group for collection of faces.
+ */
+class NameGroup {
+   constructor(name, start) {
+      this._name = name;
+      this._faces = {start: start, end: start+1};    // restriction to continus faces, should be an array of faces to be more flexible.
+   }
+
+   finalize(end) {
+      //this._faces.start = start;
+      this._faces.end = end;
+   }
+}
+
+
 
 /** 
  * abstract class representing Mesh. base SurfaceMesh, managing material,
@@ -1277,7 +1293,7 @@ class SurfaceMesh {
 
    get m() {
       return this._material.proxy;
-   }   
+   }
    
    makePullBuffer(gl) {
       //this.v.computeNormal(this.h);
@@ -1327,6 +1343,12 @@ class SurfaceMesh {
       this._computeNormal();       // and normal?
       // commpaction
       
+   }
+      
+   addNameGroup(name, start) {
+      let ret = new NameGroup(name, start);
+      this._bin.nameGroup.push( ret );
+      return ret;
    }
       
    addVertex(inPt, inOffset=0) {

@@ -1020,7 +1020,7 @@ class FaceArray {
       
    sanityCheck(dEdges) {   // halfEdge and Triangle are align automatically, always true.
       for (let face of this) {
-         for (let hEdge of this.halfEdgeIter(face)) {
+         for (let hEdge of this.halfEdgeLoop(face)) {
             const pair = this._mesh.h.pair(hEdge);
             if (this._mesh.h.isBoundary(pair)) {
                console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
@@ -1091,7 +1091,8 @@ class HoleArray {
       }
    }
 
-   * halfEdgeIter(hEdges, hole) {
+   * halfEdgeLoop(hole) {
+      const hEdges = this._mesh.h;
       const start = this.halfEdge(hole);
       let current = start;
       do {
@@ -1171,10 +1172,9 @@ class HoleArray {
    }
 
    sanityCheck() {
-      const hEdges = this._mesh.h;
       let sanity = true;
       for (let hole of this) {
-         for (let hEdge of this.halfEdgeIter(hEdges, hole)) {
+         for (let hEdge of this.halfEdgeLoop(hole)) {
             if (hEdges.hole(hEdge) !== hole) {
                sanity = false;
                break;

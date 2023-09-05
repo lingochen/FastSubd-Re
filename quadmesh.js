@@ -218,7 +218,7 @@ class QuadArray extends FaceArray {
          let material = this.material(polygon);
          let currentIdx = 0;
          
-         for (let hEdge of this.halfEdgeIter(polygon)) {
+         for (let hEdge of this.halfEdgeLoop(polygon)) {
             if (currentIdx++ > 2) {   // copy the last virtual edge
                let v0 = triangles.length - (3*3);
                let v1 = triangles.length - 3;
@@ -276,7 +276,7 @@ class QuadArray extends FaceArray {
    }
    
    // Iterator for the HalfEdge/DirectedEdge to the nGon/quad
-   * halfEdgeIter(fHandle) {
+   * halfEdgeLoop(fHandle) {
       if (fHandle >= 0) {  // optimized code path.
          let hEdge = fHandle * 4;
          yield hEdge;
@@ -298,9 +298,9 @@ class QuadArray extends FaceArray {
     * similar to array.entries
     * @param {handle} face 
     */
-   * halfEdgeEntries(face) {
+   * halfEdgeLoopEntries(face) {
       let i = 0;
-      for (let hEdge of this.halfEdgeIter(face)) {
+      for (let hEdge of this.halfEdgeLoop(face)) {
          yield [i++, hEdge];
       }
    }
@@ -311,7 +311,7 @@ class QuadArray extends FaceArray {
          return [fHandle, fHandle+1, fHandle+2, fHandle+3];
       } else { // nGon, 
          const halfLoop = [];
-         for (let hEdge of this.halfEdgeIter(fHandle)) {
+         for (let hEdge of this.halfEdgeLoop(fHandle)) {
             halfLoop.push( hEdge );
          }
          return halfLoop;

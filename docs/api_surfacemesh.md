@@ -53,11 +53,13 @@ f.faceAround
 
 ### iterator
 *v
-v.range
+v.rangeIter
 *h
-h.range
+h.rangeIter
+h.halfEdgeIter
+h.boundaryIter
 *f
-f.range
+f.rangeIter
 
 ## postprocess
 

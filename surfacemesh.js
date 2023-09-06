@@ -940,6 +940,15 @@ class FaceArray {
       }
    }
    
+   * vertexLoop(face) {
+      for (const hEdge of this.halfEdgeLoop(face)) {
+         yield this._mesh.h.origin(hEdge);
+      }
+   }
+   
+   // * wEdgeLoop(face) 
+   // * faceAround(face)
+   
    * hEdgeIter(face, startH) {
       throw("hEdgeIter should be implemented by sublass");
       if (face < 0) {   // non-quad

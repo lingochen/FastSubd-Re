@@ -1181,6 +1181,7 @@ class HoleArray {
    }
 
    sanityCheck() {
+      const hEdges = this._mesh.h;
       let sanity = true;
       for (let hole of this) {
          for (let hEdge of this.halfEdgeLoop(hole)) {
@@ -1326,12 +1327,10 @@ class SurfaceMesh {
               materials, };
    }
 
-   
-   /**
-    * finalized meshes, filled holes, compute crease, valence
-    * editDone() - post process
-    */
-   doneEdit() {
+
+   // post process
+   // fill boundaryLoop with holes.
+   fillBoundary() {
       // walk through all boundaryEdge, assign hole to each boundary group. 
       for (let boundary of this._hEdges.boundaryIter()) {
          let hole = this._hEdges.hole(boundary);
@@ -1347,6 +1346,14 @@ class SurfaceMesh {
             } while (current !== boundary);
          }
       }
+   }
+   
+   /**
+    * finalized meshes, filled holes, compute crease, valence
+    * editDone() - post process
+    */
+   doneEdit() {
+      this.fillBoundary();
       // now compute valence, crease 
       this.v.computeValence();
       this._computeNormal();       // and normal?

@@ -1326,7 +1326,20 @@ class SurfaceMesh {
               uvs: {type: "sampler2DArray", value: uvsTexture},
               materials, };
    }
-
+   
+   //
+   // post process,
+   // compacting internal array, no freed slots in array.
+   // required for subdivision.
+   // returned changed position.
+   //
+   compactBuffer() {
+      const changed = {};
+      changed.v = this.v.compactBuffer();
+      changed.f = this.f.compactBuffer();
+      
+      return changed;
+   }
 
    // post process
    // fill boundaryLoop with holes.

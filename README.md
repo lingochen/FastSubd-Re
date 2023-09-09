@@ -1,21 +1,26 @@
-# Simple and Fast Subdivision
-<s>[Demo](https://rawcdn.githack.com/lingochen/FastSubd/2f0bc924c59b363ff22817e3b1b894efe9b7ce68/index.html).</s>
+# Simple and Fast Subdivision Reboot
+<s>[Demo]().</s>
 require WebGL 2.
 
-Any feedback, problem, remark or question about the code, file an issue or contact me at boeing.chen@gmail.com
+MIT LICENSE. Any feedback, problem, remark or question about the code, file an issue or contact me at boeing.chen@gmail.com
 
 
 ## Screenshots
 ![Spot no subdivision](media/spot_subd0.png) ![Spot subdivision level 1](media/spot_subd1.png)
 
+## Why Subdivision Surfaces
+We want smooth surfaces which polygon meshes arent.
 
-## Benefits
-Simple to implemented and used.
+NURBS is not the solution because we must stitch togther multiple NURBS patches to model complex geometry, and that cause problems when animating.
 
-Subdivision surface use tiny amount of data. Since compute improve faster than bandwidth for the forseeable future, we want to optimize for data size.
+Subdivision surfaces(Catmull-Clark, Loop) are generalization of spline curves/surfaces.
 
-Perfectly suit for web based workflow.
+Subdivision surface use small amount of data. We want ot optimize for data size since compute improve faster than memory bandwidth for the forseeable future.
 
+## Implementation Goals
+Manifold polygon meshes used directly as subdivision surfaces.
+
+Simple to implemented, used and fast.
 
 ## Implementation Info
 Inspired by [A HalfEdge Refinement Rule for Parallel Catmull-Clark Subdivision](https://onrendering.com/) by Jonathan Dupuy, Kenneth Vanhoey

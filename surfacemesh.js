@@ -605,6 +605,17 @@ class HalfEdgeArray {
       this._hArray.freed.head = hEdge;                      // fEdge is now head of freeList
    }
    
+   //
+   // remove hole, make the buffer contiguous. 
+   // boundaryLoop make it contiguous too.
+   //
+   compactBuffer() {
+      // let 
+      
+      //
+      
+   }
+   
    createUvsTexture(gl) {
       return this._dArray.uvs.createDataTexture(gl);
    }

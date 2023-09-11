@@ -189,6 +189,17 @@ class PixelArray {
       }
       return index;
    }
+   
+   //
+   // remove from end
+   //
+   deallocEx(size) {
+      this._rec.usedSize -= this._rec.structStride * size;
+      // do we do contraction here?
+      
+      // return new end
+      return this._rec.useSize / this._rec.structStride;
+   }
 
    computeAllocateSize(size) {
       // allocation align to textureWidth.

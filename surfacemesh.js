@@ -610,10 +610,58 @@ class HalfEdgeArray {
    // boundaryLoop make it contiguous too.
    //
    compactBuffer() {
-      // let 
+      if (this._mesh.o.length() === 0) {
+         return;
+      }
       
-      //
+      const size = this._hArray.vertex.length();
+      // new buffer
+      const hArray = {
+         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
+         prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
+         next: Int32PixelArray.create(1, 1, size),             // negative value
+         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
+         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
+         uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
+      };
+      // do allocation
+      for (let i in hArray) {
+         hArray[i].allocEx(size);
+      }
       
+      const boundaryArray = this._hArray;
+      // redo boundaryLoop, one by one
+      let i = 0;
+      for (let hole of this._mesh.o) {
+         let head = i;
+         for (let dEdge of this._mesh.o.halfEdgeLoop(hole)) {   // walk over boundaryLoop
+            const hEdge = -(dEdge+1);
+            hArray.hole.set(i, 0, hole);
+            hArray.next.set(i, 0, -(i+2));
+            hArray.prev.set(i, 0, -i);
+            hArray.vertex.set(i, 0, boundaryArray.vertex.get(hEdge, 0));
+            const wEdge = boundaryArray.wEdge.get(hEdge, 0);
+            hArray.wEdge.set(i, 0, wEdge);
+            // remember to update wEdge too
+            const leftOrRight = wEdge % 2;
+            this._wEdgeArray.edge.set(Math.trunc(wEdge/2), leftOrRight, -(i+1));
+            //hArray.uvs
+            i++;
+         }
+         // fix next, prev.
+         hArray.next.set(i-1, 0, -(head+1));
+         hArray.prev.set(head, 0, -i);             // -i = -(i-1+1)
+         this._mesh.o.setHalfEdge(hole, -(head+1));
+      }
+      // dealloc extra.
+      const extra = size - i;
+      for (let i in hArray) {
+         hArray[i].deallocEx(extra);
+      }
+ 
+      hArray.freed = {size: 0, head: 0};
+      // replace buffer
+      this._hArray = hArray;
    }
    
    createUvsTexture(gl) {
@@ -1102,11 +1150,15 @@ class HoleArray {
       }
    }
    
+   length() {
+      return this._holes.length()-1;
+   }
+   
    *[Symbol.iterator] () {
       const len = this._holes.length();
-      for (let i = 1; i < len; ++i) {
+      for (let i = 1; i < len; ++i) {  // skipped 0, it sentinel
          if (!this._isFree(i)) {
-            yield 1;
+            yield i;
          }
       }
    }
@@ -1346,8 +1398,9 @@ class SurfaceMesh {
    //
    compactBuffer() {
       const changed = {};
-      changed.v = this.v.compactBuffer();
-      changed.f = this.f.compactBuffer();
+      //changed.v = this.v.compactBuffer();
+      //changed.f = this.f.compactBuffer();
+      changed.h = this.h.compactBuffer();
       
       return changed;
    }
@@ -1382,7 +1435,7 @@ class SurfaceMesh {
       this.v.computeValence();
       this._computeNormal();       // and normal?
       // commpaction
-      
+      this.compactBuffer();
    }
       
    addNameGroup(name, start) {

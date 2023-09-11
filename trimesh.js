@@ -3,7 +3,7 @@
    S. Campagna, L. Kobbelt, H.-P. Seidel, Directed Edges - A Scalable Representation For Triangle Meshes , ACM Journal of Graphics Tools 3 (4), 1998.
 
    The idea of FreeEdge(boundary edge) is the key in making DirectedEdge works like HalfEdge. 
-   boundary is handle by negative value and separate array for pairing/next/prev traversal.
+   boundaryLoop is handle by negative value and separate array for pairing/next/prev traversal.
 
    Note: Gino van den Bergen has an interesting implementation. http://www.dtecta.com/files/GDC17_VanDenBergen_Gino_Brep_Triangle_Meshes.pdf
 */

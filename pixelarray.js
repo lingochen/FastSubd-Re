@@ -690,6 +690,12 @@ class PixelArray3D {
       }
    }
    
+   deallocEx(count) {
+      for (let pixelArray of this._texture3d) {
+         pixelArray.deallocEx(count);
+      }     
+   }
+   
    addTo(index, field, layer, newValue) {
       return this._texture3d[layer].addTo(index, field, value);
    }

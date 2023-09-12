@@ -1258,7 +1258,7 @@ class HoleArray {
    }
 
    stat() {
-      return "Holes Count: " + (this._holes.length()-this._freed.size) + ";\n";
+      return "Holes Count: " + (this._holes.length()-1-this._freed.size) + ";\n";
    }
 }
 

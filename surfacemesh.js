@@ -916,6 +916,10 @@ class HalfEdgeArray {
    lengthW() {
       return this._wEdgeArray.edge.length() - this._wEdgeArray.freed.size;
    }
+   
+   lengthH() {
+      return this._hArray.wEdge.length();
+   }
 
    sanityCheck() {
       let length = this._wEdgeArray.edge.length();
@@ -1112,7 +1116,6 @@ class HoleArray {
    constructor(holes) {
       this._mesh = null;
       this._holes = holes;
-      this._holes.alloc();    // zeroth is for setting up various 
       this._freed = {
          size: 0,
          head: 0,
@@ -1121,6 +1124,7 @@ class HoleArray {
 
    static create(size) {
       const holes = Int32PixelArray.create(1, 1, size);
+      holes.alloc();    // zeroth hole is reserved for sentinel purpose.
       return new HoleArray(holes);
    }
 
@@ -1175,6 +1179,14 @@ class HoleArray {
 
    _hasFree() {
       return (this._freed.size > 0);
+   }
+   
+   //
+   // allocated directly from _array without checking free
+   _allocEx(size) {
+      const start = this._holes.length();
+      this._holes.allocEx(size);
+      return start;
    }
 
    alloc() {

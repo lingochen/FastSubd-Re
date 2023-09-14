@@ -35,7 +35,8 @@ async function loopSubdivide(subd, source) {
    }
    Tri.wEdgeTaskRemainder(mDat);
    
-   // setup hole
+   // update boundaryLoop
+   Tri.boundaryLoopTask(mDat);
    
    return subd;  
 }
@@ -53,6 +54,9 @@ function createNextLevelTriMesh(source) {
    subd.h._allocEx(source.f.length() * 4 * 3);           // directedEdge mapped to face 3:1
    subd.h._allocWEdge(source.h.lengthW()*2 + source.f.length()*3);
    subd.f._allocEx(source.f.length() * 4);
+   // preallocated next level of boundaryLoop
+   subd.h._allocHEdge(source.h.lengthH() * 2);
+   subd.o._allocEx(source.o.length());
 
    return subd;
 }

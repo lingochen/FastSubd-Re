@@ -25,8 +25,8 @@ function setupSubdivide(dest, source, task, edgeVertex, refineVertex) {
    mDat.desth = dest.h;
    mDat.desthv = dest.h.vBuffer();
    mDat.desthw = dest.h.wBuffer();
-   mDat.destf = source.f;
-   mDat.desto = source.o;
+   mDat.destf = dest.f;
+   mDat.desto = dest.o;
    mDat.edgeNewVertex = edgeVertex;
    mDat.vertexRefine = refineVertex;
    
@@ -124,8 +124,8 @@ function computeEdgeVertex(mThis, wEdge) {
 }
 //
 // return [loWhandle, hiWhandle, newVertex]
-function computeNewWEdge(mThis, oldhEdge) {
-   const wHandle = mThis.srch._wEdge(oldhEdge);
+function computeNewWEdge(mThis, wHandle) { //oldhEdge) {
+   //const wHandle = mThis.srch._wEdge(oldhEdge);
    const position = wHandle % 2;
    //const oldWEdge = Math.trunc(wHandle / 2);
    const oldWEdge = wHandle >> 1;
@@ -163,10 +163,43 @@ function computeNewFaceWEdgeIndex(mThis, oldFace) {
 
 //
 // walk over hole's halfEdge and expand everything by 2
+// expecting compactBuffer only. Won't work otherwise.
+// every hole's halfEdge is up by 2.
 //
-function holeTask(mThis) {
-   
-   
+function boundaryLoopTask(mThis) {
+   // update dest hole's halfEdge
+   let length = mThis.srco.length();
+   for (let hole = 1; hole <= length; ++hole) {
+      let hEdge = mThis.srco.halfEdge(hole);
+      hEdge = -(hEdge+1);                 // get real positive index
+      mThis.desto.setHalfEdge(hole, -(hEdge*2+1));
+      // now update boundaryLoop
+      let last = mThis.srch._hArray.prev.get(hEdge, 0);
+      last = -(last+1);
+      let prev = last*2 + 1;
+      for (let j = hEdge; j <= last; j++) {
+         let i = j*2;
+         mThis.desth._hArray.prev.set(i, 0, -(prev+1));
+         mThis.desth._hArray.next.set(i, 0, -(i+2));
+         mThis.desth._hArray.hole.set(i, 0, hole);
+         // compute, lo, hi, newVertex 
+         const edgeW = computeNewWEdge(mThis, mThis.srch._hArray.wEdge.get(j, 0));
+         mThis.desth._hArray.wEdge.set(i, 0, edgeW[0]);
+         let vertex = computeNewVertex(mThis, mThis.srch._hArray.vertex.get(j, 0));
+         mThis.desth._hArray.wEdge.set(i, 0, edgeW[0]);
+         mThis.desth._hArray.vertex.set(i, 0, vertex);
+         //mThis.dest._hArray.uvs
+         // the expand hi,
+         mThis.desth._hArray.prev.set(i+1, 0, -(i+1));
+         mThis.desth._hArray.next.set(i+1, 0, -(i+3));
+         mThis.desth._hArray.hole.set(i+1, 0, hole);        
+         mThis.desth._hArray.wEdge.set(i+1, 0, edgeW[1]);
+         mThis.desth._hArray.vertex.set(i+1, 0, edgeW[2]);
+         prev = i+1;
+      }
+      // fixeup the last's next
+      mThis.desth._hArray.next.set(last*2+1, 0, -(hEdge*2+1));
+   }
 }
 
 //
@@ -191,9 +224,9 @@ function triTask(mThis, face) {
    
    // new WEdge, new Vertex position computation
    const faceW = computeNewFaceWEdgeIndex(mThis, face);
-   const edgeW = [computeNewWEdge(mThis, srcHEdge),
-                  computeNewWEdge(mThis, srcHEdge+1),
-                  computeNewWEdge(mThis, srcHEdge+2),];
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
    const index = [[0,2], [1,0], [2,1]];
    for (let [i, prev] of index) {
       let vertex = computeNewVertex(mThis, mThis.srch.origin(srcHEdge+i) );
@@ -236,10 +269,16 @@ function computeSubdivideFaceDEdge(face) {
             [base+7, base+11]];
 }
 function computeSubdivideDEdge(dEdge) {
-   const base = Math.trunc(dEdge / 3) *  12;    // compute subdivide face base dEdge
-   const idxLo = (dEdge % 3) * 3;
-   const idxHi = ((dEdge+1) % 3) * 3 + 2;
-   return [base+idxLo, base+idxHi]; 
+   if (dEdge >= 0) {
+      const base = Math.trunc(dEdge / 3) *  12;    // compute subdivide face base dEdge
+      const idxLo = (dEdge % 3) * 3;
+      const idxHi = ((dEdge+1) % 3) * 3 + 2;
+      return [base+idxLo, base+idxHi];
+   } else { // 
+      dEdge = -(dEdge+1);
+      dEdge *= 2;
+      return [-(dEdge+1), -(dEdge+2)];
+   }
 }
 function computeSubdivideWEdge(mThis, wEdge) {
    let [left, right] = mThis.srch.wEdgePair(wEdge);
@@ -312,7 +351,7 @@ export {
    computeWorkTask,
    vertexTask,
    vertexTaskRemainder,
-   holeTask,
+   boundaryLoopTask,
    triTask,
    wEdgeTask,              // actually, 12 wEdge per task (3wEdges, 2Faces)
    wEdgeTaskRemainder,

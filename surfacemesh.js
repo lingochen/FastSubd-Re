@@ -1094,9 +1094,9 @@ class FaceArray {
       for (let face of this) {
          for (let hEdge of this.halfEdgeLoop(face)) {
             const pair = this._mesh.h.pair(hEdge);
-            if (this._mesh.h.isBoundary(pair)) {
-               console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
-            }
+            //if (this._mesh.h.isBoundary(pair)) {
+            //   console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
+            //}
          }
       }
       return true;

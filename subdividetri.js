@@ -108,8 +108,9 @@ function computeNewVertex(mThis, oldVertex) {
    if (diff < 0) {
       return oldVertex * 4;
    } else { // wEdge goes first
-      const offset = 4 * mThis.vMix.length + (mThis.srch.lengthW() - mThis.vMix.wLength);
-      return offset + diff;
+      const lengthW = mThis.srch.lengthW();
+      const offset = 4 * mThis.vMix.length + (lengthW - mThis.vMix.wLength);
+      return offset+diff;
    }
 }
 function computeEdgeVertex(mThis, wEdge) {
@@ -126,25 +127,24 @@ function computeEdgeVertex(mThis, wEdge) {
 // return [loWhandle, hiWhandle, newVertex]
 function computeNewWEdge(mThis, wHandle) { //oldhEdge) {
    //const wHandle = mThis.srch._wEdge(oldhEdge);
-   const position = wHandle % 2;
+   const isRight = wHandle % 2;
    //const oldWEdge = Math.trunc(wHandle / 2);
    const oldWEdge = wHandle >> 1;
    
    const diff = oldWEdge - mThis.wMix.wLength;
-   let newWEdge;
+   let newWEdge, loHi;
    if (diff < 0) {
+      loHi = [[0, 4], [5, 1]];      // wedge's right 2*2
       const idx = oldWEdge % 3;
       newWEdge = ((Math.trunc(oldWEdge/3) * 12) + idx * 4) * 2;
    } else { // over the wMix
+      loHi = [[0, 2], [3, 1]];
       // compute extra faceW first,
       const offset = 3 * (mThis.srcf.length() - mThis.wMix.fLength);
       newWEdge = (12* mThis.wMix.length + offset + 2*diff) * 2;        // 2*is [lo, hi]
    }
-   if (position) {   // wEdge's right, 2*2
-      return [newWEdge + 5, newWEdge+1, computeEdgeVertex(mThis, oldWEdge)];
-   } else {
-      return [newWEdge, newWEdge + 4, computeEdgeVertex(mThis, oldWEdge)];
-   }
+   loHi = loHi[isRight];
+   return  [newWEdge + loHi[0], newWEdge + loHi[1], computeEdgeVertex(mThis, oldWEdge)];
 }
 function computeNewFaceWEdgeIndex(mThis, oldFace) {
    const diff = oldFace - mThis.wMix.fLength;
@@ -155,7 +155,7 @@ function computeNewFaceWEdgeIndex(mThis, oldFace) {
       const faceW = (newFaceWEdge + 1 + 6*idx) * 2;
       return [faceW, faceW+4, faceW+8,];
    } else { // 
-      let faceW = 12 * mThis.wMix.length + (diff*3);
+      let faceW = (12 * mThis.wMix.length + (diff*3));
       return [faceW, faceW+2, faceW+4];
    }
 }
@@ -186,7 +186,6 @@ function boundaryLoopTask(mThis) {
          const edgeW = computeNewWEdge(mThis, mThis.srch._hArray.wEdge.get(j, 0));
          mThis.desth._hArray.wEdge.set(i, 0, edgeW[0]);
          let vertex = computeNewVertex(mThis, mThis.srch._hArray.vertex.get(j, 0));
-         mThis.desth._hArray.wEdge.set(i, 0, edgeW[0]);
          mThis.desth._hArray.vertex.set(i, 0, vertex);
          //mThis.dest._hArray.uvs
          // the expand hi,
@@ -231,7 +230,7 @@ function triTask(mThis, face) {
    for (let [i, prev] of index) {
       let vertex = computeNewVertex(mThis, mThis.srch.origin(srcHEdge+i) );
       // original 0th lower side
-      //_dest.h.setUV(destHEdge, 0, uvs[i]);
+      //_dest.h.setUV(destHEdge, 0, uvs[i]);    
       mThis.desthv[destHEdge] = vertex;
       mThis.desthw[destHEdge++] = edgeW[i][0];
       //_dest.h.setOrigin(destHEdge, vertex);                 // original vertex, move to new position.
@@ -339,8 +338,8 @@ function wEdgeTaskRemainder(mThis) {
    length = mThis.srch.lengthW();
    for (let j = mThis.wMix.wLength; j < length; ++j) {
       const loHi = computeSubdivideWEdge(mThis, j);
-      mThis.desth.setWEdge(destW++, loHi[0][0], loHi[1][0]);
-      mThis.desth.setWEdge(destW++, loHi[0][1], loHi[1][1]);
+      mThis.desth.setWEdge(destW++, loHi[0][0], loHi[1][1]);
+      mThis.desth.setWEdge(destW++, loHi[0][1], loHi[1][0]);
    }
 }
 

@@ -323,7 +323,8 @@ class VertexArray {
    }
 
    isFree(vert) {
-      return (this._array.pt.get(vert, PointK.c) < 0);
+      const c = this._array.pt.get(vert, PointK.c);
+      return (c < -1);
    }
 
    copyPt(vertex, inPt, inOffset) {

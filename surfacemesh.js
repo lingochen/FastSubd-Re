@@ -954,9 +954,10 @@ class HalfEdgeArray {
 
 
 class FaceArray {
-   constructor(materialDepot, array) {
+   constructor(materialDepot, array, fmm) {
       this._depot = materialDepot;
       this._array = array;
+      this._fmm = fmm;        // freed array slot memory manager.
    }
 
    static _rehydrateInternal(self) {
@@ -965,7 +966,8 @@ class FaceArray {
             material: rehydrate(self._array.material),
             //color: rehyrate(self_array.color),
          }
-         return [null, array];   // no depot for now
+         const fmm = self._fmm;
+         return [null, array, fmm];   // no depot for now
       }
       throw("FaceArray _rehydrateInternal: bad input");
    }
@@ -974,20 +976,20 @@ class FaceArray {
       const array = {
          material: Int32PixelArray.create(1, 1, size),
          //color: Uint8PixelArray.create(4, 4, size),
-         freed: {
-            size: 0,
-            head: 0,
-         },
       };
-      return [depot, array];
+      const fmm = {
+         size: 0,
+         head: 0,
+      };
+      return [depot, array, fmm];
    }
 
    getDehydrate(obj) {
       obj._array = {
          material: this._array.material.getDehydrate({}),
          //color: this._colors.getDehydrate({}),
-         freed: this._array.freed,
       };
+      obj._fmm = this._fmm;
       return obj;
    }
    
@@ -1034,10 +1036,10 @@ class FaceArray {
       
    alloc(material) {
       let handle;
-      if (this._array.freed.size > 0) {
-         handle = this._array.freed.head;
-         this._array.freed.head = this._array.material.get(handle, 0);
-         --this._array.freed.size;
+      if (this._fmm.size > 0) {
+         handle = this._fmm.head;
+         this._fmm.head = this._array.material.get(handle, 0);
+         --this._fmm.size;
       } else {    // increment Face Count.
          handle = this._array.material.alloc();
          //this._array.color.alloc();
@@ -1115,7 +1117,7 @@ class HoleArray {
    constructor(holes) {
       this._mesh = null;
       this._holes = holes;
-      this._freed = {
+      this._fmm = {
          size: 0,
          head: 0,
       };
@@ -1136,7 +1138,7 @@ class HoleArray {
 
    getDehydrate(obj) {
       obj._holes = this._holes.getDehydrate({});
-      obj._freed = this._freed;
+      obj._fmm = this._fmm;
       return obj;
    }
 
@@ -1177,7 +1179,7 @@ class HoleArray {
    }
 
    _hasFree() {
-      return (this._freed.size > 0);
+      return (this._fmm.size > 0);
    }
    
    //
@@ -1269,7 +1271,7 @@ class HoleArray {
    }
 
    stat() {
-      return "Holes Count: " + (this._holes.length()-1-this._freed.size) + ";\n";
+      return "Holes Count: " + (this._holes.length()-1-this._fmm.size) + ";\n";
    }
 }
 

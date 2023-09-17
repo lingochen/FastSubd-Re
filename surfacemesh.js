@@ -408,13 +408,15 @@ const wEdgeK = {
 
 
 class HalfEdgeArray {
-   constructor(dArray, hArray, wEdgeArray) {
+   constructor(dArray, hArray, wEdgeArray, fmm) {
       // quad directededge
       this._dArray = dArray;
       // boundary free edge
       this._hArray = hArray;
       // wEdge specific value
       this._wEdgeArray = wEdgeArray;
+      // freed array slot memory manager, should tried to keep array slots packed
+      this._fmm = fmm;
    }
    
    static _createInternal(size) {
@@ -422,7 +424,6 @@ class HalfEdgeArray {
          vertex: Int32PixelArray.create(1, 1, size),
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
          uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
-         // freed managed by FaceArray?
       };
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
@@ -431,20 +432,17 @@ class HalfEdgeArray {
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
-         freed: {
-            size: 0,
-            head: 0,
-         },
       };
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
          sharpness: Float32PixelArray.create(1, 1, size),   // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
-         freed: {
-            size: 0,
-            head: 0,
-         }
       };
-      return [dArray, hArray, wEdgeArray];
+      const fmm = {  // freed array slot memory manager. using linklist for freedlist
+         // dArray: {size: 0, head: 0},      // freed syncronized with faceArray
+         hArray: {size: 0, head: 0},
+         wEdgeArray: {size: 0, head: 0},
+      }
+      return [dArray, hArray, wEdgeArray, fmm];
    }
    
    static _rehydrateInternal(self) {
@@ -457,14 +455,14 @@ class HalfEdgeArray {
       for (let prop of ['vertex',  'wEdge', 'uvs', 'prev', 'next', 'hole']) {
          hArray[prop] = rehydrate(self._hArray[prop]);
       }
-      hArray.freed = self._hArray.freed;
       
       const wEdgeArray = {};
       wEdgeArray.edge = rehydrate(self._wEdgeArray.edge);
       wEdgeArray.sharpness = rehydrate(self._wEdgeArray.sharpness);
-      wEdgeArray.freed = self._wEdgeArray.freed;
       
-      return [dArray, hArray, wEdgeArray];
+      const fmm = self._fmm;
+      
+      return [dArray, hArray, wEdgeArray, fmm];
    }
    
    getDehydrate(obj) {
@@ -477,12 +475,12 @@ class HalfEdgeArray {
       for (let prop of ['vertex', 'wEdge', 'uvs', 'prev', 'next', 'hole']) {
          obj._hArray[prop] = this._hArray[prop].getDehydrate({});
       }
-      obj._hArray.freed = this._hArray.freed;
 
       obj._wEdgeArray = {};
       obj._wEdgeArray.edge = this._wEdgeArray.edge.getDehydrate({});
       obj._wEdgeArray.sharpness = this._wEdgeArray.sharpness.getDehydrate({});
-      obj._wEdgeArray.freed = this._wEdgeArray.freed;
+      
+      obj._fmm = this._fmm;
       return obj;
    }
    
@@ -569,11 +567,11 @@ class HalfEdgeArray {
       const head = [];
       let prev, next;
       while (--size >= 0) {
-         if (this._hArray.freed.size) { // get from free boundaryEdge first
-            next = this._hArray.freed.head;
+         if (this._fmm.hArray.size) { // get from free boundaryEdge first
+            next = this._fmm.hArray.head;
             const nextNext = this._hArray.next.get(-(next+1), 0);
-            this._hArray.freed.head = nextNext;
-            this._hArray.freed.size--;
+            this._fmm.hArray.head = nextNext;
+            this._fmm.hArray.size--;
             // remember to init hole to faceHole
             this._hArray.hole.set(-(next+1), 0, faceHole);
          } else { // allocated a new one. return negative handle.
@@ -598,12 +596,12 @@ class HalfEdgeArray {
    }
    
    freeHalfEdge(hEdge) {  // add to freeList.
-      this._hArray.freed.size++;
-      const nextNext = this._hArray.freed.head;
+      this._fmm.hArray.size++;
+      const nextNext = this._fmm.hArray.head;
       this._hArray.vertex.set(-(hEdge+1), 0, -1);
       this._hArray.hole.set(-(hEdge+1), 0, 0);              // reset as free.
       this._hArray.next.set(-(hEdge+1), 0, nextNext);
-      this._hArray.freed.head = hEdge;                      // fEdge is now head of freeList
+      this._fmm.hArray.head = hEdge;                        // fEdge is now head of freeList
    }
    
    //
@@ -660,7 +658,7 @@ class HalfEdgeArray {
          hArray[i].deallocEx(extra);
       }
  
-      hArray.freed = {size: 0, head: 0};
+      this._fmm.hArray.size = this._fmm.hArray.head = 0;
       // replace buffer
       this._hArray = hArray;
    }
@@ -915,7 +913,7 @@ class HalfEdgeArray {
    }
    
    lengthW() {
-      return this._wEdgeArray.edge.length() - this._wEdgeArray.freed.size;
+      return this._wEdgeArray.edge.length() - this._fmm.wEdgeArray.size;
    }
    
    lengthH() {
@@ -939,13 +937,13 @@ class HalfEdgeArray {
       }
       // check hArray.freed
       let freeCount = 0;
-      let current = this._hArray.freed.head;
+      let current = this._fmm.hArray.head;
       while (current < 0) {
          current = this._hArray.next.get(-(current+1), 0);
          freeCount++;
       }
-      if (freeCount !== this._hArray.freed.size) {
-         console.log("FreeCount disagree, expected: " + this._hArray.freed.size + " got: " + freeCount);
+      if (freeCount !== this._fmm.hArray.size) {
+         console.log("FreeCount disagree, expected: " + this._fmm.hArray.size + " got: " + freeCount);
          return false;
       }
       return true;

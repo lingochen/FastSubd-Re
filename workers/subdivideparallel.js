@@ -46,7 +46,7 @@ function loopSubdivide(subd, source) {
    //throw("error");
    
    // setup hole
-   //tasker.task(null, 'holeTask');
+   tasker.exec(null, 'boundaryLoopTask');
    
    // return when everything done.
    return tasker.whenDone(subd);       // return an promise

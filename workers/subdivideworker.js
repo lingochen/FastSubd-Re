@@ -33,8 +33,8 @@ const loopState = {
       Tri.vertexTaskRemainder(_mData);
    },
    
-   holeTask: function(msg) {
-      
+   boundaryLoopTask: function(msg) {
+      Tri.boundaryLoopTask(_mData);
    },
    
    faceTask: function(msg) {

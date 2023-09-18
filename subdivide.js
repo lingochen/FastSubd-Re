@@ -98,7 +98,7 @@ async function subdivideMB(source, level) {
 }
 
 async function subdivideLoop(source, level) {
-   if (true) {
+   if (false) {
       return triSubdivide(loopSubdivide, source, level);
    } else {
       return triSubdivide(Parallel.loopSubdivide, source, level);

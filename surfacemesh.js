@@ -1131,7 +1131,7 @@ class HoleArray {
 
    static rehydrate(self) {
       if (self._holes) {
-         return [rehydrate(self._holes)];
+         return new HoleArray(rehydrate(self._holes));
       }
       throw("HoleArray _rehydrateInternal: bad input");
    }

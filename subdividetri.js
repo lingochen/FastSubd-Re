@@ -155,7 +155,7 @@ function computeNewFaceWEdgeIndex(mThis, oldFace) {
       const faceW = (newFaceWEdge + 1 + 6*idx) * 2;
       return [faceW, faceW+4, faceW+8,];
    } else { // 
-      let faceW = (12 * mThis.wMix.length + (diff*3));
+      let faceW = (12 * mThis.wMix.length + (diff*3)) * 2;
       return [faceW, faceW+2, faceW+4];
    }
 }
@@ -329,17 +329,17 @@ function wEdgeTaskRemainder(mThis) {
    let length = mThis.srcf.length();     // end of face
    for (let j = mThis.wMix.fLength; j < length; ++j) {
       const faceW = computeSubdivideFaceDEdge(j);
-      mThis.desth.setWEdge(destW++, faceW[0][0], faceW[0][1]);
-      mThis.desth.setWEdge(destW++, faceW[1][0], faceW[1][1]);
-      mThis.desth.setWEdge(destW++, faceW[2][0], faceW[2][1]);     
+      mThis.desth._setWEdge(destW++, faceW[0][0], faceW[0][1]);
+      mThis.desth._setWEdge(destW++, faceW[1][0], faceW[1][1]);
+      mThis.desth._setWEdge(destW++, faceW[2][0], faceW[2][1]);     
    }
    
    // then consecutive wEdge until end
    length = mThis.srch.lengthW();
    for (let j = mThis.wMix.wLength; j < length; ++j) {
       const loHi = computeSubdivideWEdge(mThis, j);
-      mThis.desth.setWEdge(destW++, loHi[0][0], loHi[1][1]);
-      mThis.desth.setWEdge(destW++, loHi[0][1], loHi[1][0]);
+      mThis.desth._setWEdge(destW++, loHi[0][0], loHi[1][1]);
+      mThis.desth._setWEdge(destW++, loHi[0][1], loHi[1][0]);
    }
 }
 

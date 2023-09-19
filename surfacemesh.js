@@ -926,7 +926,7 @@ class HalfEdgeArray {
          const [left,right] = this.wEdgePair(i);
          let wEdge = this.wEdge(left);
          if (wEdge !== i) {
-            console.log("hEdge's wEdge("+ i +") disagree about wEdge's left("+ left +")");
+            console.log("hEdge's wEdge("+ i +") disagree about wEdge's left("+ left +")'s wEdge ("+ wEdge +")");
             return false;
          }
          wEdge = this.wEdge(right);

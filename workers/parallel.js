@@ -93,10 +93,14 @@ class TaskParallel {
    _taskDone() {
       --this._totalTasks;
       if (this._totalTasks === 0) {
-         if (this._wait) {
-            this.tearDown("tearDown");
-            this._wait.resolve(this._wait.ret);
-            this._wait = this._ret = null;
+         if (this._wait) {       
+            if (this._wait.inProgress) {     // wait until all tearDown is done
+               this._wait.resolve(this._wait.ret);
+               this._wait = this._ret = null;
+            } else { // start the tearDown process
+               this.tearDown("tearDown");
+               this._wait.inProgress = true;
+            }
          }
       }
    }
@@ -144,7 +148,7 @@ class TaskParallel {
             this.tearDown("tearDown");
             resolve(ret);
          } else {
-            this._wait = {resolve, reject, ret};
+            this._wait = {resolve, reject, ret, inProgress: false};
          }
       });
    }

@@ -10,7 +10,7 @@
 
 - <s>finish boundaryLoop subdivide support</s> @done (2023/09/16)
 
-- custom property support and ....
+- [dynamic properties](api_dynamicattribute.md) support and ....
 
 - using wasm to do parallel subdivision. Use D language.
 

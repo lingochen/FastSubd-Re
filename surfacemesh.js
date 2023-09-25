@@ -19,15 +19,27 @@ import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, 
 import {vec3, vec3a} from "./vec3.js";
 
 
+//
+// let browser decided if it validVarName, copy from stackoverflow
+function isValidVarName(name) {
+   try {
+      Function('var ' + name);
+   } catch(e) {
+      return false;
+   }
+   return true;
+}
+
+
 
 const PointK = {
    x: 0,
    y: 1,
    z: 2,
    c: 3,             // to be used by crease
-   sizeOf: 4,
 };
 Object.freeze(PointK);
+const sizeOfPointK = 4;
 
 /**
 // hEdge: 
@@ -42,13 +54,14 @@ class VertexArray {
       this._array = array;
       this._valenceMax = valenceMax;
       this._mesh = null;            // to be setup by Mesh
+      this._prop = {};              // custom properties.
    }
    
    static create(size) {
       const array = {
          hEdge: Int32PixelArray.create(1, 1, size),               // point back to the one of the hEdge ring that own the vertex. 
          // point attribute
-         pt: Float32PixelArray.create(PointK.sizeOf, 4, size),    // pts = {x, y, z}, 3 layers of float32 each? or 
+         pt: Float32PixelArray.create(sizeOfPointK, 4, size),     // pts = {x, y, z}, 3 layers of float32 each? or 
          color: Uint8PixelArray.create(4, 4, size),               // should we packed to pts as 4 channels(rgba)/layers of textures? including color?
          // cached value
          normal: Float16PixelArray.create(3, 3, size),
@@ -78,6 +91,31 @@ class VertexArray {
       obj._valenceMax = this._valenceMax;
       
       return obj;
+   }
+   
+   addProperty(name, type) {
+      //if (isValidVarName(name)) {
+         if (this._array[name] === undefined) { // don't already exist
+            // create Array
+            this._array[name] = createTextureBuffer(type);
+            // create DynamicProperty for accessing data
+            this._prop[name] = new DynamicProperty(this._array[name]);
+         }
+      //}
+      return false;
+   }
+   
+   getProperty(name) {
+      return this._prop[name];
+   }
+   
+   removeProperty(name) {
+      if (this._prop[name]) {
+         delete this._array[name];
+         delete this._prop[name];
+         return true;
+      }
+      return false;
    }
    
    *[Symbol.iterator] () {
@@ -226,8 +264,8 @@ class VertexArray {
             let p = this._mesh.h.destination(hEdge);
             let coseff = Math.cos(i*radStep);
             let sineff = Math.sin(i*radStep);
-            vec3a.scaleAndAdd(tangentL, 0, pt, p * PointK.sizeOf, coseff);
-            vec3a.scaleAndAdd(tangentR, 0, pt, p * PointK.sizeOf, sineff);
+            vec3a.scaleAndAdd(tangentL, 0, pt, p * sizeOfPointK, coseff);
+            vec3a.scaleAndAdd(tangentR, 0, pt, p * sizeOfPointK, sineff);
             i++;  // next face
          }
          // now we have bi-tangent, compute the normal
@@ -269,25 +307,25 @@ class VertexArray {
             let p = this._mesh.h.origin(hEdges[1]);
             let coseff = Math.cos(i*radStep) * 2.9;
             let sineff = Math.sin(i*radStep) * 2.9;
-            vec3.addAndScale(tangentL, 0, pt, p * PointK.sizeOf, coseff);
-            vec3.addAndScale(tangentR, 0, pt, p * PointK.sizeOf, sineff);
+            vec3.addAndScale(tangentL, 0, pt, p * sizeOfPointK, coseff);
+            vec3.addAndScale(tangentR, 0, pt, p * sizeOfPointK, sineff);
             
             // 2-nextToLast(ring, avg), the secondary ring if any
             coseff = Math.cos(i*radStep+offset);
             sineff = Math.sin(i*radStep+offset);
             if (hEdges.length === 4) { // normal quad
                p = this._mesh.h.origin(hEdges[2]);
-               vec3a.scaleAndAdd(tangentL, 0, pt, p * PointK.sizeOf, coseff);
-               vec3a.scaleAndAdd(tangentR, 0, pt, p * PointK.sizeOf, sineff);
+               vec3a.scaleAndAdd(tangentL, 0, pt, p * sizeOfPointK, coseff);
+               vec3a.scaleAndAdd(tangentR, 0, pt, p * sizeOfPointK, sineff);
             } else {
                if (hEdges.length === 3) {       // use diagonal avg
-                  vec3a.addAndScale(temp, 0, pt, p * PointK.sizeOf, pt, this._mesh.h.origin(hEdges[2]) * PointK.sizeOf, 0.5);
+                  vec3a.addAndScale(temp, 0, pt, p * sizeOfPointK, pt, this._mesh.h.origin(hEdges[2]) * sizeOfPointK, 0.5);
                } else { //if (hEdges.length > 4) { // avg all ring
                   let length = hEdges.length - 3;
                   const scale = 1/length;
-                  vec3.scale(temp, 0,  pt, this._mesh.h.origin(hEdges[2]) * PointK.sizeOf, scale); 
+                  vec3.scale(temp, 0,  pt, this._mesh.h.origin(hEdges[2]) * sizeOfPointK, scale); 
                   for (let j = 3; j < (length+2); ++j) {
-                     vec3a.scaleAndAdd(temp, 0, pt, this._mesh.h.origin(hEdges[j])*PointK.sizeOf, scale);
+                     vec3a.scaleAndAdd(temp, 0, pt, this._mesh.h.origin(hEdges[j])*sizeOfPointK, scale);
                   }
                }
                vec3a.scaleAndAdd(tangentL, 0, temp, 0, coseff);
@@ -328,7 +366,7 @@ class VertexArray {
    }
 
    copyPt(vertex, inPt, inOffset) {
-      vec3.copy(this._array.pt.getBuffer(), vertex * PointK.sizeOf, inPt, inOffset);
+      vec3.copy(this._array.pt.getBuffer(), vertex * sizeOfPointK, inPt, inOffset);
       //this._array.pt.set(vertex, 0, 0, inPt[inOffset]);
       //this._array.pt.set(vertex, 0, 1, inPt[inOffset+1]);
       //this._array.pt.set(vertex, 0, 2, inPt[inOffset+2]);

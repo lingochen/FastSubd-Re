@@ -64,6 +64,9 @@ class PixelArray {
          this._set = this._setNoCheck; // must be workerCopy, used by subdivide, so don't check.
       }
    }
+   
+   // https://stackoverflow.com/questions/31618212/find-all-classes-in-a-javascript-application-that-extend-a-base-class
+   static derived = new Map;
 
    /**
     * create typedArray with specfic type.
@@ -357,6 +360,8 @@ class Uint8PixelArray extends PixelArray {
       super(pixel, record, blob);
    }
    
+   static dummy = PixelArray.derived.set(this.name, this);
+   
    static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
          const blob = new Uint8Array(self._sharedBuffer);
@@ -404,10 +409,13 @@ class Uint8PixelArray extends PixelArray {
 }
 
 
+
 class Int32PixelArray extends PixelArray {
    constructor(pixel, record, blob) {
       super(pixel, record, blob);
    }
+   
+   static dummy = PixelArray.derived.set(this.name, this);
 
    static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
@@ -455,10 +463,13 @@ class Int32PixelArray extends PixelArray {
 }
 
 
+
 class Float32PixelArray extends PixelArray {
    constructor(pixel, record, blob) {
       super(pixel, record, blob);
    }
+   
+   static dummy = PixelArray.derived.set(this.name, this);   
 
    static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
@@ -506,10 +517,13 @@ class Float32PixelArray extends PixelArray {
 }
 
 
+
 class Float16PixelArray extends PixelArray {
    constructor(pixel, record, blob) {
       super(pixel, record, blob);
    }
+   
+   static dummy = PixelArray.derived.set(this.name, this);   
 
    static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
@@ -735,6 +749,8 @@ class Int32PixelArray3D extends PixelArray3D {
       super(array3d);
    }
    
+   static dummy = PixelArray.derived.set(this.name, this);      
+   
    static rehydrate(self) {
       const array3d = PixelArray3D._rehydrateInternal(self, Int32PixelArray.rehydrate);
       return new Int32PixelArray3D(array3d);
@@ -745,6 +761,8 @@ class Int32PixelArray3D extends PixelArray3D {
       return new Int32PixelArray3D(array3d);   
    }
 }
+
+
 
 
 /**
@@ -758,6 +776,8 @@ class Float16PixelArray3D extends PixelArray3D {
       super(array3d);
    }
    
+   static dummy = PixelArray.derived.set(this.name, this);   
+   
    static rehydrate(self) {
       const array3d = PixelArray3D._rehydrateInternal(self, Float16PixelArray.rehydrate);
       return new Float16PixelArray3D(array3d);
@@ -770,10 +790,13 @@ class Float16PixelArray3D extends PixelArray3D {
 }
 
 
+
 class Float32PixelArray3D extends PixelArray3D {
    constructor(array3d) {
       super(array3d);
    }
+
+   static dummy = PixelArray.derived.set(this.name, this);   
    
    static rehydrate(self) {
       const array3d = PixelArray3D._rehydrateInternal(self, Float32PixelArray.rehydrate);
@@ -882,26 +905,111 @@ const createDataTexture3DInt32 = function(array, gl) {
 }
 
 
+
 function rehydrate(obj) {
-   if (obj.className == "Uint8PixelArray") {
-      return Uint8PixelArray.rehydrate(obj);
-   } else if (obj.className == "Int32PixelArray") {
-      return Int32PixelArray.rehydrate(obj);
-   } else if (obj.className == "Float32PixelArray") {
-      return Float32PixelArray.rehydrate(obj);
-   } else if (obj.className == "Float16PixelArray") {
-      return Float16PixelArray.rehydrate(obj);
-   } else if (obj.className == "Int32PixelArray3D") {
-      return Int32PixelArray3D.rehydrate(obj);
-   } else if (obj.className == "Float32PixelArray3D") {
-      return Float32PixelArray3D.rehydrate(obj);
-   } else if (obj.className == "Float16PixelArray3D") {
-      return Float16PixelArray3D.rehydrate(obj);
+   const classObj = PixelArray.derived.get(obj.className);
+   if (classObj) {
+      return classObj.rehydrate(obj);
+   } else {
+      throw("non-existence class: " + obj.className);
    }
-   // no matching class, should we throw?
-   return null;
 }
 
+
+
+
+class DynamicProperty {
+   constructor(buffer) {
+      this._buffer = buffer;
+   }
+   
+   get(handle, offset) {
+      return this._buffer.get(handle, offset);
+   }
+   
+   set(handle, offset, value) {
+      return this._buffer.set(handle, offset, value);
+   }
+   
+   getBuffer() {
+      
+   }
+   
+}
+
+
+
+class DynamicProperty2 {
+   constructor(buffer, buffer2) {
+      this._buffer = buffer;
+      this._buffer2 = buffer2;
+   }
+   
+   get(handle, offset) {
+      if (handle < 0) {
+         return this._buffer2.get(-(handle+1), offset);
+      } else {
+         return this._buffer.get(handle, offset);
+      }
+   }
+   
+   set(handle, offset, value) {
+      if (handle < 0) {
+         return this._buffer2.set(-(handle+1), offset, value);
+      } else {
+         return this._buffer.get(handle, offset, value);
+      }
+   }
+   
+   getBuffer() {
+      
+   }
+}
+
+
+//
+// type = {className, fields, sizeOf, numberOfChannel, initialSize}
+//
+function createTextureBuffer(type) {
+   const classObj = PixelArray.derived.get(type.className);
+   if (classObj) {
+      return classObj.create(type.sizeOf, type.numberOfChannel, type.initialSize);
+   } else {
+      throw("non-existence class: " + obj.className);
+   }
+}
+
+function addProp(obj, fields) {
+   for (let key of Object.keys(fields)) {
+      const offset = fields[key];
+      const capName = key.charAt(0).toUpperCase() + key.slice(1);
+      const getter = `get${capName}`;
+      const setter = `set${capName}`;
+      obj[getter] = function(handle) {
+         this.get(handle, offset);
+      };
+      obj[setter] = function(handle, value) {
+         this.set(handle, offset, value);
+      }
+   }
+}
+
+function createDynamicProperty(type, size) {
+   const buffer = createTextureBuffer(type, size);
+   const prop = new DynamicProperty(buffer);
+   // add fields getter/setter.
+   addProp(prop, type.fields);
+   
+   return prop;
+}
+
+function createDynamicProperty2(type, size, size2) {
+   const buffer = createTextureBuffer(type, size);
+   const buffer2 = createTextureBuffer(type, size2);
+   const prop = new DynamicProperty2(buffer, buffer2);
+   addProp(prop, type.fields);
+   return prop;
+}
 
 
 export {
@@ -915,4 +1023,6 @@ export {
    rehydrate,
    createDataTexture3D,
    createDataTexture3DInt32,
+   createDynamicProperty,
+   createDynamicProperty2,
 }

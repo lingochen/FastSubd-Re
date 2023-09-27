@@ -17,7 +17,7 @@ v.getProperty(name)
 h.getProperty(name)
 f.getProperty(name)
 
-## DynamicProperty class to handle.
+## DynamicProperty/2 class to handle.
 property.get(handle)
 property.set(handle, value)
 property.getBuffer()

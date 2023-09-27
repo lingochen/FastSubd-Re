@@ -932,7 +932,7 @@ class DynamicProperty {
    }
    
    getBuffer() {
-      
+      return this._buffer.getBuffer();
    }
    
 }
@@ -941,28 +941,28 @@ class DynamicProperty {
 
 class DynamicProperty2 {
    constructor(buffer, buffer2) {
-      this._buffer = buffer;
-      this._buffer2 = buffer2;
+      this._bufferA = buffer;
+      this._bufferB = buffer2;
    }
    
    get(handle, offset) {
       if (handle < 0) {
-         return this._buffer2.get(-(handle+1), offset);
+         return this._bufferB.get(-(handle+1), offset);
       } else {
-         return this._buffer.get(handle, offset);
+         return this._bufferA.get(handle, offset);
       }
    }
    
    set(handle, offset, value) {
       if (handle < 0) {
-         return this._buffer2.set(-(handle+1), offset, value);
+         return this._bufferB.set(-(handle+1), offset, value);
       } else {
-         return this._buffer.get(handle, offset, value);
+         return this._bufferA.get(handle, offset, value);
       }
    }
    
    getBuffer() {
-      
+      return [this._bufferA.getBuffer(), this._bufferB.getBuffer()];
    }
 }
 

@@ -95,11 +95,9 @@ class VertexArray {
    
    addProperty(name, type) {
       //if (isValidVarName(name)) {
-         if (this._array[name] === undefined) { // don't already exist
-            // create Array
-            this._array[name] = createTextureBuffer(type);
+         if (this._prop[name] === undefined) { // don't already exist
             // create DynamicProperty for accessing data
-            this._prop[name] = new DynamicProperty(this._array[name]);
+            this._prop[name] = createDynamicProperty(type, this.length());
          }
       //}
       return false;
@@ -111,7 +109,6 @@ class VertexArray {
    
    removeProperty(name) {
       if (this._prop[name]) {
-         delete this._array[name];
          delete this._prop[name];
          return true;
       }
@@ -447,14 +444,17 @@ const wEdgeK = {
 
 class HalfEdgeArray {
    constructor(dArray, hArray, wEdgeArray, fmm) {
-      // quad directededge
+      // tri/quad directededge
       this._dArray = dArray;
-      // boundary free edge
+      // boundaryLoop edge/polygon edge
       this._hArray = hArray;
       // wEdge specific value
       this._wEdgeArray = wEdgeArray;
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
+      // 
+      this._mesh = null;
+      this._prop = {};
    }
    
    static _createInternal(size) {
@@ -521,6 +521,29 @@ class HalfEdgeArray {
       obj._fmm = this._fmm;
       return obj;
    }
+   
+   addProperty(name, type) {
+      //if (isValidVarName(name)) {
+         if (this._prop[name] === undefined) { // don't already exist
+            // create DynamicProperty for accessing data
+            this._prop[name] = createDynamicProperty2(type, this.length());
+         }
+      //}
+      return false;
+   }
+   
+   getProperty(name) {
+      return this._prop[name];
+   }
+   
+   removeProperty(name) {
+      if (this._prop[name]) {
+         delete this._prop[name];
+         return true;
+      }
+      return false;
+   }   
+   
    
    vBuffer() {
       return this._dArray.vertex.getBuffer();
@@ -996,6 +1019,7 @@ class FaceArray {
       this._depot = materialDepot;
       this._array = array;
       this._fmm = fmm;        // freed array slot memory manager.
+      this._prop = {};
    }
 
    static _rehydrateInternal(self) {
@@ -1030,6 +1054,28 @@ class FaceArray {
       obj._fmm = this._fmm;
       return obj;
    }
+   
+   addProperty(name, type) {
+      //if (isValidVarName(name)) {
+         if (this._prop[name] === undefined) { // don't already exist
+            // create DynamicProperty for accessing data
+            this._prop[name] = createDynamicProperty(type, this.length());
+         }
+      //}
+      return false;
+   }
+   
+   getProperty(name) {
+      return this._prop[name];
+   }
+   
+   removeProperty(name) {
+      if (this._prop[name]) {
+         delete this._prop[name];
+         return true;
+      }
+      return false;
+   }   
    
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this.length());

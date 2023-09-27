@@ -206,6 +206,16 @@ class QuadArray extends FaceArray {
       return obj;
    }
    
+   addProperty(name, type) {
+      //if (isValidVarName(name)) {
+         if (this._prop[name] === undefined) { // don't already exist
+            // create DynamicProperty for accessing data
+            this._prop[name] = createDynamicProperty2(type, this.length());
+         }
+      //}
+      return false;
+   }
+   
    /**
     * triangulate polygon using fan-like method. (simple, flawed but good enough for our case)
     * list of triangles of pull vertex - (hEdgeIndex, ptIndex, materialIndex} - pull vertex.

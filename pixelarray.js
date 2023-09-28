@@ -995,20 +995,37 @@ function addProp(obj, fields) {
 }
 
 function createDynamicProperty(type, size) {
-   const buffer = createTextureBuffer(type, size);
-   const prop = new DynamicProperty(buffer);
-   // add fields getter/setter.
-   addProp(prop, type.fields);
-   
-   return prop;
+   const array = [];
+   const length = type.arraySize ? type.arraySize : 1;
+   for (let i = 0; i < length; ++i) {
+      const buffer = createTextureBuffer(type, size);
+      const prop = new DynamicProperty(buffer);
+      // add fields getter/setter.
+      addProp(prop, type.fields);
+      array.push( prop );
+   }
+   if (length === 1) {
+      return array[0];
+   } else {
+      return array;
+   }
 }
 
 function createDynamicProperty2(type, size, size2) {
-   const buffer = createTextureBuffer(type, size);
-   const buffer2 = createTextureBuffer(type, size2);
-   const prop = new DynamicProperty2(buffer, buffer2);
-   addProp(prop, type.fields);
-   return prop;
+   const array = [];
+   const length = type.arraySize ? type.arraySize : 1;
+   for (let i = 0; i < length; ++i) {
+      const buffer = createTextureBuffer(type, size);
+      const buffer2 = createTextureBuffer(type, size2);
+      const prop = new DynamicProperty2(buffer, buffer2);
+      addProp(prop, type.fields);
+      array.push(prop);
+   }
+   if (length === 1) {
+      return array[0];
+   } else {
+      return array;
+   }
 }
 
 

@@ -103,8 +103,12 @@ class VertexArray {
       return false;
    }
    
-   getProperty(name) {
-      return this._prop[name];
+   getProperty(name, index) {
+      if (index === undefined) {
+         return this._prop[name];
+      } else {
+         return this._prop[name][index];
+      }
    }
    
    removeProperty(name) {
@@ -532,8 +536,12 @@ class HalfEdgeArray {
       return false;
    }
    
-   getProperty(name) {
-      return this._prop[name];
+   getProperty(name, index) {
+      if (index === undefined) {
+         return this._prop[name];
+      } else {
+         return this._prop[name][index];
+      }
    }
    
    removeProperty(name) {
@@ -1065,8 +1073,12 @@ class FaceArray {
       return false;
    }
    
-   getProperty(name) {
-      return this._prop[name];
+   getProperty(name, index) {
+      if (index === undefined) {
+         return this._prop[name];
+      } else {
+         return this._prop[name][index];
+      }
    }
    
    removeProperty(name) {

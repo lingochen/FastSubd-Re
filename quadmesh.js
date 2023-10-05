@@ -9,36 +9,25 @@
  */
 
 import {SurfaceMesh, FaceArray, HoleArray, HalfEdgeArray, VertexArray} from './surfacemesh.js';
-import {Int32PixelArray, Float32PixelArray, Float16PixelArray3D, Uint8PixelArray} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray} from './pixelarray.js';
 
 
 
 class QuadEdgeArray extends HalfEdgeArray {
    constructor(uvs, internal) {
       super(...internal);
-      //if (uvs) {   // additional uvs for hArray if any?
-         this._hArray.uvs = uvs;
-      //}
    }
    
    static create(size) {
       //quadSize = Math.trunc(size/4);
       //size = quadSize * 4;
       const params = HalfEdgeArray._createInternal(size);
-      const uvs = Float16PixelArray3D.create(1, 2, 2,  size);     // uv goes with edge          
-      return new QuadEdgeArray(uvs, params);
+      return new QuadEdgeArray(params);
    }
    
    static rehydrate(self) {
       const params = HalfEdgeAray._rehydrateInternal(self);
-      const uvs = rehydrate(self._hArray.uvs);
-      return QuadEdgeArray(uvs, params);
-   }
-   
-   getDehydrate(obj) {      
-      super.getDehydrate(obj);
-      obj._hArray.uvs = this._hArray.uvs.getDehydrate({});
-      return obj;
+      return QuadEdgeArray(params);
    }
    
    /**
@@ -91,14 +80,6 @@ class QuadEdgeArray extends HalfEdgeArray {
             yield hEdge;
             hEdge = this._hArray.next.get(-(hEdge+1), 0);   // next
          } while (hEdge !== start);
-      }
-   }
-   
-   setUV(hEdge, layer, uv) {  // override original
-      if (hEdge >= 0) {
-         this._dArray.uvs.setVec2(hEdge, 0, layer, uv);
-      } else {
-         this._hArray.uvs.setVec2(-(hEdge+1), 0, layer, uv);
       }
    }
    

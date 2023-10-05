@@ -83,7 +83,6 @@ class Importer {
          if (mapping && (uvIndex.length > 0) && (uvIndex.length === faceIndex.length)) {
             if (uvIndex.length === polygon.hLoop.length) {
                for (let i = 0; i < uvIndex.length; ++i) {
-                  //this._currentMesh.h.setUV(polygon.hLoop[i], 0, mapping[uvIndex[i]]);
                   this._currentUvs[0].setUV(polygon.hLoop[i], mapping[uvIndex[i]]);
                }
             } else {

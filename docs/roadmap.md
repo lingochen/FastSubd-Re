@@ -10,7 +10,7 @@
 
 - <s>finish boundaryLoop subdivide support</s> @done (2023/09/16)
 
-- [dynamic properties](api_dynamicattribute.md) support and move uv, normal to us its.
+- <s>[dynamic properties](api_dynamicattribute.md) support</s> @done (2023/10/05)
 
 - using wasm to do parallel subdivision. Use D language.
 

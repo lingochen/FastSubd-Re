@@ -4,10 +4,11 @@
  */
  
 import {QuadMesh} from './quadmesh.js';
- import {TriangleMesh} from './trimesh.js';
- import * as Tri from './subdividetri.js';
- import * as Loop from './subdivideloop.js';
- // import * as MB from './subidivdemb.js';
+import {TriangleMesh} from './trimesh.js';
+import {HalfEdgeArray} from './surfacemesh.js'; 
+import * as Tri from './subdividetri.js';
+import * as Loop from './subdivideloop.js';
+// import * as MB from './subidivdemb.js';
 import * as Parallel from './workers/subdivideparallel.js';
 
 
@@ -47,6 +48,8 @@ async function loopSubdivide(subd, source) {
 function createNextLevelTriMesh(source) {
    const subd = TriangleMesh.create(source._material.depot);
    subd.v._valenceMax = source.v.valenceMax();
+   // remember to add "uvs" dynamic property
+   HalfEdgeArray.addUvs(subd.h, 1);
    
    // preallocated enough points to next subdivision level, 
    subd.v._allocEx(source.v.length() + source.h.lengthW());
@@ -57,6 +60,8 @@ function createNextLevelTriMesh(source) {
    // preallocated next level of boundaryLoop
    subd.h._allocHEdge(source.h.lengthH() * 2);
    subd.o._allocEx(source.o.length());
+   
+   // preallocated
 
    return subd;
 }

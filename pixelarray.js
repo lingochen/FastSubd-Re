@@ -906,7 +906,7 @@ const createDataTexture3DInt32 = function(array, gl) {
 
 
 
-function rehydrate(obj) {
+function rehydrateBuffer(obj) {
    const classObj = PixelArray.derived.get(obj.className);
    if (classObj) {
       return classObj.rehydrate(obj);
@@ -923,6 +923,21 @@ class DoubleBuffer {
       this._bufferA = buffer;
       this._bufferB = buffer2;
    }
+   
+   static dummy = PixelArray.derived.set(this.name, this);   
+      
+   static rehydrate(self) {
+      const bufferA = rehydrateBuffer(self._bufferA);
+      const bufferB = rehydrateBuffer(self._bufferB);
+      return new DoubleBuffer(bufferA, bufferB);
+   }
+
+   getDehydrate(obj) {
+      obj.className = this.constructor.name;
+      obj._bufferA = this._bufferA.getDehydrate({});
+      obj._bufferB = this._bufferB.getDehydrate({});
+      return obj;
+   }   
    
    allocExA(size) {
       return this._bufferA.allocEx(size);
@@ -1064,7 +1079,7 @@ export {
    Int32PixelArray3D,
    Float32PixelArray3D,
    Float16PixelArray3D,
-   rehydrate,
+   rehydrateBuffer,
    createDataTexture3D,
    createDataTexture3DInt32,
    createDynamicProperty,

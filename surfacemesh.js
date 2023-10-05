@@ -15,7 +15,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, Float16PixelArray3D, Float32PixelArray3D, rehydrate, createDataTexture3D, createDynamicProperty, createDynamicProperty2} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, createDynamicProperty2} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 
 
@@ -28,6 +28,39 @@ function isValidVarName(name) {
       return false;
    }
    return true;
+}
+
+function dehydrateObject(obj) {
+   const json = {};
+   for (let [key, prop] of Object.entries(obj)) {
+      if (Array.isArray(prop)) {
+         const array = [];
+         for (let entry of prop) {
+            array.push( entry.getDehydrate({}) );
+         }
+         json[key] = array;
+      } else {
+         json[key] = prop.getDehydrate({});
+      }
+   }
+   
+   return json;
+};
+
+function rehydrateObject(json) {
+   const retObj = {};
+   for (let [key, prop] of Object.entries(json)) {
+      if (Array.isArray(prop)) {
+         const array = [];
+         for (let pixelObj of prop) {
+            array.push( rehydrateBuffer(pixelObj) );
+         }
+         retObj[key] = array;
+      } else {
+         retObj[key] = rehydrateBuffer(prop);
+      }
+   }
+   return retObj;
 }
 
 
@@ -50,11 +83,11 @@ const sizeOfPointK = 4;
 // crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
 */
 class VertexArray {
-   constructor(array, valenceMax) {
+   constructor(array, props, valenceMax) {
       this._array = array;
       this._valenceMax = valenceMax;
       this._mesh = null;            // to be setup by Mesh
-      this._prop = {};              // custom properties.
+      this._prop = props;           // custom properties.
    }
    
    static create(size) {
@@ -68,26 +101,22 @@ class VertexArray {
          valence: Int32PixelArray.create(1, 1, size),
       };
 
-      return new VertexArray(array, 0);
+      return new VertexArray(array, {}, 0);
    }
 
    static rehydrate(self) {
-      if (self._array && self._array.hEdge && self._array.pt && self._array.color && 
-           self._array.normal && self._array.valence) {
-         const array = {};
-         for (let prop in self._array) {
-            array[prop] = rehydrate(self._array[prop]);
-         }
-         return new VertexArray(array, self._valenceMax);
+      if (self._array && self._prop) {
+         const array = rehydrateObject(self._array);
+         const props = rehydrateObject(self._prop);
+         return new VertexArray(array, props, self._valenceMax);
       }
       throw("VertexArray rehydrate: bad input");
    }
 
    getDehydrate(obj) {
-      obj._array = {};
-      for (let prop in this._array) {
-         obj._array[prop] = this._array[prop].getDehydrate({});
-      }
+      obj._array = dehydrateObject(this._array);
+      obj._prop = dehydrateObject(this._prop);
+      
       obj._valenceMax = this._valenceMax;
       
       return obj;
@@ -448,7 +477,7 @@ const wEdgeK = {
 
 
 class HalfEdgeArray {
-   constructor(dArray, hArray, wEdgeArray, fmm) {
+   constructor(dArray, hArray, wEdgeArray, fmm, props) {
       // tri/quad directededge
       this._dArray = dArray;
       // boundaryLoop edge/polygon edge
@@ -459,14 +488,13 @@ class HalfEdgeArray {
       this._fmm = fmm;
       // 
       this._mesh = null;
-      this._prop = {};
+      this._prop = props;
    }
    
    static _createInternal(size) {
       const dArray = { // odd number of index and odd number of polygon(triangle) created false sharing, so we have to separate everything out
          vertex: Int32PixelArray.create(1, 1, size),
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
-         uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
       };
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
@@ -474,7 +502,6 @@ class HalfEdgeArray {
          next: Int32PixelArray.create(1, 1, size),             // negative value
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
-         uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
       };
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
@@ -485,45 +512,30 @@ class HalfEdgeArray {
          hArray: {size: 0, head: 0},
          wEdgeArray: {size: 0, head: 0},
       }
-      return [dArray, hArray, wEdgeArray, fmm];
+      return [dArray, hArray, wEdgeArray, fmm, {}];
    }
    
    static _rehydrateInternal(self) {
-      const dArray = {};
-      for (let prop of ['vertex', 'wEdge', 'uvs']) {
-         dArray[prop] = rehydrate(self._dArray[prop]);
-      }
+      const dArray = rehydrateObject(self._dArray);
       
-      const hArray = {};
-      for (let prop of ['vertex',  'wEdge', 'uvs', 'prev', 'next', 'hole']) {
-         hArray[prop] = rehydrate(self._hArray[prop]);
-      }
-      
-      const wEdgeArray = {};
-      wEdgeArray.edge = rehydrate(self._wEdgeArray.edge);
-      wEdgeArray.sharpness = rehydrate(self._wEdgeArray.sharpness);
-      
+      const hArray = rehydrateObject(self._hArray);
+      const wEdgeArray = rehydrateObject(self._wEdgeArray);
       const fmm = self._fmm;
-      
-      return [dArray, hArray, wEdgeArray, fmm];
+ 
+      const props = rehydrateObject(self._prop);
+      return [dArray, hArray, wEdgeArray, fmm, props];
    }
    
    getDehydrate(obj) {
-      obj._dArray = {};
-      for (let prop of ['vertex', 'wEdge', 'uvs' ]) {
-         obj._dArray[prop] = this._dArray[prop].getDehydrate({});
-      }
+      obj._dArray = dehydrateObject(this._dArray);
 
-      obj._hArray = {};
-      for (let prop of ['vertex', 'wEdge', 'uvs', 'prev', 'next', 'hole']) {
-         obj._hArray[prop] = this._hArray[prop].getDehydrate({});
-      }
+      obj._hArray = dehydrateObject(this._hArray);
 
-      obj._wEdgeArray = {};
-      obj._wEdgeArray.edge = this._wEdgeArray.edge.getDehydrate({});
-      obj._wEdgeArray.sharpness = this._wEdgeArray.sharpness.getDehydrate({});
+      obj._wEdgeArray = dehydrateObject(this._wEdgeArray);
       
       obj._fmm = this._fmm;
+      
+      obj._prop = dehydrateObject(this._prop);
       return obj;
    }
    
@@ -567,22 +579,6 @@ class HalfEdgeArray {
       return null;
    }
    
-   createUvsTexture(gl) {
-      return this._dArray.uvs.createDataTexture(gl);
-   }
-   
-   uvDepth() {
-      return this._uvs.depth();
-   }
-   
-   getUV(hEdge, layer, uv) {
-      this._dArray.uvs.getVec2(hEdge, 0, layer, uv);
-   }
-      
-   setUV(hEdge, layer, uv) {
-      this._dArray.uvs.setVec2(hEdge, 0, layer, uv);
-   }
-   
    vBuffer() {
       return this._dArray.vertex.getBuffer();
    }
@@ -595,7 +591,6 @@ class HalfEdgeArray {
    _allocEx(size) {
       const index = this._dArray.vertex.allocEx(size);
       this._dArray.wEdge.allocEx(size);
-      this._dArray.uvs.allocEx(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
          if (Array.isArray(prop)) {
             for (let realProp of prop) {
@@ -729,7 +724,6 @@ class HalfEdgeArray {
          next: Int32PixelArray.create(1, 1, size),             // negative value
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
-         uvs: Float16PixelArray3D.create(1, 2, 2, size),       // uvs with halfEdge instead of vertex.
       };
       // do allocation
       for (let i in hArray) {
@@ -752,7 +746,6 @@ class HalfEdgeArray {
             // remember to update wEdge too
             const leftOrRight = wEdge % 2;
             this._wEdgeArray.edge.set(Math.trunc(wEdge/2), leftOrRight, -(i+1));
-            //hArray.uvs
             i++;
          }
          // fix next, prev.
@@ -1076,15 +1069,9 @@ class FaceArray {
    }
 
    static _rehydrateInternal(self) {
-      if (self._array.material) {
-         const array = {
-            material: rehydrate(self._array.material),
-            //color: rehyrate(self_array.color),
-         }
-         const fmm = self._fmm;
-         return [null, array, fmm];   // no depot for now
-      }
-      throw("FaceArray _rehydrateInternal: bad input");
+      const array = rehydrateObject(self._array);
+      const fmm = self._fmm;
+      return [null, array, fmm];   // FixMe: no depot for now
    }
 
    static _createInternal(depot, size) {
@@ -1100,10 +1087,7 @@ class FaceArray {
    }
 
    getDehydrate(obj) {
-      obj._array = {
-         material: this._array.material.getDehydrate({}),
-         //color: this._colors.getDehydrate({}),
-      };
+      obj._array = dehydrateObject(this._array);
       obj._fmm = this._fmm;
       return obj;
    }
@@ -1273,7 +1257,7 @@ class HoleArray {
 
    static rehydrate(self) {
       if (self._holes) {
-         return new HoleArray(rehydrate(self._holes));
+         return new HoleArray(rehydrateBuffer(self._holes));
       }
       throw("HoleArray _rehydrateInternal: bad input");
    }
@@ -1529,9 +1513,7 @@ class SurfaceMesh {
       const pullVertex = this.f.makePullBuffer(this._vertices);
    
       const positionTexture = this.v.createPositionTexture(gl);
-//      const attrsTexture = this.v.createAttributeTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
-      //const uvsTexture = this.h.createUvsTexture(gl);
       const uvsTexture = this.h.createPropertyTexture('uvs', gl);
       
       const materials = [];

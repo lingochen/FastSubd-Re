@@ -5,6 +5,7 @@
 // 2) dropbox, yandex.
 // 3) google drive, microsoft onedrive, baidupan to come later.
 //
+import {HalfEdgeArray} from './surfacemesh.js';
 import {QuadMesh} from './quadmesh.js';
 import {TriangleMesh} from './trimesh.js';
 import {blinnPhongToPBR, defaultPBR} from './material.js';
@@ -52,6 +53,8 @@ class Importer {
          } else {
             this._currentMesh = QuadMesh.create(this._depot);
          }
+         // remember to add uvs dynamic property.
+         this._currentUvs = HalfEdgeArray.addUvs(this._currentMesh.h, 1);
 
          this._objs.push( this._currentMesh );
       }
@@ -80,7 +83,8 @@ class Importer {
          if (mapping && (uvIndex.length > 0) && (uvIndex.length === faceIndex.length)) {
             if (uvIndex.length === polygon.hLoop.length) {
                for (let i = 0; i < uvIndex.length; ++i) {
-                  this._currentMesh.h.setUV(polygon.hLoop[i], 0, mapping[uvIndex[i]]);
+                  //this._currentMesh.h.setUV(polygon.hLoop[i], 0, mapping[uvIndex[i]]);
+                  this._currentUvs[0].setUV(polygon.hLoop[i], mapping[uvIndex[i]]);
                }
             } else {
                console.log("uv size different from polygon side");

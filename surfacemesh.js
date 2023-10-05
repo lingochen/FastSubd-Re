@@ -15,7 +15,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, Float16PixelArray3D, Float32PixelArray3D, rehydrate} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, Float16PixelArray3D, Float32PixelArray3D, rehydrate, createDataTexture3D, createDynamicProperty, createDynamicProperty2} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 
 
@@ -98,6 +98,7 @@ class VertexArray {
          if (this._prop[name] === undefined) { // don't already exist
             // create DynamicProperty for accessing data
             this._prop[name] = createDynamicProperty(type, this.length());
+            return this._prop[name];
          }
       //}
       return false;
@@ -531,6 +532,7 @@ class HalfEdgeArray {
          if (this._prop[name] === undefined) { // don't already exist
             // create DynamicProperty for accessing data
             this._prop[name] = createDynamicProperty2(type, this.length());
+            return this._prop[name];
          }
       //}
       return false;
@@ -551,7 +553,35 @@ class HalfEdgeArray {
       }
       return false;
    }   
+
+   createPropertyTexture(name, gl) {
+      const prop = this._prop[name];
+      if (prop) {
+         if (Array.isArray(prop)) {
+            return createDataTexture3D(prop, gl);
+         } else {
+            return prop.createDataTexture(gl);
+         }
+      }
+      throw("unknown dynamic property: " + name);
+      return null;
+   }
    
+   createUvsTexture(gl) {
+      return this._dArray.uvs.createDataTexture(gl);
+   }
+   
+   uvDepth() {
+      return this._uvs.depth();
+   }
+   
+   getUV(hEdge, layer, uv) {
+      this._dArray.uvs.getVec2(hEdge, 0, layer, uv);
+   }
+      
+   setUV(hEdge, layer, uv) {
+      this._dArray.uvs.setVec2(hEdge, 0, layer, uv);
+   }
    
    vBuffer() {
       return this._dArray.vertex.getBuffer();
@@ -566,6 +596,15 @@ class HalfEdgeArray {
       const index = this._dArray.vertex.allocEx(size);
       this._dArray.wEdge.allocEx(size);
       this._dArray.uvs.allocEx(size);
+      for (let [_key, prop] of Object.entries(this._prop)) {
+         if (Array.isArray(prop)) {
+            for (let realProp of prop) {
+               realProp.allocExA(size);
+            }
+         } else {
+            prop.allocExA(size);
+         }
+      }
       return index;
    }
    
@@ -730,22 +769,6 @@ class HalfEdgeArray {
       this._fmm.hArray.size = this._fmm.hArray.head = 0;
       // replace buffer
       this._hArray = hArray;
-   }
-   
-   createUvsTexture(gl) {
-      return this._dArray.uvs.createDataTexture(gl);
-   }
-   
-   uvDepth() {
-      return this._uvs.depth();
-   }
-   
-   getUV(hEdge, layer, uv) {
-      this._dArray.uvs.getVec2(hEdge, 0, layer, uv);
-   }
-      
-   setUV(hEdge, layer, uv) {
-      this._dArray.uvs.setVec2(hEdge, 0, layer, uv);
    }
    
    *[Symbol.iterator] () {
@@ -1017,6 +1040,28 @@ class HalfEdgeArray {
       }
       return true;
    }
+   
+   //
+   // convenient utility functions for adding dynamic property.
+   //
+   static addUvs(halfEdgeArray, numberOfLayer) {
+      const type = {
+         className: 'Float16PixelArray',
+         sizeOf: 2,
+         numberOfChannel: 2,
+         initialSize: halfEdgeArray.length(),
+         fields: {
+            U: [0, 1],                    // [position, size]
+            V: [1, 1],
+            UV: [0, 2],
+         }
+      }
+      type.arraySize = 1;
+      if (numberOfLayer) {
+         type.arraySize = numberOfLayer;
+      }
+      return halfEdgeArray.addProperty('uvs', type);
+   }
 }
 
 
@@ -1068,6 +1113,7 @@ class FaceArray {
          if (this._prop[name] === undefined) { // don't already exist
             // create DynamicProperty for accessing data
             this._prop[name] = createDynamicProperty(type, this.length());
+            return this._prop[name];
          }
       //}
       return false;
@@ -1485,7 +1531,8 @@ class SurfaceMesh {
       const positionTexture = this.v.createPositionTexture(gl);
 //      const attrsTexture = this.v.createAttributeTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
-      const uvsTexture = this.h.createUvsTexture(gl);
+      //const uvsTexture = this.h.createUvsTexture(gl);
+      const uvsTexture = this.h.createPropertyTexture('uvs', gl);
       
       const materials = [];
       for (let [handle, count] of this._material.used) {

@@ -918,31 +918,18 @@ function rehydrate(obj) {
 
 
 
-class DynamicProperty {
-   constructor(buffer) {
-      this._buffer = buffer;
-   }
-   
-   get(handle, offset) {
-      return this._buffer.get(handle, offset);
-   }
-   
-   set(handle, offset, value) {
-      return this._buffer.set(handle, offset, value);
-   }
-   
-   getBuffer() {
-      return this._buffer.getBuffer();
-   }
-   
-}
-
-
-
-class DynamicProperty2 {
+class DoubleBuffer {
    constructor(buffer, buffer2) {
       this._bufferA = buffer;
       this._bufferB = buffer2;
+   }
+   
+   allocExA(size) {
+      return this._bufferA.allocEx(size);
+   }
+   
+   getTextureParameter() {
+      return this._bufferA.getTextureParameter();   
    }
    
    get(handle, offset) {
@@ -953,16 +940,33 @@ class DynamicProperty2 {
       }
    }
    
+   getVec2(handle, offset, vec) {
+      if (handle < 0) {
+         return this._bufferB.getVec2(-(handle+1), offset, vec);
+      } else {
+         return this._bufferA.getVec2(handle, offset, vec);
+      }
+   }
+   
    set(handle, offset, value) {
       if (handle < 0) {
          return this._bufferB.set(-(handle+1), offset, value);
       } else {
-         return this._bufferA.get(handle, offset, value);
+         return this._bufferA.set(handle, offset, value);
+      }
+   }
+   
+   setVec2(handle, offset, vec) {
+      if (handle < 0) {
+         return this._bufferB.setVec2(-(handle+1), offset, vec);
+      } else {
+         return this._bufferA.setVec2(handle, offset, vec);
       }
    }
    
    getBuffer() {
-      return [this._bufferA.getBuffer(), this._bufferB.getBuffer()];
+      //return [this._bufferA.getBuffer(), this._bufferB.getBuffer()];
+      return this._bufferA.getBuffer();
    }
 }
 
@@ -981,15 +985,39 @@ function createTextureBuffer(type) {
 
 function addProp(obj, fields) {
    for (let key of Object.keys(fields)) {
-      const offset = fields[key];
-      const capName = key.charAt(0).toUpperCase() + key.slice(1);
-      const getter = `get${capName}`;
-      const setter = `set${capName}`;
-      obj[getter] = function(handle) {
-         this.get(handle, offset);
-      };
-      obj[setter] = function(handle, value) {
-         this.set(handle, offset, value);
+      const [offset, size] = fields[key];
+      const getter = `get${key}`;
+      const setter = `set${key}`;
+      if (size <= 1) {
+         obj[getter] = function(handle) {
+            return this.get(handle, offset);
+         };
+         obj[setter] = function(handle, value) {
+            return this.set(handle, offset, value);
+         }
+      } else if (size === 2) {
+         obj[getter] = function(handle, vec) {
+            return this.getVec2(handle, offset, vec);
+         }
+         obj[setter] = function(handle, vec) {
+            return this.setVec2(handle, offset, vec);
+         }
+      } else if (size === 3) {
+         obj[getter] = function(handle, vec) {
+            return this.getVec3(handle, offset, vec);
+         }
+         obj[setter] = function(handle, vec) {
+            return this.setVec2(handle, offset, vec);
+         }
+      } else if (size === 4) {
+         obj[getter] = function(handle, vec) {
+            return this.getVec4(handle, offset, vec);
+         }
+         obj[setter] = function(handle, vec) {
+            return this.setVec4(handle, offset, vec);
+         }
+      } else {
+         throw("unsupport size: " + size);
       }
    }
 }
@@ -998,13 +1026,12 @@ function createDynamicProperty(type, size) {
    const array = [];
    const length = type.arraySize ? type.arraySize : 1;
    for (let i = 0; i < length; ++i) {
-      const buffer = createTextureBuffer(type, size);
-      const prop = new DynamicProperty(buffer);
+      const prop = createTextureBuffer(type, size);
       // add fields getter/setter.
       addProp(prop, type.fields);
       array.push( prop );
    }
-   if (length === 1) {
+   if (type.arraySize === undefined) {
       return array[0];
    } else {
       return array;
@@ -1017,11 +1044,11 @@ function createDynamicProperty2(type, size, size2) {
    for (let i = 0; i < length; ++i) {
       const buffer = createTextureBuffer(type, size);
       const buffer2 = createTextureBuffer(type, size2);
-      const prop = new DynamicProperty2(buffer, buffer2);
+      const prop = new DoubleBuffer(buffer, buffer2);
       addProp(prop, type.fields);
       array.push(prop);
    }
-   if (length === 1) {
+   if (type.arraySize === undefined) {
       return array[0];
    } else {
       return array;

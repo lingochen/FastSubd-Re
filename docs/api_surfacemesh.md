@@ -1,26 +1,25 @@
 [readme](../README.md) | [api](api.md)
 
 ## basics
+- ### vertex
+    - v.halfEdge
+    - v.length
+    - v.valence
+    - v.crease
 
-### halfEdge
-h.pair
-h.next
-h.prev
-h.vertex
-h.wEdge
-h.face
-h.length
-h.wLength
+- ### halfEdge
+    - h.pair
+    - h.next
+    - h.prev
+    - h.vertex
+    - h.wEdge
+    - h.face
+    - h.length
+    - h.wLength
 
-### vertex
-v.halfEdge
-v.length
-v.valence
-v.crease
-
-### face
-f.halfEdge
-f.length
+- ### face
+    - f.halfEdge
+    - f.length
 
 ## allocation/free
 
@@ -28,38 +27,40 @@ f.length
 ## navigation
 traversal of vertex, edge, and face.
 
-### circulator
-#### around a vertex
-v.faceAround
-v.wEdgeAround
-v.vertexAround
-v.inHalfEdgeAround
-v.outHalfEdgeAround
+- ### circulator
+    - #### around a vertex
+        - v.faceAround
+        - v.wEdgeAround
+        - v.vertexAround
+        - v.inHalfEdgeAround
+        - v.outHalfEdgeAround
 
-#### around an edge
-h.left
-h.right
-h.leftFace
-h.rightFace
-h.origin
-h.destination
+    - #### around an edge
+        - h.left
+        - h.right
+        - h.leftFace
+        - h.rightFace
+        - h.origin
+        - h.destination
 
+    - #### around a face
+        - f.vertexLoop
+        - f.halfEdgeLoop
+        - f.wEdgeLoop
+        - f.faceAround
 
-#### around a face
-f.vertexLoop
-f.halfEdgeLoop
-f.wEdgeLoop
-f.faceAround
-
-### iterator
-*v
-v.rangeIter
-*h
-h.rangeIter
-h.halfEdgeIter
-h.boundaryIter
-*f
-f.rangeIter
+- ### iterator
+    - #### vertex
+        - *v
+        - v.rangeIter
+    - #### edge
+        - *h
+        - h.rangeIter
+        - h.halfEdgeIter
+        - h.boundaryIter
+    - #### face
+        - *f
+        - f.rangeIter
 
 ## postprocess
 

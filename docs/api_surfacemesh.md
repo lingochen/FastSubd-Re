@@ -21,8 +21,12 @@
     - f.halfEdge
     - f.length
 
-## allocation/free
-
+## memory mangament of vertex/hEdge/face of SurfaceMesh.
+- ### alloc
+    - #### addVertex
+    - #### addFace
+    - #### v._appendNew
+    - #### v._appendNewRange
 
 ## navigation
 traversal of vertex, edge, and face.

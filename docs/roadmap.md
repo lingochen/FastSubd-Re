@@ -12,7 +12,7 @@
 
 - <s>[dynamic properties](api_dynamicattribute.md) support</s> @done (2023/10/05)
 
-- using wasm to do parallel subdivision. Use D language.
+- using [wasm](dwasm.md) to do parallel subdivision. Use wasm with D language.
 
 - [MeshColors PatchTexture](meshcolors.md)
 

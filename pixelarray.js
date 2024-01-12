@@ -437,18 +437,6 @@ class Uint8PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);
    
-/*   static rehydrate(self) {
-      if (self._pixel && self._rec && self._sharedBuffer) {
-         const ret = new Uint8PixelArray(self._pixel, self._rec, null);
-         if (self._sharedBuffer.length > 0) {
-            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: dummy refCount to prevent deletion. is this the best way?
-            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
-         }
-         return ret;
-      }
-      throw("Int32PixelArray rehydrate: bad input");
-   }*/
-   
    static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED_INTEGER;
       let internalFormat = PixelInternalFormatK.R8;
@@ -497,18 +485,6 @@ class Int32PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);
 
-/*   static rehydrate(self) {
-      if (self._pixel && self._rec && self._sharedBuffer) {
-         const ret = new Int32PixelArray(self._pixel, self._rec, null);
-         if (self._sharedBuffer.length > 0) {
-            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked to prevent deletion.
-            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
-         }
-         return ret;
-      }
-      throw("Int32PixelArray rehydrate: bad input");
-   }*/
-
    static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED_INTEGER;
       let internalFormat = PixelInternalFormatK.R32I;
@@ -553,18 +529,6 @@ class Float32PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);   
 
-/*   static rehydrate(self) {
-      if (self._pixel && self._rec && self._sharedBuffer) {
-         const ret = new Float32PixelArray(self._pixel, self._rec, null);
-         if (self._sharedBuffer.length > 0) {
-            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked to prevent deletion, is this the best way?
-            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
-         }
-         return ret;
-      }
-      throw("Float32PixelArray rehydrate: bad Input");
-   }*/
-
    static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED;
       let internalFormat = PixelInternalFormatK.R32F;
@@ -608,18 +572,6 @@ class Float16PixelArray extends PixelArray {
    }
    
    static dummy = PixelArray.derived.set(this.name, this);   
-
-/*   static rehydrate(self) {
-      if (self._pixel && self._rec && self._sharedBuffer) {
-         const ret = new Float16PixelArray(self._pixel, self._rec, null);
-         if (self._sharedBuffer.length > 0) {
-            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked refCount to prevent deletion, to rethink.
-            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
-         }
-         return ret;
-      }
-      throw("Float16PixelArray rehydrate: bad input");
-   }*/
 
    static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RG;

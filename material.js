@@ -12,7 +12,7 @@
  */
  
 import * as glUtil from "./glutil.js";
-import {Float32PixelArray} from "./pixelarray.js";
+import {Float32PixelArray, allocBuffer} from "./pixelarray.js";
 
 
 
@@ -147,7 +147,16 @@ class MaterialDepot {
    }
 
    create(gl, name, input) {
-      const handle = this._gpu.alloc();
+      if (this._gpu.capacity() < 1) {  // expand if no capacity
+         let size = this._gpu.maxLength();
+         if (size === 0) {
+            size = glUtil.MAX_TEXTURE_SIZE;
+         } else {
+            size *= 1.5;
+         }
+         this._gpu.setBuffer(allocBuffer(this._gpu.structSize()*size), 0, size);
+      }
+      const handle = this._gpu.appendNew();
       // set all texture to WHITE, BLACK?
       const attr = this._warehouse.push( {_name: name, 
                                           _usageCount: 0,

@@ -111,40 +111,111 @@ function setConstant(gl) {
 };
 
 
-function makeDataTexture(gl, data, internalFormat, format, type, numElements) {
+function makeDataTexture(gl, data, internalFormat, format, type, pixelFormat) {
+   const numElements = data.length / pixelFormat;
    const height = Math.ceil(numElements/MAX_TEXTURE_SIZE);
 
    const tex = gl.createTexture();
    gl.activeTexture(gl.TEXTURE0);
    gl.bindTexture(gl.TEXTURE_2D, tex);
-   // we don't need any filtering
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
    
-   // now copy data over
-   gl.texImage2D(
+   _dontFilter2D(gl);
+   // reserve gpu data texture.
+   gl.texStorage2D(
      gl.TEXTURE_2D,
-     0,                    // mip level
+     1,                    // mip level
      internalFormat,       // format
      MAX_TEXTURE_SIZE,     // width
-     height,               // height
-     0,                    // border
-     format,               // format
-     type,                 // type
-     data,
+     height                // height
    );
-
+   
+   _updateDataTexture((x, y, width, height)=>{
+            gl.texSubImage2D(gl.TEXTURE_2D, 0,
+               x, y, width, height,
+               format, type, data);
+       },
+       pixelFormat, 0, data.length);
+   
    return tex;
 };
 
 
-function makeDataTexture3D(gl, data, internalFormat, format, type, numElements) {
-   const numImages = data.length;
-   const height = Math.ceil(numElements/MAX_TEXTURE_SIZE);
+/**
+ * @param {int} start - the start of buffer index
+ * @param {int} end - the end of buffer index
+ */
+function _updateDataTexture(texSubImage, pixelType, start, end) {
+   start = Math.floor(start / pixelType);
+   const startX = start % MAX_TEXTURE_SIZE;
+   const startY = Math.floor(start / MAX_TEXTURE_SIZE);
+   end = Math.floor((end+pixelType-1) / pixelType);  // it should align to pixelSize, no needs for (pixelType-1), but...
+   const endX = end % (MAX_TEXTURE_SIZE+1);
+   const endY= Math.floor((end-1) / MAX_TEXTURE_SIZE);
    
+   // now copy data over.
+   // part 1, starting line
+   let yStart = startY;
+   let width = MAX_TEXTURE_SIZE-startX;
+   if ((startX > 0) || (yStart === endY)) {  // must do startLine, cannot merge
+      if (startY === endY) {
+         width = endX - startX;
+      }
+      texSubImage(startX, startY, width, 1);
+      yStart++;
+   }
+    
+   // do middle rectangle if any
+   if (yStart < endY) {
+      width = MAX_TEXTURE_SIZE;
+      let height = endY - yStart;
+      if (endX === MAX_TEXTURE_SIZE) { // merge endline
+         height++;
+      }
+      texSubImage(0, yStart, width, height);
+      yStart += height;
+   }
+      
+   // part 3, end line if any
+   if (yStart === endY) {
+      texSubImage(0, yStart, endX, 1);
+   }
+}
+
+function _dontFilter2D(gl) {
+   // don't do filtering
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);      
+}
+/**
+ * update gpu data texture, reflect the change in cpu's data 
+ * 
+ */
+function updateDataTexture(gl, texID, data, internalFormat, format, type, pixelType, start, end) {
+   // select texture
+   gl.activeTexture(gl.TEXTURE0);
+   gl.bindTexture(gl.TEXTURE_2D, texID);
+   
+   // now, copy the data to gpu
+   //_dontFilter2D(gl);
+   _updateDataTexture((x, y, width, height)=>{
+            gl.texSubImage2D(gl.TEXTURE_2D, 0,
+               x, y, width, height,
+               format, type, data);
+         },
+         pixelType, start, end);
+}
+
+
+function makeDataTexture3D(gl, data, internalFormat, format, type, pixelFormat) {
+   const numImages = data.length;   // slices
+   const end = data[0].length;
+   const start = 0;
+   const numElements = end - start;
+   const height = Math.ceil(numElements/MAX_TEXTURE_SIZE);
+    
    const texture = gl.createTexture();
    // -- Init Texture
    gl.activeTexture(gl.TEXTURE0);
@@ -158,24 +229,21 @@ function makeDataTexture3D(gl, data, internalFormat, format, type, numElements) 
    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
    
    // allocated image
-   gl.texImage3D(gl.TEXTURE_2D_ARRAY, 
-      0,                            // 0 mipmap
+   gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 
+      1,                            // 1 mipmap
       internalFormat,
       MAX_TEXTURE_SIZE, height, numImages,
-      0,                            // 0 border 
-      format, type, null
    );
    // now copy over to gpu
    for (let i = 0; i < numImages; ++i) {
-      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,
-         0,                   // mipmap level
-         0, 0, 0,             // x, y, z offset
-         MAX_TEXTURE_SIZE,
-         height,
-         i+1,                 // depth start at 1 instead of 0.
-         format, type,
-         data[i]
-       );
+      _updateDataTexture((x, y, width, height)=>{
+            gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,  0,
+               x, y, i,             // x, y, z offset
+               width, height,
+               1,                   // number of slices of 3d images. 
+               format, type,data[i]);
+         },
+         pixelFormat, 0, numElements);
    }
    
    return texture;

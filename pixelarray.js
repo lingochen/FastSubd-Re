@@ -1,12 +1,13 @@
 /**
  *  mainly to provide Uint32Array and Float32Array for use.
+ * 2023/11/15 - backing buffer changed to be pluggable, either sharedarray or wasm sharable memory.
+ * also eliminated auto capacity growth, backing buffer managed by outside 
  * @module PixelArray
  * 
 */
 
 
-
-import {makeDataTexture, makeDataTexture3D, MAX_TEXTURE_SIZE} from './glutil.js';
+import {makeDataTexture, makeDataTexture3D} from './glutil.js';
 
 /** webgl2 constant. copied only what we needs texturing data. */
 const PixelTypeK = {
@@ -54,15 +55,13 @@ Object.freeze(PixelInternalFormatK);
 /** class managing typedArray so that it can be used as gpu Texture directly. */
 class PixelArray {
    // should be called by create/workerCopy only.
-   constructor(pixel, record, blob) {
+   constructor(pixel, record) {
       this._pixel = pixel;
       this._rec = record;
-      this._blob = blob;
-      this._set = this._setNoCheck;    //this._setWithCheck;
+      this._blob = null;               // bufferInfo, byteOffset, length
+      this._dataView = null;
+      this._set = this._setNoCheck;    // NoCheck as default. Only turn on this._setWithCheck when necessary;
       this._fillValue = 0;
-      if (blob) {
-         this._set = this._setNoCheck; // must be workerCopy, used by subdivide, so don't check.
-      }
    }
    
    // https://stackoverflow.com/questions/31618212/find-all-classes-in-a-javascript-application-that-extend-a-base-class
@@ -100,8 +99,52 @@ class PixelArray {
       obj.className = this.constructor.name;
       obj._pixel = this._pixel;
       obj._rec = this._rec;
-      obj._sharedBuffer = this._blob.buffer;
+      if (this._blob) {
+         obj._sharedBuffer = {
+            buffer: this._blob.bufferInfo.buffer, 
+            byteOffset: this._blob.byteOffset,
+            length: this._blob.length
+         };
+      } else {
+         obj._sharedBuffer = {
+            buffer: null,
+            byteOffet: 0,
+            length: 0
+         };
+      }
       return obj;
+   }
+   
+   static rehydrate(self) {
+      if (self._pixel && self._rec && self._sharedBuffer) {
+         const ret = new this(self._pixel, self._rec, null);                        // (this) is the class object, will called the correct constructor 
+         if (self._sharedBuffer.length > 0) {
+            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: dummy refCount to prevent deletion. is this the best way?
+            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
+         }
+         return ret;
+      }
+      throw(this.className + " rehydrate: bad input");
+   }
+   
+   /**
+    * the size from length() to buffer end's.
+    * of slots still available for allocation. negative meant overflow
+    */
+   capacity() {
+      if (this._blob) {
+         const size = this._rec.used - this._blob.length;
+         return (size / this._rec.structStride);
+      } else {
+         return 0;
+      }
+   }
+   
+   /**
+    * structure's byte length.
+    */
+   structSize() {
+      return this._rec.structStride * this._pixel.byteCount;
    }
 
    /**
@@ -119,6 +162,17 @@ class PixelArray {
    length() {
       return (this._rec.usedSize / this._rec.structStride);
    }
+   
+   /**
+    * the maximum capacity.
+    */
+   maxLength() {
+      if (this._blob) {
+         return (this._blob.length / this._rec.structStride);
+      } else {
+         return 0;
+      }
+   }
 
 
    /**
@@ -126,7 +180,7 @@ class PixelArray {
     * @returns {typedArray} -  
     */
    getBuffer() {
-      return this._blob;
+      return this._dataView;
    }
    
    /**
@@ -134,12 +188,12 @@ class PixelArray {
     * @returns {typedArray} - subarray of currently used typedArray 
     */
    makeUsedBuffer() {
-      return this._blob.subarray(0, this._rec.usedSize);
+      return this._dataView.subarray(0, this._rec.usedSize);
    }
 
    createDataTexture(gl) {
       const buffer = this.getBuffer();
-      const tex = makeDataTexture(gl, buffer, this._pixel.internalFormat, this._pixel.format, this._getType(), buffer.length/this._pixel.channelCount);
+      const tex = makeDataTexture(gl, buffer, this._pixel.internalFormat, this._pixel.format, this._getType(), this._pixel.channelCount);
       return tex;
    }
    
@@ -160,7 +214,7 @@ class PixelArray {
       let start = Math.floor(this._rec.alteredMin/this._rec.structStride) * this._rec.structStride;
       let end =  (Math.floor(this._rec.alteredMax/this._rec.structStride)+1) * this._rec.structStride;
       return {byteOffset: start*this._pixel.byteCount,
-              array: this._blob.subarray(start, end)};
+              array: this._dataView.subarray(start, end)};
    }
 
    getInterval(formatChannel) {
@@ -172,46 +226,67 @@ class PixelArray {
       return ret;
    }
 
-   /**
-    * 
-    */
-   alloc() {
-      const index = this._rec.usedSize / this._rec.structStride;
-      this._rec.usedSize += this._rec.structStride;
-      if (this._rec.usedSize > this._blob.length) {
-         this.expand();
-      }
-      return index;
+   //
+   // delegate to appendRangeNew
+   appendNew() {
+      return this.appendRangeNew(1);
    }
    
-   allocEx(size) {
+   //
+   // expand() delegated to owner.
+   //
+   appendRangeNew(size) {
       const index = this._rec.usedSize / this._rec.structStride;
       this._rec.usedSize += this._rec.structStride * size;
-      if (this._rec.usedSize > this._blob.length) {
-         this.expand(this._rec.usedSize);
-      }
+      //if (this._rec.usedSize > this._blob.length) {
+      //   this.expand(this._rec.usedSize);
+      //}
       return index;
    }
    
    //
-   // remove from end
+   // rename from dealloc. remove from end
+   // real buffer is allocated from outside.
    //
-   deallocEx(size) {
+   shrink(size) {
       this._rec.usedSize -= this._rec.structStride * size;
-      // do we do contraction here?
-      
-      // return new end
+      // return new end index
       return this._rec.useSize / this._rec.structStride;
    }
+   
+   /**
+    * let outside caller manage buffer replacement, so we can shared buffer with other pixelarray
+    * pro: efficient, con: complexity on caller.
+    * 
+    */
+   setBuffer(bufferInfo, byteOffset, length) {
+      const dataView = this._createView(bufferInfo.buffer, byteOffset, length*this._rec.structStride);
+      if (this._dataView) { // remember to copy old blob if any.
+         dataView.set(this._dataView.subarray(0, this.length()));
+      }
+      // release refCount buffer if we are the last reference.
+      if (this._blob) {
+         if (--this._blob.bufferInfo.refCount === 0) {
+            freeBuffer(this._blob.bufferInfo.buffer);
+         }
+      }
+      // now setup the newBuffer and the copied View.
+      this._blob = {bufferInfo, byteOffset, length};
+      ++bufferInfo.refCount;
+      this._dataView = dataView;
+      
+      // return new byteOffset
+      return byteOffset + dataView.byteLength;
+   }
 
-   computeAllocateSize(size) {
+/*   computeAllocateSize(size) {
       // allocation align to textureWidth.
       return Math.ceil(size / MAX_TEXTURE_SIZE) * MAX_TEXTURE_SIZE * this._pixel.channelCount;
    }
 
-   /**
-    * expand by 1.5x of oldSize if not given a newSize.
-    */
+   //
+   // expand by 1.5x of oldSize if not given a newSize.
+   //
    expand(newSize) {
       if (!newSize) {   // resize to larger by 1.5x of oldSize
          newSize = MAX_TEXTURE_SIZE;
@@ -226,11 +301,11 @@ class PixelArray {
       if (oldBuffer) {
          this._blob.set(oldBuffer);
       }
-   }
+   } */
    
    setFill(value) {
       this._fillValue = value;
-      this._blob.fill(this._fillValue);
+      this._dataView.fill(this._fillValue);
    }
    
    addToVec2(data, index, field) {
@@ -241,11 +316,11 @@ class PixelArray {
    }
       
    _get(index) {
-      return this._blob[index];
+      return this._dataView[index];
    }
 
    get(index, field) {
-      return this._blob[index*this._rec.structStride + field];
+      return this._dataView[index*this._rec.structStride + field];
    }
 
    getVec2(index, field, data) {
@@ -273,18 +348,18 @@ class PixelArray {
    }
 
    _setValues(index, array) {
-      this._blob.set(array, index);
+      this._dataView.set(array, index);
       return true;
    }
    
    _setNoCheck(index, newValue) {
-      this._blob[index] = newValue;
+      this._dataView[index] = newValue;
       return true;
    }
    
    _setWithCheck(index, newValue) {
-      if (this._blob[index] !== newValue) {
-         this._blob[index] = newValue;
+      if (this._dataView[index] !== newValue) {
+         this._dataView[index] = newValue;
          if (index < this._rec.alteredMin) {
             this._rec.alteredMin = index;
          }
@@ -362,15 +437,19 @@ class Uint8PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);
    
-   static rehydrate(self) {
+/*   static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
-         const blob = new Uint8Array(self._sharedBuffer);
-         return new Uint8PixelArray(self._pixel, self._rec, blob);
+         const ret = new Uint8PixelArray(self._pixel, self._rec, null);
+         if (self._sharedBuffer.length > 0) {
+            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: dummy refCount to prevent deletion. is this the best way?
+            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
+         }
+         return ret;
       }
       throw("Int32PixelArray rehydrate: bad input");
-   }
+   }*/
    
-   static create(structSize, numberOfChannel, allocationSize) {
+   static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED_INTEGER;
       let internalFormat = PixelInternalFormatK.R8;
       switch (numberOfChannel) {
@@ -391,16 +470,17 @@ class Uint8PixelArray extends PixelArray {
         default:
            console.log("Unsupport # of pixel channel: " + numberOfChannel);
       }
-      // now allocated data
+      // buffer will be set on outside.
       const [pixel, record] = PixelArray._createInternal(structSize, 1, numberOfChannel, internalFormat, format);
-      const ret = new Uint8PixelArray(pixel, record, null);
-      ret.expand(allocationSize);
-      return ret;
+      return new Uint8PixelArray(pixel, record, null);
    }
    
-     
-   _allocateBuffer(size) {
-      return new Uint8Array(new SharedArrayBuffer(this.computeAllocateSize(size)*4));
+   //
+   // buffer - sharedarraybuffer or "shared wasm buffer"
+   // offset - offset to the buffer
+   // length - the number of items of this particular type
+   _createView(buffer, byteOffset, length) {
+      return new Uint8Array(buffer, byteOffset, length);
    }
 
    _getType() {
@@ -417,15 +497,19 @@ class Int32PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);
 
-   static rehydrate(self) {
+/*   static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
-         const blob = new Int32Array(self._sharedBuffer);
-         return new Int32PixelArray(self._pixel, self._rec, blob);
+         const ret = new Int32PixelArray(self._pixel, self._rec, null);
+         if (self._sharedBuffer.length > 0) {
+            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked to prevent deletion.
+            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
+         }
+         return ret;
       }
       throw("Int32PixelArray rehydrate: bad input");
-   }
+   }*/
 
-   static create(structSize, numberOfChannel, allocationSize) {
+   static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED_INTEGER;
       let internalFormat = PixelInternalFormatK.R32I;
       switch (numberOfChannel) {
@@ -446,15 +530,13 @@ class Int32PixelArray extends PixelArray {
         default:
            console.log("Unsupport # of pixel channel: " + numberOfChannel);
       }
-      // now allocated data
+      // caller remember to setBuffer()
       const [pixel, record] = PixelArray._createInternal(structSize, 4, numberOfChannel, internalFormat, format);
-      const ret = new Int32PixelArray(pixel, record, null);
-      ret.expand(allocationSize);
-      return ret;
+      return new Int32PixelArray(pixel, record, null);
    }
    
-   _allocateBuffer(size) {
-      return new Int32Array(new SharedArrayBuffer(this.computeAllocateSize(size)*4));
+   _createView(buffer, offset, length) {
+      return new Int32Array(buffer, offset, length);
    }
 
    _getType() {
@@ -471,15 +553,19 @@ class Float32PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);   
 
-   static rehydrate(self) {
+/*   static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
-         const blob = new Float32Array(self._sharedBuffer);
-         return new Float32PixelArray(self._pixel, self._rec, blob);
+         const ret = new Float32PixelArray(self._pixel, self._rec, null);
+         if (self._sharedBuffer.length > 0) {
+            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked to prevent deletion, is this the best way?
+            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
+         }
+         return ret;
       }
       throw("Float32PixelArray rehydrate: bad Input");
-   }
+   }*/
 
-   static create(structSize, numberOfChannel, allocationSize) {
+   static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RED;
       let internalFormat = PixelInternalFormatK.R32F;
       switch (numberOfChannel) {
@@ -500,15 +586,13 @@ class Float32PixelArray extends PixelArray {
         default:
            console.log("Unsupport # of pixel channel: " + numberOfChannel);
       }
-      // now allocated data
+      // buffer set by the caller
       const [pixel, record] = PixelArray._createInternal(structSize, 4, numberOfChannel, internalFormat, format);
-      const ret = new Float32PixelArray(pixel, record, null);
-      ret.expand(allocationSize);
-      return ret;
+      return new Float32PixelArray(pixel, record, null);
    }
    
-   _allocateBuffer(size) {
-      return new Float32Array(new SharedArrayBuffer(this.computeAllocateSize(size)*4));
+   _createView(buffer, byteOffset, length) {
+      return new Float32Array(buffer, byteOffset, length);
    }
 
    _getType() {
@@ -525,15 +609,19 @@ class Float16PixelArray extends PixelArray {
    
    static dummy = PixelArray.derived.set(this.name, this);   
 
-   static rehydrate(self) {
+/*   static rehydrate(self) {
       if (self._pixel && self._rec && self._sharedBuffer) {
-         const blob = new Uint16Array(self._sharedBuffer);
-         return new Float16PixelArray(self._pixel, self._rec, blob);
+         const ret = new Float16PixelArray(self._pixel, self._rec, null);
+         if (self._sharedBuffer.length > 0) {
+            const bufferInfo = {buffer: self._sharedBuffer.buffer, refCount: 1};    // TODO: hacked refCount to prevent deletion, to rethink.
+            ret.setBuffer(bufferInfo, self._sharedBuffer.byteOffset, self._sharedBuffer.length);
+         }
+         return ret;
       }
       throw("Float16PixelArray rehydrate: bad input");
-   }
+   }*/
 
-   static create(structSize, numberOfChannel, allocationSize) {
+   static create(structSize, numberOfChannel) {
       let format = PixelFormatK.RG;
       let internalFormat = PixelInternalFormatK.RG16F;
       switch (numberOfChannel) {
@@ -552,15 +640,13 @@ class Float16PixelArray extends PixelArray {
            console.log("Unsupport # of pixel channel: " + numberOfChannel);
       }
       
-      // now allocated data
+      // caller to setBuffer().
       const [pixel, record] = PixelArray._createInternal(structSize, 2, numberOfChannel, internalFormat, format);
-      const ret = new Float16PixelArray(pixel, record, null);
-      ret.expand(allocationSize);
-      return ret;
+      return new Float16PixelArray(pixel, record, null);
    }
    
-   _allocateBuffer(size) {
-      return new Uint16Array(this.computeAllocateSize(size));
+   _createView(buffer, byteOffset, length) {
+      return new Uint16Array(buffer, byteOffset, length);
    }
    
    _getType() {
@@ -659,25 +745,8 @@ const createDataTexture3D = function(array, gl) {
    for (let uv of array) {
       uvs.push( uv.getBuffer() );
    }
-   const tex = makeDataTexture3D(gl, uvs, param.internalFormat, param.format, param.type, uvs[0].length/param.channelCount);
+   const tex = makeDataTexture3D(gl, uvs, param.internalFormat, param.format, param.type, param.channelCount);
    return tex;
-}
-
-
-const createDataTexture3DInt32 = function(array, gl) {
-   const uvs = [];
-   let temp;
-   for (let uv of array) {
-      temp = new Int32PixelArray(1, 1, uv.length);
-      temp.allocEx(uv.length);
-      temp._setValues(0, uv);
-      uvs.push( temp.getBuffer() );
-   }
-   if (temp) {
-      const param = temp.getTextureParameter();
-      return makeDataTexture3D(gl, uvs, param.internalFormat, param.format, param.type, uvs[0].length/param.channelCount);
-   }
-   return null;
 }
 
 
@@ -691,9 +760,18 @@ function rehydrateBuffer(obj) {
    }
 }
 
+/**
+ * padded the offset so it align on 64 bytes boundary.
+ * why 64 bytes? alignment on cache boundary. current standard.
+ */
+function alignCache(byteOffset) {
+   return Math.floor((byteOffset + 63) / 64) * 64;
+}
 
 
-
+/**
+ * TODO: deprecated class, to be removed later when we implemented front/back deque like pixelarray for handling negative index.
+ */
 class DoubleBuffer {
    constructor(buffer, buffer2) {
       this._bufferA = buffer;
@@ -713,10 +791,23 @@ class DoubleBuffer {
       obj._bufferA = this._bufferA.getDehydrate({});
       obj._bufferB = this._bufferB.getDehydrate({});
       return obj;
-   }   
+   }
    
-   allocExA(size) {
-      return this._bufferA.allocEx(size);
+   structSize() {
+      return this._bufferA.structSize();  // bufferA and bufferB are the same
+   }
+   
+   setBuffer(buffer, byteOffset, length) {
+      return this._bufferA.setBuffer(buffer, byteOffset, length);
+      //return this._bufferB.setBuffer(buffer, byteOffset, bLength);
+   }
+   
+   setBufferB(buffer, byteOffset, length) {
+      return this._bufferB.setBuffer(buffer, byteOffset, length);
+   }
+   
+   appendRangeNew(size) {
+      return this._bufferA.appendRangeNew(size);
    }
    
    getTextureParameter() {
@@ -846,6 +937,20 @@ function createDynamicProperty2(type, size, size2) {
    }
 }
 
+/**
+ * eventually transition to WebAssembly linear memory
+ */
+function allocBuffer(totalBytes) {
+   return {buffer: new SharedArrayBuffer(totalBytes), refCount: 0};
+}
+
+/**
+ * eventually transition to WASM lineary memory
+ */
+function freeBuffer(buffer) {
+   // do nothing for now
+}
+
 
 export {
    Uint8PixelArray,
@@ -854,7 +959,8 @@ export {
    Float16PixelArray,
    rehydrateBuffer,
    createDataTexture3D,
-   createDataTexture3DInt32,
    createDynamicProperty,
    createDynamicProperty2,
+   allocBuffer,
+   freeBuffer,
 }

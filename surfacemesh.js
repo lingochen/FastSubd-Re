@@ -6,6 +6,9 @@
  * better cache coherence and more similar to traditional face/vertex representation.
  * easier to optimize for parallel subdivision.
  * 
+ * triangle ratio vertex(4):edge(5):triangle(3)
+ * quad ratio vertex(4):edge(4):quad(2)
+ * 
  * Provided 5 classes.
  * VertexArray
  * HalfEdgeArray
@@ -15,12 +18,23 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, createDynamicProperty2} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, createDynamicProperty2, allocBuffer, freeBuffer} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
+import {MAX_TEXTURE_SIZE} from "./glutil.js";
 
 
-//
-// let browser decided if it validVarName, copy from stackoverflow
+const kExpandSize = 1.5;
+function allocSizeExpand(size) {
+   if (size === 0) {
+      return MAX_TEXTURE_SIZE;
+   } else {
+      return size * kExpandSize;
+   }
+}
+
+/**
+ * let browser decided if it validVarName, copy from stackoverflow
+ */
 function isValidVarName(name) {
    try {
       Function('var ' + name);
@@ -63,13 +77,69 @@ function rehydrateObject(json) {
    return retObj;
 }
 
+/**
+ * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.
+ */
+function totalStructSize(objs, length) {
+   let totalByte = 0;
+   for (let [key, buffer] of Object.entries(objs)) {
+      if (!Array.isArray(buffer)) {
+         totalByte += alignCache(buffer.structSize() * length);
+      } else {
+         for (let array of buffer) {
+            totalByte += alignCache(array.structSize() * length);
+         }
+      }
+   }
+   return totalByte;
+}
+
+/**
+ * iterate over the array, setBuffer accordingly.
+ */
+function setBufferAll(objs, bufferInfo, byteOffset, length) {
+   for (let [key, buffer] of Object.entries(objs)) {
+      if (!Array.isArray(buffer)) {
+         byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
+      } else {
+         for (let array of buffer) {
+            byteOffset = alignCache(array.setBuffer(bufferInfo, byteOffset, length));
+         }
+      }
+   }
+   return byteOffset;
+}
+
+/**
+ * iterate over the array's DoubleBuffer, setBuffer accordingly.
+ */
+function setBufferAllB(objs, bufferInfo, byteOffset, length) {
+   for (let [key, dBuffer] of Object.entries(objs)) {
+      if (!Array.isArray(dBuffer)){
+         byteOffset = alignCache(dBuffer.setBufferB(bufferInfo, byteOffset, length));
+      } else {
+         for (let array of dBuffer) {
+            byteOffset = alignCache(array.setBufferB(bufferInfo, byteOffset, length));
+         }
+      }
+   }
+   return byteOffset;
+}
+
+/**
+ * padded the offset so it align on 64 bytes boundary.
+ * why 64 bytes? alignment on cache boundary. current standard.
+ */
+function alignCache(byteOffset) {
+   return Math.floor((byteOffset + 63) / 64) * 64;
+}
 
 
 const PointK = {
    x: 0,
    y: 1,
    z: 2,
-   c: 3,             // to be used by crease
+   c: 3,             // to be used by crease and other attributes if...
 };
 Object.freeze(PointK);
 const sizeOfPointK = 4;
@@ -120,6 +190,28 @@ class VertexArray {
       obj._valenceMax = this._valenceMax;
       
       return obj;
+   }
+   
+   /**
+    * 
+    */
+   computeBufferSize(length) {
+      return totalStructSize(this._array, length)
+             + totalStructSize(this._prop, length);
+   }
+   
+   /**
+    * use new buffer with length as capacity
+    */
+   setBuffer(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {   // no buffer, so that meant new separate buffer
+         bufferInfo = allocBuffer(this.computeBufferSize(length));
+      }
+      
+      byteOffset = setBufferAll(this._array, bufferInfo, byteOffset, length);
+      byteOffset = setBufferAll(this._prop, bufferInfo, byteOffset, length);
+      
+      return byteOffset;
    }
    
    addProperty(name, type) {
@@ -372,22 +464,28 @@ class VertexArray {
       }
    }
 
+   /**
+    * should be allocated from free first.
+    * 
+    */
    alloc() {
-      const vertex = this._array.hEdge.alloc();
-      this._array.pt.alloc();
-      this._array.color.alloc();
-      this._array.normal.alloc();
-      this._array.valence.alloc();
-      return vertex;
+      return this._allocEx(1);
    }
-   
+
+   /**
+    * used by subdivision, and alloc()
+    */
    _allocEx(size) {
+      if (this._array.hEdge.capacity() < size) {  // realloc if no capacity.
+         this.setBuffer(null, 0, allocSizeExpand(this._array.hEdge.maxLength()));
+      }
+      
       const start = this.length();
-      this._array.hEdge.allocEx(size);
-      this._array.pt.allocEx(size);
-      this._array.color.allocEx(size);
-      this._array.normal.allocEx(size);
-      this._array.valence.allocEx(size);
+      this._array.hEdge.appendRangeNew(size);
+      this._array.pt.appendRangeNew(size);
+      this._array.color.appendRangeNew(size);
+      this._array.normal.appendRangeNew(size);
+      this._array.valence.appendRangeNew(size);
       return start;
    }
 
@@ -489,6 +587,7 @@ class HalfEdgeArray {
       // 
       this._mesh = null;
       this._prop = props;
+      this._bufferInfo = null;
    }
    
    static _createInternal(size) {
@@ -498,10 +597,10 @@ class HalfEdgeArray {
       };
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
+         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
-         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
       };
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
@@ -537,6 +636,71 @@ class HalfEdgeArray {
       
       obj._prop = dehydrateObject(this._prop);
       return obj;
+   }
+   
+   computeBufferSize(length) {
+      return totalStructSize(this._dArray, length)
+            + totalStructSize(this._prop, length);
+   }
+   
+   computeBufferSizeB(length) {
+      return totalStructSize(this._hArray, length)
+            + totalStructSize(this._prop, length);    //structA/B size are the same
+   }
+   
+   computeBufferSizeW(length) {
+      return totalStructSize(this._wEdgeArray, length);
+   }
+   
+   computeBufferSizeAll(length, bLength, wLength) {
+      return this.computeBufferSize(length)
+            + this.computeBufferSizeB(bLength)
+            + this.computeBufferSizeW(wLength);
+   }
+   
+   setBuffer(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSize(length));
+         byteOffset = 0;
+      }
+      
+      // necessary property
+      byteOffset = setBufferAll(this._dArray, bufferInfo, byteOffset, length);
+   
+      // set custom property's buffer
+      return setBufferAll(this._prop, bufferInfo, byteOffset, length);   //, bLength);
+   }
+   
+   setBufferB(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSizeB(length));
+         byteOffset = 0;
+      }
+      
+      byteOffset = setBufferAll(this._hArray, bufferInfo, byteOffset, length);
+      
+      return setBufferAllB(this._prop, bufferInfo, byteOffset, length);
+   }
+   
+   setBufferW(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSizeW(length));
+         byteOffset = 0;
+      }
+      
+      return setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
+   }
+   
+   setBufferAll(bufferInfo, byteOffset, length, bLength, wLength) {
+      if (!bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSizeAll(length, bLength, wLength));
+         byteOffset = 0;
+      }
+      
+      byteOffset = this.setBuffer(bufferInfo, byteOffset, length);
+      byteOffset = this.setBufferB(bufferInfo, byteOffset, bLength);
+      
+      return this.setBufferW(bufferInfo, byteOffset, wLength);
    }
    
    addProperty(name, type) {
@@ -587,43 +751,65 @@ class HalfEdgeArray {
       return this._dArray.wEdge.getBuffer();
    }
    
-// allocation/free routines.
+   // allocation/free routines.
+   /**
+    * 
+    */
    _allocEx(size) {
-      const index = this._dArray.vertex.allocEx(size);
-      this._dArray.wEdge.allocEx(size);
+      if (this._dArray.vertex.capacity() < size) {
+         this.setBuffer(null, 0, allocSizeExpand(this._dArray.vertex.maxLength()));
+      }
+      
+      const index = this._dArray.vertex.appendRangeNew(size);
+      this._dArray.wEdge.appendRangeNew(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
          if (Array.isArray(prop)) {
             for (let realProp of prop) {
-               realProp.allocExA(size);
+               realProp.appendRangeNew(size);
             }
          } else {
-            prop.allocExA(size);
+            prop.appendRangeNew(size);
          }
       }
       return index;
    }
    
+   /**
+    * 
+    */
+   allocWEdge(dEdge, pair) {
+      const handle = this._allocWEdge(1);
+      //this._wEdgeArray.edge.set(handle, 0, dEdge);
+      this.setWEdge(handle, dEdge, pair);
+      return handle;
+   }
+   
+   /**
+    * used by subdivision
+    */
    _allocWEdge(size) {
-      const start = this._wEdgeArray.edge.allocEx(size);
-      this._wEdgeArray.sharpness.allocEx(size);
+      if (this._wEdgeArray.edge.capacity() < size) {  // expand by 1.5
+         const maxLen = this._dArray.vertex.maxLength(); // directedEdge should used it by now.
+         this.setBufferW(null, 0, allocSizeExpand(maxLen) );
+      }
+      
+      const start = this._wEdgeArray.edge.appendRangeNew(size);
+      this._wEdgeArray.sharpness.appendRangeNew(size);
       return start;
    }
 
    _allocHEdge(size) {
-      const index = this._hArray.vertex.allocEx(size);
-      this._hArray.prev.allocEx(size);
-      this._hArray.next.allocEx(size);
-      this._hArray.hole.allocEx(size);
-      this._hArray.wEdge.allocEx(size);
+      if (this._hArray.next.capacity() < size) {   // not enough backLength
+         const maxLen = this._hArray.next.maxLength();
+         this.setBufferB(null, 0, allocSizeExpand(maxLen) );
+      }
+      
+      const index = this._hArray.vertex.appendRangeNew(size);
+      this._hArray.prev.appendRangeNew(size);
+      this._hArray.next.appendRangeNew(size);
+      this._hArray.hole.appendRangeNew(size);
+      this._hArray.wEdge.appendRangeNew(size);
       return index;
-   }
-   
-   allocWEdge(dEdge, pair) {
-      this._wEdgeArray.sharpness.alloc();
-      const handle = this._wEdgeArray.edge.alloc();
-      //this._wEdgeArray.edge.set(handle, 0, dEdge);
-      this.setWEdge(handle, dEdge, pair);
-      return handle;
    }
    
    _freeWEdge(wEdge) {
@@ -645,6 +831,12 @@ class HalfEdgeArray {
    }
    
    _allocDirectedEdge(hEdge, length) {
+      if (this._dArray.vertex.capacity() < length) {
+         let maxLen = this._dArray.vertex.maxLength();
+         maxLen = allocSizeExpand(maxLen);
+         this.setBuffer(null, 0, maxLen, Math.floor(maxLen/3*2) );   // TODO: What the optimal wEdge expansion size? 
+      }
+            
       let handle = [];
       if (hEdge >= this._dArray.vertex.length()) { // asking for new one, hEdge === length().
          this._allocEx(length);
@@ -727,7 +919,7 @@ class HalfEdgeArray {
       };
       // do allocation
       for (let i in hArray) {
-         hArray[i].allocEx(size);
+         hArray[i].appendRangeNew(size);
       }
       
       const boundaryArray = this._hArray;
@@ -1092,6 +1284,28 @@ class FaceArray {
       return obj;
    }
    
+   /**
+    * given length(number of faces), return the required memory size.
+    * 
+    */
+   computeBufferSize(length) {
+      return totalStructSize(this._array, length)
+            + totalStructSize(this._prop, length);
+   }
+   
+   /**
+    * update all 
+    */
+   setBuffer(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSize(length));
+         byteOffset = 0;
+      }
+      
+      byteOffset = setBufferAll(this._array, bufferInfo, byteOffset, length);
+      return setBufferAll(this._prop, bufferInfo, byteOffset, length);
+   }
+   
    addProperty(name, type) {
       //if (isValidVarName(name)) {
          if (this._prop[name] === undefined) { // don't already exist
@@ -1152,11 +1366,16 @@ class FaceArray {
       return (this._array.material.length());
    }
    
-   //
-   // allocated directly from _array without checking free
+   /**
+    * allocated directly from _array without checking freeList
+    */
    _allocEx(size) {
+      if (this._array.material.capacity() < size) { // resize array if not enough free space.
+         this.setBuffer(null, 0, allocSizeExpand( this._array.material.maxLength() ) );
+      }
+      
       const start = this._array.material.length();
-      this._array.material.allocEx(size);
+      this._array.material.appendRangeNew(size);
       return start;
    }
       
@@ -1167,8 +1386,7 @@ class FaceArray {
          this._fmm.head = this._array.material.get(handle, 0);
          --this._fmm.size;
       } else {    // increment Face Count.
-         handle = this._array.material.alloc();
-         //this._array.color.alloc();
+         handle = this._allocEx(1);       // this._array.material.alloc(); this._array.color.alloc();
       }
       if (material == null) {
          material = this._depot.getDefault();
@@ -1207,7 +1425,8 @@ class FaceArray {
       }
    }
 
-/*   color(polygon, color) {
+/* DELETED: replaced by custom property  
+   color(polygon, color) {
       this._array.color.getVec4(polygon, 0, color);
       return color;
    }
@@ -1249,9 +1468,9 @@ class HoleArray {
       };
    }
 
-   static create(size) {
-      const holes = Int32PixelArray.create(1, 1, size);
-      holes.alloc();    // zeroth hole is reserved for sentinel purpose.
+   static create(buffer, byteOffset, length) {
+      const holes = Int32PixelArray.create(1, 1);
+      holes.appendNew();    // zeroth hole is reserved for sentinel purpose.
       return new HoleArray(holes);
    }
 
@@ -1267,6 +1486,23 @@ class HoleArray {
       obj._fmm = this._fmm;
       return obj;
    }
+   
+   // 
+   // given items length, compute the number of bytes needs
+   // int32(4 bytes) * length.
+   //
+   computeBufferSize(length) {
+      return this._holes.structSize()*length;
+   }
+   
+   setBuffer(bufferInfo, byteOffset, length) {
+      if (bufferInfo) {
+         bufferInfo = allocBuffer(this.computeBufferSize(length));
+         byteOffset = 0;
+      }
+      
+      return this._holes.setBuffer(bufferInfo, byteOffset, length);
+   }
 
    /**
     * assumed this is pristine, reconstruct hole from another one, used by subdivide.
@@ -1274,7 +1510,7 @@ class HoleArray {
     */
    _copy(src) {
       const srcLen = src._holes.length();
-      this._holes.allocEx(srcLen - this._holes.length());
+      this._holes.appendRangeNew(srcLen - this._holes.length());
       // now copy everything.
       for (let i = 0; i < srcLen; ++i) {
          this._holes.set(i, 0, src._holes.get(i, 0));
@@ -1312,7 +1548,7 @@ class HoleArray {
    // allocated directly from _array without checking free
    _allocEx(size) {
       const start = this._holes.length();
-      this._holes.allocEx(size);
+      this._holes.appendRangeNew(size);
       return start;
    }
 
@@ -1321,6 +1557,10 @@ class HoleArray {
       if (this._hasFree()) {
          return this._allocFromFree();
       } else {
+         if (this._holes.capacity() < 1) {
+            this.setBuffer(null, 0, allocSizeExpand(this._holes.maxLength()) );
+         }
+         
          let handle = this._holes.alloc();
          return handle;
       }
@@ -1485,6 +1725,41 @@ class SurfaceMesh {
    getDehydrate(obj) {
       // get nothing because subdivide don't use it? material?
       return obj;
+   }
+   
+   
+   /**
+    *  reserve pixel array capacity for static mesh. for dynamic reserve individually.
+    * 
+    */
+   reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles, isStatic=true) {
+      if (isStatic) {
+         const totalBytes = this._vertices.computeBufferSize(nVertices)
+                          + this._hEdges.computeBufferSizeAll(nHfEdges, nBoundaries, nWEdges)
+                          + this._faces.computeBufferSize(nFaces)
+                          + this._holes.computeBufferSize(nHoles);
+      
+         // reserve total linear memory
+         const newBuffer = allocBuffer(totalBytes);
+         // set new buffer and copy over if necesary.
+         let byteOffset = this._vertices.setBuffer(newBuffer, 0, nVertices);
+         byteOffset = this._hEdges.setBufferAll(newBuffer, byteOffset, nHfEdges, nBoundaries, nWEdges);
+         byteOffset = this._faces.setBuffer(newBuffer, byteOffset, nFaces);
+                      this._holes.setBuffer(newBuffer, byteOffset, nHoles);
+      } else { // reserve linear memory separately for dynamic resizing
+         this._vertices.setBuffer(null, 0, nVertices);
+         this._hEdges.setBufferAll(null, 0, nHfEdges, nBoundaries, nWEdges);
+         this._faces.setBuffer(null, 0, nFaces);
+         this._holes.setBuffer(null, 0, nHoles);
+      }
+   }
+   
+   /**
+    * free unused memory from all the pixel's array.
+    * TODO: 
+    */
+   shrink() {
+      
    }
   
    get f() {

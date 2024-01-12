@@ -45,12 +45,13 @@ class TriangleEdgeArray extends HalfEdgeArray {
       yield (hEdge+1) % 3;
       yield (hEdge+2) % 3;
    }
-   
+
+   /* DELETED
    alloc(face) {   // alloc 3 directedEdge.
       const hEdge = face * 3;
       const handle = this._allocDirectedEdge(hEdge, 3);
       return hEdge;
-   }
+   } */
 
    next(dEdge) {
       if (dEdge >= 0) {
@@ -107,10 +108,10 @@ class TriangleArray extends FaceArray {
       return super.getDehydrate(obj);
    } */
    
-   /**
-    * triangulate polygon using fan-like method. (simple, flawed but good enough for our case)
-    * list of triangles of pull vertex - (hEdgeIndex, ptIndex, materialIndex} - pull vertex.
-    */
+   //
+   // triangulate polygon using fan-like method. (simple, flawed but good enough for our case)
+   // list of triangles of pull vertex - (hEdgeIndex, ptIndex, materialIndex} - pull vertex.
+   //
    makePullBuffer(vertices) {
       const dEdges = this._mesh.h;
       let current = 0;
@@ -153,7 +154,8 @@ class TriangleArray extends FaceArray {
       return [tri, tri+1, tri+2];
    }
    
-   /*_allocEx(count) {
+   /* DELETED
+    * _allocEx(count) {
       //this.setHalfEdge(handle, -1);  // note: needs?
       return this._faces.allocEx(count);
    }*/
@@ -232,10 +234,9 @@ class TriangleMesh extends SurfaceMesh {
          throw("Triangle Only: " + side + " edges.");
       }
       const handle = this._faces.alloc(material);
-      this._hEdges.alloc(handle);
+      this._hEdges._allocDirectedEdge(handle * 3, 3);     // alloc 3 directed edges.
       return handle;
    }
-   
    // for debugging purpose.
 /*   _gatherEdge(vertex) {
       let outPut = [];

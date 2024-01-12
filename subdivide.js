@@ -51,17 +51,26 @@ function createNextLevelTriMesh(source) {
    // remember to add "uvs" dynamic property
    HalfEdgeArray.addUvs(subd.h, 1);
    
-   // preallocated enough points to next subdivision level, 
-   subd.v._allocEx(source.v.length() + source.h.lengthW());
-   // preallocated next level of the wEdges/Faces.
-   subd.h._allocEx(source.f.length() * 4 * 3);           // directedEdge mapped to face 3:1
-   subd.h._allocWEdge(source.h.lengthW()*2 + source.f.length()*3);
-   subd.f._allocEx(source.f.length() * 4);
-   // preallocated next level of boundaryLoop
-   subd.h._allocHEdge(source.h.lengthH() * 2);
-   subd.o._allocEx(source.o.length());
+   // compute size
+   const nVertices = source.v.length() + source.h.lengthW();
+   const nHfEdges = source.f.length() * 4 * 3;     // directedEdge mapped to face 3:1
+   const nWEdges = source.h.lengthW()*2 + source.f.length()*3;
+   const nFaces = source.f.length() * 4;
+   const nBoundaries = source.h.lengthH() * 2;
+   const nHoles = source.o.length();
    
-   // preallocated
+   // preallocated buffer
+   subd.reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles);
+   
+   // preallocated enough points to next subdivision level,
+   subd.v._allocEx(nVertices);
+   // preallocated next level of the wEdges/Faces.
+   subd.h._allocEx(nHfEdges);                   
+   subd.h._allocWEdge(nWEdges);
+   subd.f._allocEx(nFaces); 
+   // preallocated next level of boundaryLoop
+   subd.h._allocHEdge(nBoundaries);
+   subd.o._allocEx(nHoles);
 
    return subd;
 }

@@ -1,7 +1,7 @@
 [design](design_note.md)
 
-as of today (2023/08/30)
+as of today (2024/01/14)
 
-multiple js webworkers working the same SharedBufferArray turn out to be very slow. It seems that you have to partition into separate non-overlapping views in order to get speedup.
+with compact array representation, no extra empty spaces, webworker finally got good speedup.
 
-use wasm to avoid the overhead.
+so how to arrange memory is the key. wasm priority move down.

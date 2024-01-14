@@ -279,7 +279,8 @@ class PixelArray {
       return byteOffset + dataView.byteLength;
    }
 
-/*   computeAllocateSize(size) {
+/* DELETION:
+   computeAllocateSize(size) {
       // allocation align to textureWidth.
       return Math.ceil(size / MAX_TEXTURE_SIZE) * MAX_TEXTURE_SIZE * this._pixel.channelCount;
    }

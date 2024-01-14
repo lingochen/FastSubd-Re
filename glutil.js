@@ -130,9 +130,10 @@ function makeDataTexture(gl, data, internalFormat, format, type, pixelFormat) {
    );
    
    _updateDataTexture((x, y, width, height)=>{
+            const offset = (x + y*MAX_TEXTURE_SIZE) * pixelFormat;
             gl.texSubImage2D(gl.TEXTURE_2D, 0,
                x, y, width, height,
-               format, type, data);
+               format, type, data.subarray(offset));
        },
        pixelFormat, 0, data.length);
    
@@ -149,7 +150,7 @@ function _updateDataTexture(texSubImage, pixelType, start, end) {
    const startX = start % MAX_TEXTURE_SIZE;
    const startY = Math.floor(start / MAX_TEXTURE_SIZE);
    end = Math.floor((end+pixelType-1) / pixelType);  // it should align to pixelSize, no needs for (pixelType-1), but...
-   const endX = end % (MAX_TEXTURE_SIZE+1);
+   const endX = end % (MAX_TEXTURE_SIZE);
    const endY= Math.floor((end-1) / MAX_TEXTURE_SIZE);
    
    // now copy data over.
@@ -159,6 +160,9 @@ function _updateDataTexture(texSubImage, pixelType, start, end) {
    if ((startX > 0) || (yStart === endY)) {  // must do startLine, cannot merge
       if (startY === endY) {
          width = endX - startX;
+         if (width === 0) {
+            width = MAX_TEXTURE_SIZE;
+         }
       }
       texSubImage(startX, startY, width, 1);
       yStart++;
@@ -203,7 +207,7 @@ function updateDataTexture(gl, texID, data, internalFormat, format, type, pixelT
    _updateDataTexture((x, y, width, height)=>{
             gl.texSubImage2D(gl.TEXTURE_2D, 0,
                x, y, width, height,
-               format, type, data);
+               format, type, data.subarray(x + y*MAX_TEXTURE_SIZE));
          },
          pixelType, start, end);
 }
@@ -237,11 +241,12 @@ function makeDataTexture3D(gl, data, internalFormat, format, type, pixelFormat) 
    // now copy over to gpu
    for (let i = 0; i < numImages; ++i) {
       _updateDataTexture((x, y, width, height)=>{
+            const offset = (x + y*MAX_TEXTURE_SIZE) * pixelFormat;
             gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,  0,
                x, y, i,             // x, y, z offset
                width, height,
                1,                   // number of slices of 3d images. 
-               format, type,data[i]);
+               format, type,data[i].subarray(offset));
          },
          pixelFormat, 0, numElements);
    }

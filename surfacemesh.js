@@ -25,10 +25,10 @@ import {MAX_TEXTURE_SIZE} from "./glutil.js";
 
 const kExpandSize = 1.5;
 function allocSizeExpand(size) {
-   if (size === 0) {
+   if (size < MAX_TEXTURE_SIZE) {
       return MAX_TEXTURE_SIZE;
    } else {
-      return size * kExpandSize;
+      return Math.ceil(size * kExpandSize);
    }
 }
 
@@ -477,7 +477,7 @@ class VertexArray {
     */
    _allocEx(size) {
       if (this._array.hEdge.capacity() < size) {  // realloc if no capacity.
-         this.setBuffer(null, 0, allocSizeExpand(this._array.hEdge.maxLength()));
+         this.setBuffer(null, 0, allocSizeExpand(this._array.hEdge.maxLength()+size));
       }
       
       const start = this.length();
@@ -757,7 +757,7 @@ class HalfEdgeArray {
     */
    _allocEx(size) {
       if (this._dArray.vertex.capacity() < size) {
-         this.setBuffer(null, 0, allocSizeExpand(this._dArray.vertex.maxLength()));
+         this.setBuffer(null, 0, allocSizeExpand(this._dArray.vertex.maxLength()+size));
       }
       
       const index = this._dArray.vertex.appendRangeNew(size);
@@ -790,7 +790,7 @@ class HalfEdgeArray {
    _allocWEdge(size) {
       if (this._wEdgeArray.edge.capacity() < size) {  // expand by 1.5
          const maxLen = this._dArray.vertex.maxLength(); // directedEdge should used it by now.
-         this.setBufferW(null, 0, allocSizeExpand(maxLen) );
+         this.setBufferW(null, 0, allocSizeExpand(maxLen+size) );
       }
       
       const start = this._wEdgeArray.edge.appendRangeNew(size);
@@ -801,7 +801,7 @@ class HalfEdgeArray {
    _allocHEdge(size) {
       if (this._hArray.next.capacity() < size) {   // not enough backLength
          const maxLen = this._hArray.next.maxLength();
-         this.setBufferB(null, 0, allocSizeExpand(maxLen) );
+         this.setBufferB(null, 0, allocSizeExpand(maxLen+size) );
       }
       
       const index = this._hArray.vertex.appendRangeNew(size);
@@ -833,7 +833,7 @@ class HalfEdgeArray {
    _allocDirectedEdge(hEdge, length) {
       if (this._dArray.vertex.capacity() < length) {
          let maxLen = this._dArray.vertex.maxLength();
-         maxLen = allocSizeExpand(maxLen);
+         maxLen = allocSizeExpand(maxLen+length);
          this.setBuffer(null, 0, maxLen, Math.floor(maxLen/3*2) );   // TODO: What the optimal wEdge expansion size? 
       }
             
@@ -1371,7 +1371,7 @@ class FaceArray {
     */
    _allocEx(size) {
       if (this._array.material.capacity() < size) { // resize array if not enough free space.
-         this.setBuffer(null, 0, allocSizeExpand( this._array.material.maxLength() ) );
+         this.setBuffer(null, 0, allocSizeExpand( this._array.material.maxLength()+size ) );
       }
       
       const start = this._array.material.length();

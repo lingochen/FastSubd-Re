@@ -12,6 +12,8 @@
 
 - <s>[dynamic properties](api_dynamicattribute.md) support</s> @done (2023/10/05)
 
+- Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)
+
 - using [wasm](dwasm.md) to do parallel subdivision. Use wasm with D language.
 
 - [MeshColors PatchTexture](meshcolors.md)

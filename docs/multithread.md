@@ -2,6 +2,10 @@
 
 as of today (2024/01/14)
 
-with compact array representation, no extra empty spaces, webworker finally got good speedup.
+<s>with compact array representation, even with extra space, webworker finally got good speedup?</>
 
-so how to arrange memory is the key. wasm priority move down.
+<s>so how to arrange memory is the key?</s> 
+
+The above statements are untrue, somehow multithread just worked, is it the new chrome version? or did the various codes changed let us hit the fastpath?
+
+Firefox still get no speedup.

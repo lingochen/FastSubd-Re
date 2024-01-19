@@ -25,6 +25,9 @@ class WebWorkerPool {
          this._pool.push(worker);
          this._freePool.push(worker);
       }
+      
+      // precreated index buffer for iteration purpose.
+      
    }
    
    freeWorker(worker) {
@@ -84,6 +87,7 @@ class TaskParallel {
       this._pool = pool;
       this._totalTasks = 0;      // the number of tasks waiting to finished
       this._wait = null;
+      this._indexBuffer = new SharedArrayBuffer(64*3);
    }
    
    _addTask() {
@@ -109,8 +113,8 @@ class TaskParallel {
       this._pool.execAll(this, {action: tearDownFn});
    }
    
-   setup(data, setupFn) {
-      const msg = Object.assign({action:setupFn}, data);
+   setup(data, setupFnName) {
+      const msg = Object.assign({action:setupFnName, indexBuffer: this._indexBuffer}, data);
       this._pool.execAll(this, msg);
    }
    

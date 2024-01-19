@@ -66,6 +66,7 @@ const initState = {
       const source = TriangleMesh.rehydrate(data.source);
       const dest = TriangleMesh.rehydrate(data.subd);
       loopSubdivide(dest, source);
+      _mData.indexBuffer = new Int32Array(data.indexBuffer);
       // switch gHandler to LoopState
       gHandler = loopState; 
    },

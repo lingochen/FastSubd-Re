@@ -14,7 +14,7 @@ import * as test from './subdivideworker.js';
 let gTasker;
 function getTasker() {
    if (!gTasker) {   // init gTasker
-      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', 4);
+      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', 8);
       gTasker = new Parallel.TaskParallel(pool);
    }
    return gTasker;
@@ -31,7 +31,7 @@ function loopSubdivide(subd, source) {
    
    // compute blockSize, 
    
-   const blockSize = 4;
+   const blockSize = 32;
    // copy/refine vertex and add middle edge points.
    tasker.pFor(0, task.vMix.length, blockSize*3, 'vertexTask');
    // copy/refine the remainder

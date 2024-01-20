@@ -46,8 +46,12 @@ class WebWorkerPool {
          // get queuing jobs and exec if any.
          while (this._tasksQueue.length) {
             const task = this._tasksQueue.pop();
-            task(worker);
-            if (worker._task > 0) {
+            const [pushBack, taskGroup, msg] = task();
+            if (pushBack) {
+               this._tasksQueue.push( task );
+            }
+            if (msg) {
+               this.processTask(taskGroup, msg, worker);
                break;
             }
          } 
@@ -60,6 +64,13 @@ class WebWorkerPool {
       taskGroup._taskDone();
    }
    
+   processTask(taskGroup, msg, worker) {
+      taskGroup._addTask();
+      worker._taskGroup = taskGroup;
+      ++worker._task;
+      worker.postMessage(msg);
+   }
+   
    
    //
    // queue postmessage even when busy.
@@ -67,10 +78,7 @@ class WebWorkerPool {
    //
    execAll(taskGroup, msg) {
       for (let worker of this._pool) {
-         taskGroup._addTask();
-         worker.postMessage(msg);
-         worker._taskGroup = taskGroup;
-         ++worker._task;
+         this.processTask(taskGroup, msg, worker);
       }
    }
 
@@ -78,17 +86,12 @@ class WebWorkerPool {
    // exec one function 
    //
    exec(taskGroup, msg) {
-      taskGroup._addTask();
       if (this._freePool.length) {
          const worker = this._freePool.pop();
-         worker.postMessage(msg);
-         worker._taskGroup = taskGroup;
-         ++worker._task;
+         this.processTask(taskGroup, msg, worker);
       } else { // queue the task to be called by freed worker.
-         this._tasksQueue.unshift( (worker)=>{
-            worker._taskGroup = taskGroup;
-            ++worker._task;
-            worker.postMessage(msg);
+         this._tasksQueue.unshift( ()=>{
+            return [false, taskGroup, msg];
          });
       }
    }
@@ -104,23 +107,18 @@ class WebWorkerPool {
       // grab as much worker as possible. NOTE, but less then end
       while (this._freePool.length) {
          const worker = this._freePool.pop();
-         taskGroup._addTask();
-         worker._taskGroup = taskGroup;
-         ++worker._task;
-         worker.postMessage(msg);
+         this.processTask(taskGroup, msg, worker);
       }
       // add to taskQueue to grab new worker if needed and available.
-      const forTask = (worker)=>{
+      const forTask = ()=>{
          // checked if works still available
          const current = Atomics.load(this._for.index[curIndex], 0);
          if (current < end) {
-            taskGroup._addTask();
-            worker._taskGroup = taskGroup;
-            ++worker._task;
-            worker.postMessage(msg);
-            // push() instead of unshift() because forLoop running together should be more efficient
-            this._tasksQueue.push(forTask);
+            // push back true for taking the job
+            return [true, taskGroup, msg];
          }
+         // done, no more jobs
+         return [false, null, null];
       }
       this._tasksQueue.unshift(forTask);
    }

@@ -60,7 +60,7 @@ const loopState = {
    },
    
    wEdgeTask: function(msg) {
-      for (let i of nextTask(msg.index, msg.end, msg.blockSiz)) {
+      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
          Tri.wEdgeTask(_mData, i);
       }
    },

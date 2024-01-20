@@ -11,6 +11,22 @@ import * as Loop from '../subdivideloop.js';
  
 
 let _mData = {};
+let _mIndex = [];
+function* nextTask(indexBuffer, hardEnd, blockSize) {
+   const index = _mIndex[indexBuffer];
+   let current;
+   do {
+      const start = Atomics.add(index, 0, blockSize);
+      current = start;
+      let end = Math.min(start+blockSize, hardEnd);
+      while (current < end) {
+         yield current;
+         current++
+      }
+   } while (current < hardEnd);
+}
+
+
  
 function loopSubdivide(subd, source) {
    // Setup TaskGroup
@@ -24,7 +40,7 @@ function loopSubdivide(subd, source) {
 //
 const loopState = {
    vertexTask: function(msg) {
-      for (let i = msg.start; i < msg.end; ++i) {
+      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
          Tri.vertexTask(_mData, i);
       }
    },
@@ -38,13 +54,13 @@ const loopState = {
    },
    
    faceTask: function(msg) {
-      for (let i = msg.start; i < msg.end; ++i) {
+      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
          Tri.triTask(_mData, i);
       }
    },
    
    wEdgeTask: function(msg) {
-      for (let i = msg.start; i < msg.end; ++i) {
+      for (let i of nextTask(msg.index, msg.end, msg.blockSiz)) {
          Tri.wEdgeTask(_mData, i);
       }
    },
@@ -66,7 +82,6 @@ const initState = {
       const source = TriangleMesh.rehydrate(data.source);
       const dest = TriangleMesh.rehydrate(data.subd);
       loopSubdivide(dest, source);
-      _mData.indexBuffer = new Int32Array(data.indexBuffer);
       // switch gHandler to LoopState
       gHandler = loopState; 
    },
@@ -88,13 +103,19 @@ let gHandler = initState;
  
 // the main function passing
 onmessage = (e)=> {
-   const fn = gHandler[e.data.action];
-   if (fn) {
-      const ret = fn(e.data);
-      // let caller knows we are done.
-      postMessage(e.data.action);
-   } else {
-      console.log("failure: no " + e.data.action);
-      postMessage('unknown method');
+   _mIndex.push( new Int32Array(e.data, 0, 16)  ); // thread startup needs to get the sharedIndexBuffer
+   _mIndex.push( new Int32Array(e.data, 64, 16) );
+   _mIndex.push( new Int32Array(e.data, 128, 16) );
+   // change to normal message handling.
+   onmessage = (e)=> {
+      const fn = gHandler[e.data.action];
+      if (fn) {
+         const ret = fn(e.data);
+         // let caller knows we are done.
+         postMessage(e.data.action);
+      } else {
+         console.log("failure: no " + e.data.action);
+         postMessage('unknown method');
+      }
    }
 }

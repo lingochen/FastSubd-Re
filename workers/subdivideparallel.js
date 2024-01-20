@@ -9,7 +9,7 @@ import * as Tri from '../subdividetri.js';
 import * as Loop from '../subdivideloop.js';
 // import * as MB from '../subidivdemb.js';
 import * as Parallel from './parallel.js';
-//import * as test from './subdivideworker.js';
+import * as test from './subdivideworker.js';
 
 let gTasker;
 function getTasker() {
@@ -31,7 +31,7 @@ function loopSubdivide(subd, source) {
    
    // compute blockSize, 
    
-   const blockSize = 1024;
+   const blockSize = 4;
    // copy/refine vertex and add middle edge points.
    tasker.pFor(0, task.vMix.length, blockSize*3, 'vertexTask');
    // copy/refine the remainder

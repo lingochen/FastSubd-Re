@@ -10,5 +10,4 @@ The above statements are untrue, somehow multithread just worked, is it the new 
 
 Firefox still get no speedup.
 
-TODO:
 use shared memory for distributing works, use atomic index to iterated. eliminated postmessage bottleneck if any. (Done, 2024/01/20), firefox has slight performance improvement.

@@ -47,11 +47,11 @@ class WebWorkerPool {
          while (this._tasksQueue.length) {
             const task = this._tasksQueue.pop();
             const [pushBack, taskGroup, msg] = task();
-            if (pushBack) {
-               this._tasksQueue.push( task );
-            }
             if (msg) {
-               this.processTask(taskGroup, msg, worker);
+               this.sendTask(taskGroup, msg, worker);
+               if (pushBack) {
+                  this._tasksQueue.push( task );
+               }
                break;
             }
          } 
@@ -64,7 +64,10 @@ class WebWorkerPool {
       taskGroup._taskDone();
    }
    
-   processTask(taskGroup, msg, worker) {
+   /**
+    * do all the accounting then postMessage to worker.
+    */
+   sendTask(taskGroup, msg, worker) {
       taskGroup._addTask();
       worker._taskGroup = taskGroup;
       ++worker._task;
@@ -78,7 +81,7 @@ class WebWorkerPool {
    //
    execAll(taskGroup, msg) {
       for (let worker of this._pool) {
-         this.processTask(taskGroup, msg, worker);
+         this.sendTask(taskGroup, msg, worker);
       }
    }
 
@@ -88,7 +91,7 @@ class WebWorkerPool {
    exec(taskGroup, msg) {
       if (this._freePool.length) {
          const worker = this._freePool.pop();
-         this.processTask(taskGroup, msg, worker);
+         this.sendTask(taskGroup, msg, worker);
       } else { // queue the task to be called by freed worker.
          this._tasksQueue.unshift( ()=>{
             return [false, taskGroup, msg];
@@ -107,7 +110,7 @@ class WebWorkerPool {
       // grab as much worker as possible. NOTE, but less then end
       while (this._freePool.length) {
          const worker = this._freePool.pop();
-         this.processTask(taskGroup, msg, worker);
+         this.sendTask(taskGroup, msg, worker);
       }
       // add to taskQueue to grab new worker if needed and available.
       const forTask = ()=>{

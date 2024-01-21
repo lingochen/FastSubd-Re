@@ -16,7 +16,7 @@ avoid false sharing
 
 parallel implementation (gpu), [cpu](multithread.md)
 
-wasm, (sharedtypearray is slow)
+wasm, (sharedtypearray is slow?)
 
 good name, [sane api](api.md)
 

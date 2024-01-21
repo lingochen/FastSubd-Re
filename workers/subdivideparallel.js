@@ -9,12 +9,13 @@ import * as Tri from '../subdividetri.js';
 import * as Loop from '../subdivideloop.js';
 // import * as MB from '../subidivdemb.js';
 import * as Parallel from './parallel.js';
-import * as test from './subdivideworker.js';
+//import * as test from './subdivideworker.js';
 
 let gTasker;
 function getTasker() {
    if (!gTasker) {   // init gTasker
-      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', 8);
+      const numberOfWorker = navigator.hardwareConcurrency;
+      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', numberOfWorker);
       gTasker = new Parallel.TaskParallel(pool);
    }
    return gTasker;

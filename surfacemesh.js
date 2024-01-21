@@ -918,6 +918,9 @@ class HalfEdgeArray {
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
       };
       // do allocation
+      const totalBytes = totalStructSize(hArray, size);
+      const hArrayBuffer = allocBuffer(totalBytes);
+      setBufferAll(hArray, hArrayBuffer, 0, size);
       for (let i in hArray) {
          hArray[i].appendRangeNew(size);
       }
@@ -948,7 +951,7 @@ class HalfEdgeArray {
       // dealloc extra.
       const extra = size - i;
       for (let i in hArray) {
-         hArray[i].deallocEx(extra);
+         hArray[i].shrink(extra);
       }
  
       this._fmm.hArray.size = this._fmm.hArray.head = 0;
@@ -1496,7 +1499,7 @@ class HoleArray {
    }
    
    setBuffer(bufferInfo, byteOffset, length) {
-      if (bufferInfo) {
+      if (!bufferInfo) {
          bufferInfo = allocBuffer(this.computeBufferSize(length));
          byteOffset = 0;
       }
@@ -1561,7 +1564,7 @@ class HoleArray {
             this.setBuffer(null, 0, allocSizeExpand(this._holes.maxLength()) );
          }
          
-         let handle = this._holes.alloc();
+         let handle = this._holes.appendNew();
          return handle;
       }
    }

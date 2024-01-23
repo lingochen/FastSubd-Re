@@ -1,6 +1,6 @@
 [readme](../README.md) | [roadmap](roadmap.md) | [design](design_note.md) | [api](api.md) | [reference](reference.md)
 
-Although [Htex](https://onrendering.com/) by Jonathan Dupuy is great for Catmull-Clark Surface, but we also want to support Triangle Subdivision Scheme, which does not seems to work well with Htex.
+Although [Htex](https://onrendering.com/) by Jonathan Dupuy is elegant for Catmull-Clark Surface, but we also want to support Triangle Subdivision Scheme, which doesn't seems to be a good fit for Htex.
 
 [Mesh Colors](http://www.cemyuksel.com/research/meshcolors/) by Cem Yuksel, or rather some variations of the Patch Texture, seems to works well with both quad/tri scheme. So we will tried Mesh Colors.
 

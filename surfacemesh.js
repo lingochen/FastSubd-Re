@@ -1495,11 +1495,17 @@ class HoleArray {
    // int32(4 bytes) * length.
    //
    computeBufferSize(length) {
-      return this._holes.structSize()*(length+1);     // added sentinel
+      if (length) {
+         return this._holes.structSize()*(length+1);     // added sentinel
+      }
+      return 0;
    }
    
    setBuffer(bufferInfo, byteOffset, length) {
-      length++;                                       // remember to add sentinel
+      if (length) {
+         length++;                                       // remember to add sentinel
+      }
+      
       if (!bufferInfo) {
          bufferInfo = allocBuffer(this.computeBufferSize(length));
          byteOffset = 0;

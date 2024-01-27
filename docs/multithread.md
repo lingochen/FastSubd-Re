@@ -8,6 +8,6 @@ as of today (2024/01/14)
 
 The above statements are untrue, somehow multithread just worked, is it the new chrome version? or did the various codes changed let us hit the fastpath?
 
-Firefox still get no speedup.
+use shared memory for distributing works, use atomic index to iterated. eliminated postmessage bottleneck if any. (Done, 2024/01/20), firefox has good performance improvement.
 
-use shared memory for distributing works, use atomic index to iterated. eliminated postmessage bottleneck if any. (Done, 2024/01/20), firefox has slight performance improvement.
+Cache alignment probably is the key. 

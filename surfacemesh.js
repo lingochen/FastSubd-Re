@@ -135,6 +135,14 @@ function alignCache(byteOffset) {
 }
 
 
+/**
+ * A Point,
+ * @typedef {Struct} Point
+ * @property {number} x - 
+ * @property {number} y 
+ * @property {number} z
+ * @property {number} c - crease, and may pack other attributes.
+ */
 const PointK = {
    x: 0,
    y: 1,
@@ -1753,8 +1761,11 @@ class SurfaceMesh {
          const newBuffer = allocBuffer(totalBytes);
          // set new buffer and copy over if necesary.
          let byteOffset = this._vertices.setBuffer(newBuffer, 0, nVertices);
+         //console.log("offset: " + byteOffset);
          byteOffset = this._hEdges.setBufferAll(newBuffer, byteOffset, nHfEdges, nBoundaries, nWEdges);
+         //console.log("offet: " + byteOffset);
          byteOffset = this._faces.setBuffer(newBuffer, byteOffset, nFaces);
+         //console.log("offset: " + byteOffset);
                       this._holes.setBuffer(newBuffer, byteOffset, nHoles);
       } else { // reserve linear memory separately for dynamic resizing
          this._vertices.setBuffer(null, 0, nVertices);

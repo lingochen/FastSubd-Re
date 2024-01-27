@@ -32,9 +32,9 @@ function loopSubdivide(subd, source) {
    
    // compute blockSize, 
    
-   const blockSize = 8;
+   const blockSize = 64;
    // copy/refine vertex and add middle edge points.
-   tasker.pFor(0, task.vMix.length, blockSize, 'vertexTask');
+   tasker.pFor(0, task.vMix.length, blockSize*4, 'vertexTask');
    // copy/refine the remainder
    tasker.exec(null, 'vertexTaskRemainder');
    

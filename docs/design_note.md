@@ -10,7 +10,7 @@ contiguous sequential array update, (performance)
 
 DirectedEdge Array, (performance, easy update, subdivision)
 
-use ptex/htex 
+use meshcolortexture/ptex/htex.
 
 avoid false sharing
 
@@ -22,10 +22,14 @@ good name, [sane api](api.md)
 
 Limitation/PitFall
 
-directededge must be contiguous without hole or freed space.
+directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.
 
 so we needs flexibility to handle the editing operation, and the underlying data can be optimized and contiguous at will.(@done, 2023/12)
 
+nice to have
+morton order(z-curve) of polygons. better data locality/access 
+
+hierarchical subdivision surface?
 
 
 [UV TexCoord Attribute](uv_texcoord.md)

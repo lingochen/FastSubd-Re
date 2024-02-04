@@ -154,7 +154,7 @@ class MaterialDepot {
          } else {
             size *= 1.5;
          }
-         this._gpu.setBuffer(allocBuffer(this._gpu.structSize()*size), 0, size);
+         this._gpu.setBuffer(allocBuffer(this._gpu.computeBufferSize(size)), 0, size);
       }
       const handle = this._gpu.appendNew();
       // set all texture to WHITE, BLACK?

@@ -139,13 +139,6 @@ class PixelArray {
          return 0;
       }
    }
-   
-   /**
-    * structure's byte length.
-    */
-   structSize() {
-      return this._rec.structStride * this._pixel.byteCount;
-   }
 
    /**
     * get total byte length
@@ -759,12 +752,8 @@ class DoubleBuffer {
       return obj;
    }
    
-   structSize() {
-      return this._bufferA.structSize();  // bufferA and bufferB are the same
-   }
-   
    computeBufferSize(length) {
-      return this._bufferA.computeBufferSize(length);
+      return this._bufferA.computeBufferSize(length);    // bufferA and buuferB are the same
    }
    
    setBuffer(buffer, byteOffset, length) {

@@ -7,7 +7,7 @@
 */
 
 
-import {makeDataTexture, makeDataTexture3D} from './glutil.js';
+import {computeDataTextureDim, makeDataTexture, makeDataTexture3D} from './glutil.js';
 
 /** webgl2 constant. copied only what we needs texturing data. */
 const PixelTypeK = {
@@ -277,6 +277,19 @@ class PixelArray {
       
       // return new byteOffset
       return byteOffset + dataView.byteLength;
+   }
+   
+   /**
+    * compute buffer size that is padded to dataTexture's rect dimension.
+    */
+   computeBufferSize(length) {
+      if (!length) {
+         length = this.length();
+      }
+      
+      const [width, height] = computeDataTextureDim(length, this._rec.structStride);
+
+      return (width * height * this._pixel.byteCount);
    }
 
 /* DELETION:
@@ -748,6 +761,10 @@ class DoubleBuffer {
    
    structSize() {
       return this._bufferA.structSize();  // bufferA and bufferB are the same
+   }
+   
+   computeBufferSize(length) {
+      return this._bufferA.computeBufferSize(length);
    }
    
    setBuffer(buffer, byteOffset, length) {

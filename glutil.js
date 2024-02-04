@@ -334,6 +334,25 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
    return false;
 }
 
+/**
+ * vertical preferred rect.
+ * 
+ */
+function computeDataTextureDim(length, stride) {
+   let height = length;
+   let width = Math.ceil(length / MAX_TEXTURE_SIZE);
+   if (width > 1) {
+      height = Math.ceil(length / width);     // align to texture rect
+   }
+   
+   width *= stride;
+   if (width > MAX_TEXTURE_SIZE) {
+      //width = height = 0;
+      throw("data texture > than MAX_TEXTURE_SIZE: " + width);
+   }
+   
+   return [width, height];
+}
 
 
 export {
@@ -345,6 +364,7 @@ export {
    setWHITE,
    setConstant,
    MAX_TEXTURE_SIZE,
+   computeDataTextureDim,
    createProgram,
    setUniforms,
    updatePullBufferInfo,

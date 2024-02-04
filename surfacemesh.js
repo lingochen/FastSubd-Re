@@ -84,10 +84,10 @@ function totalStructSize(objs, length) {
    let totalByte = 0;
    for (let [key, buffer] of Object.entries(objs)) {
       if (!Array.isArray(buffer)) {
-         totalByte += alignCache(buffer.structSize() * length);
+         totalByte += alignCache(buffer.computeBufferSize(length));
       } else {
          for (let array of buffer) {
-            totalByte += alignCache(array.structSize() * length);
+            totalByte += alignCache(array.computeBufferSize(length));
          }
       }
    }
@@ -1504,14 +1504,14 @@ class HoleArray {
    //
    computeBufferSize(length) {
       if (length) {
-         return this._holes.structSize()*(length+1);     // added sentinel
+         return this._holes.computeBufferSize(length+1);    // added sentinel
       }
       return 0;
    }
    
    setBuffer(bufferInfo, byteOffset, length) {
       if (length) {
-         length++;                                       // remember to add sentinel
+         length++;                                          // remember to add sentinel
       }
       
       if (!bufferInfo) {

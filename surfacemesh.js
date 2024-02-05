@@ -20,7 +20,7 @@
 
 import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, createDynamicProperty2, allocBuffer, freeBuffer} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
-import {MAX_TEXTURE_SIZE} from "./glutil.js";
+import {MAX_TEXTURE_SIZE, computeDataTextureLen} from "./glutil.js";
 
 
 const kExpandSize = 1.5;
@@ -28,7 +28,7 @@ function allocSizeExpand(size) {
    if (size < MAX_TEXTURE_SIZE) {
       return MAX_TEXTURE_SIZE;
    } else {
-      return Math.ceil(size * kExpandSize);
+      return computeDataTextureLen( Math.ceil(size * kExpandSize) );    // padded to dataTexture's dimension.
    }
 }
 
@@ -842,7 +842,7 @@ class HalfEdgeArray {
       if (this._dArray.vertex.capacity() < length) {
          let maxLen = this._dArray.vertex.maxLength();
          maxLen = allocSizeExpand(maxLen+length);
-         this.setBuffer(null, 0, maxLen, Math.floor(maxLen/3*2) );   // TODO: What the optimal wEdge expansion size? 
+         this.setBuffer(null, 0, maxLen, computeDataTextureLen(Math.floor(maxLen/3*2)) );   // TODO: What the optimal wEdge expansion size? 
       }
             
       let handle = [];

@@ -335,8 +335,10 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
 }
 
 /**
- * vertical preferred rect.
- * 
+ * vertical preferred rect texture. compute the (width, height) given an array length and stride
+ * @param {int} length - array length
+ * @param {int} stride - # of pixelElement of the object's structure.
+ * @return {int, int} (width, height) - data texture dimension.
  */
 function computeDataTextureDim(length, stride) {
    let height = length;
@@ -354,6 +356,15 @@ function computeDataTextureDim(length, stride) {
    return [width, height];
 }
 
+/**
+ * given an array length, compute the length that will fitted the dataTexture's rect dimension.
+ * 
+ */
+function computeDataTextureLen(length) {
+   const [width, height] = computeDataTextureDim(length, 1);
+   return (width * height);
+}
+
 
 export {
    makeDataTexture,
@@ -365,6 +376,7 @@ export {
    setConstant,
    MAX_TEXTURE_SIZE,
    computeDataTextureDim,
+   computeDataTextureLen,
    createProgram,
    setUniforms,
    updatePullBufferInfo,

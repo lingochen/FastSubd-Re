@@ -78,17 +78,19 @@ class PixelArray {
    static _createInternal(structSize, channelPrecision, channelCount, internalFormat, pixelFormat) {
       //this._structSize = structSize;
       const pixel = {
-         byteCount: channelPrecision,                                // format's size in byte.
-         channelCount: channelCount,                                 // number of channels per pixel. ie.. (rgba) channels
+         byteCount: channelPrecision,                             // pixelArray type in byte.
+         channelCount: channelCount,                              // number of channels per pixel. ie.. (rgba) channels
          internalFormat, internalFormat,
-         format: pixelFormat,                                        // the real webgl format.
+         format: pixelFormat,                                     // the real webgl format.
       };
+      const stride = Math.ceil(structSize/channelCount);
       const record = {
-         structStride: Math.ceil(structSize/channelCount)*channelCount,   // number of pixels to store a structure.
+         structStride: stride*channelCount,                       // number of pixels to store a structure.
+         pixelStride: stride,
       //this._allocatedStruct = 0;                                   // number of structure allocated.
-         usedSize: 0,                                            // current allocated array in native type
-         gpuSize: 0,                                             // current allocated gpu texture in native type.
-         alteredMin: 0,                                          // in native type
+         usedSize: 0,                                             // current allocated array in native type
+         gpuSize: 0,                                              // current allocated gpu texture in native type.
+         alteredMin: 0,                                           // in native type
          alteredMax: -1,
       }
       //self._set = this._setWithCheck;
@@ -132,8 +134,8 @@ class PixelArray {
     * of slots still available for allocation. negative meant overflow
     */
    capacity() {
-      if (this._blob) {
-         const size = this._rec.used - this._blob.length;
+      if (this._dataView) {
+         const size = this._dataView.length - this._rec.usedSize;
          return (size / this._rec.structStride);
       } else {
          return 0;
@@ -161,12 +163,11 @@ class PixelArray {
     */
    maxLength() {
       if (this._blob) {
-         return (this._blob.length / this._rec.structStride);
+         return this._blob.length;
       } else {
          return 0;
       }
    }
-
 
    /**
     * return typedArray including unused part. unsafed access but no extra runtime cost.
@@ -183,13 +184,19 @@ class PixelArray {
    makeUsedBuffer() {
       return this._dataView.subarray(0, this._rec.usedSize);
    }
+   
+   isValidDataTexture() {
+      const length = this.maxLength();
+      const rectLen = computeDataTextureLen(length);
+      if (length !== rectLen) {
+         throw("dataTexture size not padded to rect(width, height) size");
+      }
+      return true;
+   }
 
    createDataTexture(gl) {
       // make sure dataView is padded toe dataTextureRect dimension.
-      const length = this.length();
-      if (length !== computeDataTextureLen(length)) {
-         throw("dataTexture size not padded to rect(width, height) size");
-      }
+      this.isValidDataTexture();
       const buffer = this.getBuffer();
       const tex = makeDataTexture(gl, buffer, this._pixel.internalFormat, this._pixel.format, this._getType(), this._pixel.channelCount);
       return tex;
@@ -285,9 +292,9 @@ class PixelArray {
          length = this.length();
       }
       
-      const [width, height] = computeDataTextureDim(length, this._rec.structStride);
+      const [width, height] = computeDataTextureDim(length, this._rec.pixelStride);
 
-      return (width * height * this._pixel.byteCount);
+      return (width * height * this._pixel.channelCount * this._pixel.byteCount);
    }
    
    setFill(value) {

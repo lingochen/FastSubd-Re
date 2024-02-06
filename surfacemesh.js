@@ -1751,6 +1751,12 @@ class SurfaceMesh {
     * 
     */
    reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles, isStatic=true) {
+      nVertices = computeDataTextureLen(nVertices);
+      nWEdges = computeDataTextureLen(nWEdges);
+      nHfEdges = computeDataTextureLen(nHfEdges);
+      nBoundaries = computeDataTextureLen(nFaces);
+      nHoles = computeDataTextureLen(nHoles);
+      
       if (isStatic) {
          const totalBytes = this._vertices.computeBufferSize(nVertices)
                           + this._hEdges.computeBufferSizeAll(nHfEdges, nBoundaries, nWEdges)

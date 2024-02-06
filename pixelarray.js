@@ -7,7 +7,7 @@
 */
 
 
-import {computeDataTextureDim, makeDataTexture, makeDataTexture3D} from './glutil.js';
+import {computeDataTextureDim, computeDataTextureLen, makeDataTexture, makeDataTexture3D} from './glutil.js';
 
 /** webgl2 constant. copied only what we needs texturing data. */
 const PixelTypeK = {
@@ -185,6 +185,11 @@ class PixelArray {
    }
 
    createDataTexture(gl) {
+      // make sure dataView is padded toe dataTextureRect dimension.
+      const length = this.length();
+      if (length !== computeDataTextureLen(length)) {
+         throw("dataTexture size not padded to rect(width, height) size");
+      }
       const buffer = this.getBuffer();
       const tex = makeDataTexture(gl, buffer, this._pixel.internalFormat, this._pixel.format, this._getType(), this._pixel.channelCount);
       return tex;
@@ -284,31 +289,6 @@ class PixelArray {
 
       return (width * height * this._pixel.byteCount);
    }
-
-/* DELETION:
-   computeAllocateSize(size) {
-      // allocation align to textureWidth.
-      return Math.ceil(size / MAX_TEXTURE_SIZE) * MAX_TEXTURE_SIZE * this._pixel.channelCount;
-   }
-
-   //
-   // expand by 1.5x of oldSize if not given a newSize.
-   //
-   expand(newSize) {
-      if (!newSize) {   // resize to larger by 1.5x of oldSize
-         newSize = MAX_TEXTURE_SIZE;
-         if (this._blob) {
-            newSize = 1.5 * this._blob.length;
-         }
-      }
-      // allocation
-      const oldBuffer = this._blob;
-      this._blob = this._allocateBuffer(newSize);
-      this._blob.fill(this._fillValue);
-      if (oldBuffer) {
-         this._blob.set(oldBuffer);
-      }
-   } */
    
    setFill(value) {
       this._fillValue = value;

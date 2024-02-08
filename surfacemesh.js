@@ -1745,12 +1745,13 @@ class SurfaceMesh {
       return obj;
    }
    
-   
    /**
     *  reserve pixel array capacity for static mesh. for dynamic reserve individually.
-    * 
+    * @param {int} nVertices - number of vertices
+    * @param {int} nWEdges = number of WhlEdges
     */
    reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles, isStatic=true) {
+      // padded to rectData dimension.
       nVertices = computeDataTextureLen(nVertices);
       nWEdges = computeDataTextureLen(nWEdges);
       nHfEdges = computeDataTextureLen(nHfEdges);

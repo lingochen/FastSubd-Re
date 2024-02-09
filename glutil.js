@@ -139,58 +139,7 @@ function makeDataTexture(gl, internalFormat, format, type, data, length, pixelSt
 };
 
 
-/**
- * @param {int} start - the start of buffer index
- * @param {int} end - the end of buffer index
- */
-function _updateDataTexture(texSubImage, pixelType, start, end) {
-   start = Math.floor(start / pixelType);
-   const startX = start % MAX_TEXTURE_SIZE;
-   const startY = Math.floor(start / MAX_TEXTURE_SIZE);
-   end = Math.floor((end+pixelType-1) / pixelType);  // it should align to pixelSize, no needs for (pixelType-1), but...
-   const endX = end % (MAX_TEXTURE_SIZE);
-   const endY= Math.floor((end-1) / MAX_TEXTURE_SIZE);
-   
-   // now copy data over.
-   // part 1, starting line
-   let yStart = startY;
-   let width = MAX_TEXTURE_SIZE-startX;
-   if ((startX > 0) || (yStart === endY)) {  // must do startLine, cannot merge
-      if (startY === endY) {
-         width = endX - startX;
-         if (width === 0) {
-            width = MAX_TEXTURE_SIZE;
-         }
-      }
-      texSubImage(startX, startY, width, 1);
-      yStart++;
-   }
-    
-   // do middle rectangle if any
-   if (yStart < endY) {
-      width = MAX_TEXTURE_SIZE;
-      let height = endY - yStart;
-      if (endX === MAX_TEXTURE_SIZE) { // merge endline
-         height++;
-      }
-      texSubImage(0, yStart, width, height);
-      yStart += height;
-   }
-      
-   // part 3, end line if any
-   if (yStart === endY) {
-      texSubImage(0, yStart, endX, 1);
-   }
-}
 
-function _dontFilter2D(gl) {
-   // don't do filtering
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);      
-}
 /**
  * update gpu data texture, reflect the change in cpu's data 
  * 
@@ -200,14 +149,11 @@ function updateDataTexture(gl, texID, data, internalFormat, format, type, pixelT
    gl.activeTexture(gl.TEXTURE0);
    gl.bindTexture(gl.TEXTURE_2D, texID);
    
-   // now, copy the data to gpu
    //_dontFilter2D(gl);
-   _updateDataTexture((x, y, width, height)=>{
-            gl.texSubImage2D(gl.TEXTURE_2D, 0,
-               x, y, width, height,
-               format, type, data.subarray(x + y*MAX_TEXTURE_SIZE));
-         },
-         pixelType, start, end);
+   
+   // TODO: copied the change data.
+   
+   
 }
 
 

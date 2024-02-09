@@ -236,8 +236,8 @@ function makeDataTexture3D(gl, internalFormat, format, type, data, length, pixel
    // now copy over to gpu
    for (let i = 0; i < numImages; ++i) {
       gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,
-         0,                         // base image
-         0, 0, 0, width, height, i,
+         0,                            // base image
+         0, 0, 0, width, height, i+1,  // xoffset, yoffset, zoffset, width, height, depth,
          format, type,
          data[i]      
       );

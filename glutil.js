@@ -108,6 +108,7 @@ function drawPullBuffer(gl, program, pullInfo) {
 let MAX_TEXTURE_SIZE = 0;
 function setConstant(gl) {
    MAX_TEXTURE_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 };
 
 
@@ -118,18 +119,18 @@ function makeDataTexture(gl, internalFormat, format, type, data, length, pixelSt
    gl.activeTexture(gl.TEXTURE0);
    gl.bindTexture(gl.TEXTURE_2D, tex);
    
+   
    _dontFilter2D(gl);
    // allocate image
-//   gl.texStorage2D(gl.TEXTURE_2D,
-//     1,                    // 1 level only
-//     internalFormat,
-//     width, height);
+   gl.texStorage2D(gl.TEXTURE_2D,
+     1,                    // 1 level only
+     internalFormat,
+     width, height);
    
    // copy texture
-   gl.texImage2D(gl.TEXTURE_2D,
+   gl.texSubImage2D(gl.TEXTURE_2D,
      0,                    // base image
-     internalFormat,       // format
-     width, height, 0,     // width, height, border(0)
+     0, 0, width, height,  // x, y, width, height,
      format, type,
      data
    );
@@ -234,10 +235,9 @@ function makeDataTexture3D(gl, internalFormat, format, type, data, length, pixel
    );
    // now copy over to gpu
    for (let i = 0; i < numImages; ++i) {
-      gl.texImage3D(gl.TEXTURE_2D_ARRAY,
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY,
          0,                         // base image
-         internalFormat,
-         width, height, i, 0,
+         0, 0, 0, width, height, i,
          format, type,
          data[i]      
       );

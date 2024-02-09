@@ -198,15 +198,16 @@ class PixelArray {
       // make sure dataView is padded toe dataTextureRect dimension.
       this.isValidDataTexture();
       const buffer = this.getBuffer();
-      const tex = makeDataTexture(gl, buffer, this._pixel.internalFormat, this._pixel.format, this._getType(), this._pixel.channelCount);
+      const tex = makeDataTexture(gl, this._pixel.internalFormat, this._pixel.format, this._getType(), buffer, this.maxLength(), this._rec.pixelStride);
       return tex;
    }
    
    getTextureParameter() {
       return {internalFormat: this._pixel.internalFormat,
               format: this._pixel.format,
-              channelCount: this._pixel.channelCount,
               type: this._getType(),
+              length: this.maxLength(),
+              pixelStride: this._rec.pixelStride,
              };
    }
 
@@ -691,7 +692,7 @@ const createDataTexture3D = function(array, gl) {
    for (let uv of array) {
       uvs.push( uv.getBuffer() );
    }
-   const tex = makeDataTexture3D(gl, uvs, param.internalFormat, param.format, param.type, param.channelCount);
+   const tex = makeDataTexture3D(gl, param.internalFormat, param.format, param.type, uvs, param.length, param.pixelStride);
    return tex;
 }
 

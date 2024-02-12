@@ -11,21 +11,50 @@ import {vec3a} from './vec3.js';
 import * as glUtil from './glutil.js';
 
 
-const multiQuadVS = `#version 300 es
+const pullTriVS = `#version 300 es
 precision highp float;
 
-in vec4 a_position;
-in vec4 a_normal;
 
 uniform mat4 u_projection;
 uniform mat4 u_view;
 uniform mat4 u_world;
 
-//uniform sampler2D u_attribute;
+//uniform sampler2D u_faceMat;         // face array provide material id. 
+uniform sampler2D u_vertex;          // HfEdge's origin(vertex) index.
+
+uniform sampler2D u_position;
+uniform sampler2D u_normal;
+uniform sampler2DArray u_uvs;
+//uniform sampler2D u_material;
+
+out vec3 v_normal;
+out vec2 v_texcoord;
+
+ivec2 getPull(int texWidth, int index) {
+   int col = index % texWidth;
+   int row = index / texWidth;
+   return ivec2(col, row);
+}
 
 void main() {
-   int idx = gl_VertexID;
-   int face = gl_InstanceID;
+   int texWidth = textureSize(u_vertex, 0).x;
+   
+   v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, gl_VertexID), 0), 0).xy;   
+
+   int origin = texelFetch(u_vertex, getPull(texWidth, gl_VertexID), 0);
+   
+   texWidth = textureSize(u_position, 0).x;
+   vec3 pos = texelFetch(u_position, getPull(texWidth, origin), 0).xyz;
+   vec4 a_position = vec4(pos, 1);
+   
+   //texWidth = textureSize(u_normal, 0).x;
+   vec3 a_normal = texelFetch(u_normal, getPull(texWidth, origin), 0).xyz;
+   
+   //int face = gl_VertexID / 3;       // per face material
+   
+   gl_Position = u_projection * u_view * u_world * a_position;
+
+   v_normal = mat3(u_world) * a_normal;
 }
 `;
 
@@ -115,6 +144,7 @@ function initMain(gl) {
    info.gl = gl;
    // compiles and links the shaders
    info.meshProgram = glUtil.createProgram(gl, pullVS, pullFS);
+   //glUtil.createProgram(gl, pullTriVS, pullFS);
    
    // create MaterialDepot.
    info.depot = new MaterialDepot(gl);

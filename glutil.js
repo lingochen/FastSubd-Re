@@ -112,6 +112,15 @@ function setConstant(gl) {
 };
 
 
+function _dontFilter2D(gl) {
+   // don't do filtering
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);      
+}
+
 function makeDataTexture(gl, internalFormat, format, type, data, length, pixelStride) {
    let [width, height] = computeDataTextureDim(length, pixelStride);
 

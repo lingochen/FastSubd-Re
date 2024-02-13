@@ -736,7 +736,11 @@ class HalfEdgeArray {
          return true;
       }
       return false;
-   }   
+   }
+   
+   createVertexTexture(gl) {
+       return this._dArray.vertex.createDataTexture(gl);
+   }
 
    createPropertyTexture(name, gl) {
       const prop = this._prop[name];
@@ -1197,7 +1201,7 @@ class HalfEdgeArray {
    }
    
    length() {
-      return this._dArray.wEdge.length();      // what about freed? 
+      return this._dArray.wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
    }
    
    lengthW() {
@@ -1815,6 +1819,7 @@ class SurfaceMesh {
       
       const pullVertex = this.f.makePullBuffer(this._vertices);
    
+      const vertexTexture = this.h.createVertexTexture(gl);
       const positionTexture = this.v.createPositionTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
       const uvsTexture = this.h.createPropertyTexture('uvs', gl);
@@ -1824,7 +1829,9 @@ class SurfaceMesh {
          materials.push( this._material.depot.getUniforms(handle) );
       }
       
-      return {pullVertex, 
+      return {pullVertex,
+              pullLength: this.h.length(),
+              vertex: {type:"isampler2D", value: vertexTexture},
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},
               uvs: {type: "sampler2DArray", value: uvsTexture},

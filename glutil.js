@@ -28,6 +28,11 @@ function setUniform(gl, setter, uniformInfo) {
          gl.bindTexture(gl.TEXTURE_2D, uniformInfo.value);
          gl.uniform1i(setter.loc, setter.unit);
       break;
+      case "isampler2D":
+         gl.activeTexture(gl.TEXTURE0 + setter.unit);
+         gl.bindTexture(gl.TEXTURE_2D, uniformInfo.value);
+         gl.uniform1i(setter.loc, setter.unit);
+      break;
       case "sampler2DArray":
          gl.activeTexture(gl.TEXTURE0 + setter.unit);
          gl.bindTexture(gl.TEXTURE_2D_ARRAY, uniformInfo.value);
@@ -45,7 +50,7 @@ function setUniforms(gl, programInfo, uniformInfos) {
          const loc = gl.getUniformLocation(programInfo.program, key);
          if (loc !== null) {
             locations[key] = {loc};
-            if ((info.type === "sampler2D") || (info.type === "sampler2DArray")) {
+            if ((info.type === "isampler2D") || (info.type === "sampler2D") || (info.type === "sampler2DArray")) {
                locations[key].unit = programInfo.textureUnit++;
             }
          }
@@ -101,6 +106,10 @@ function drawPullBuffer(gl, program, pullInfo) {
    gl.bindAttribLocation(program.program, 0, "a_pullVertex");
    // now draw, with size
    gl.drawArrays(gl.TRIANGLES, 0, pullInfo.count);
+}
+
+function drawPull(gl, program, pullLength) {
+   gl.drawArrays(gl.TRIANGLES, 0, pullLength);
 }
 
 
@@ -328,5 +337,6 @@ export {
    setUniforms,
    updatePullBufferInfo,
    drawPullBuffer,
+   drawPull,
    resizeCanvasToDisplaySize,
 }

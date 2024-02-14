@@ -18,6 +18,8 @@ parallel implementation (gpu), [cpu](multithread.md)
 
 wasm, (sharedtypearray is slow? )
 
+rethink pull shader [pullShader](pullshader.md)
+
 good name, [sane api](api.md)
 
 [morton order(z-curve)](morton.md) of polygons, better spatial data locality/access.

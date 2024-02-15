@@ -91,7 +91,7 @@ function createProgram(gl, vs, fs) {
 
 
 function drawPull(gl, program, pullLength) {
-   gl.drawArrays(gl.TRIANGLES, 0, pullLength);
+   gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, Math.floor(pullLength/3));
 }
 
 

@@ -38,11 +38,12 @@ ivec2 getPull(int texWidth, int index) {
 }
 
 void main() {
+   int vertexID = gl_VertexID + gl_InstanceID*3;
    int texWidth = textureSize(u_vertex, 0).x;
    
-   v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, gl_VertexID), 0), 0).xy;   
+   v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, vertexID), 0), 0).xy;   
 
-   int origin = texelFetch(u_vertex, getPull(texWidth, gl_VertexID), 0).x;
+   int origin = texelFetch(u_vertex, getPull(texWidth, vertexID), 0).x;
    
    texWidth = textureSize(u_position, 0).x;
    vec3 tmp = texelFetch(u_position, getPull(texWidth, origin), 0).xyz;

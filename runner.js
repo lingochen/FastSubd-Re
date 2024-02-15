@@ -60,49 +60,6 @@ void main() {
 `;
 
 
-const pullVS = `#version 300 es
-precision highp float;
-precision highp sampler2DArray;
-
-in ivec3 a_pullVertex;
-
-uniform mat4 u_projection;
-uniform mat4 u_view;
-uniform mat4 u_world;
-
-//uniform int u_currentMat;
-
-uniform sampler2D u_position;
-uniform sampler2D u_normal;
-
-uniform sampler2DArray u_uvs;
-
-out vec3 v_normal;
-out vec2 v_texcoord;
-
-ivec2 getPull(int texWidth, int index) {
-   int col = index % texWidth;
-   int row = index / texWidth;
-   return ivec2(col, row);
-}
-
-
-
-void main() {
-   int texWidth = textureSize(u_position, 0).x;
-   vec3 temp = texelFetch(u_position, getPull(texWidth, a_pullVertex.y), 0).xyz;
-   vec4 a_position = vec4(temp, 1);
-   vec3 a_normal = texelFetch(u_normal, getPull(texWidth, a_pullVertex.y), 0).xyz;
-
-   gl_Position = u_projection * u_view * u_world * a_position;
-
-   v_normal = mat3(u_world) * a_normal;
-   
-   v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, a_pullVertex.x), 0), 0).xy;
-}
-
-
-`;
 
 const pullFS = `#version 300 es
 precision highp float;
@@ -145,7 +102,6 @@ function initMain(gl) {
 
    info.gl = gl;
    // compiles and links the shaders
-   //info.meshProgram = glUtil.createProgram(gl, pullVS, pullFS);
    info.meshProgram = glUtil.createProgram(gl, pullTriVS, pullFS);
    
    // create MaterialDepot.
@@ -182,7 +138,6 @@ const renderData = {
 let renderOn = false;
 function setRenderData(source) {
    const data = source.makePullBuffer(info.gl);
-   //info.drawBuffer = glUtil.updatePullBufferInfo(info.gl, info.buffer, data.pullVertex);
    info.pullLength = data.pullLength;
 
    // data
@@ -257,7 +212,6 @@ function render(time) {
          glUtil.setUniforms(info.gl, info.meshProgram, current);
       
          // calls gl.drawArrays or gl.drawElements
-         //glUtil.drawPullBuffer(info.gl, info.meshProgram, info.drawBuffer);
          glUtil.drawPull(info.gl, info.meshProgram, info.pullLength);
       }
  

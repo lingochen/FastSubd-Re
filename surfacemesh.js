@@ -1816,8 +1816,6 @@ class SurfaceMesh {
    
    makePullBuffer(gl) {
       //this.v.computeNormal(this.h);
-      
-      const pullVertex = this.f.makePullBuffer(this._vertices);
    
       const vertexTexture = this.h.createVertexTexture(gl);
       const positionTexture = this.v.createPositionTexture(gl);
@@ -1829,8 +1827,7 @@ class SurfaceMesh {
          materials.push( this._material.depot.getUniforms(handle) );
       }
       
-      return {pullVertex,
-              pullLength: this.h.length(),
+      return {pullLength: this.h.length(),
               vertex: {type:"isampler2D", value: vertexTexture},
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},

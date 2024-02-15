@@ -108,27 +108,6 @@ class TriangleArray extends FaceArray {
       return super.getDehydrate(obj);
    } */
    
-   //
-   // triangulate polygon using fan-like method. (simple, flawed but good enough for our case)
-   // list of triangles of pull vertex - (hEdgeIndex, ptIndex, materialIndex} - pull vertex.
-   //
-   makePullBuffer(vertices) {
-      const dEdges = this._mesh.h;
-      let current = 0;
-      const triangles = [];
-      for (let polygon of this) {
-         let material = this.material(polygon);
- 
-         triangles.push( current, dEdges.origin(current), material );
-         current++;
-         triangles.push( current, dEdges.origin(current), material );
-         current++;
-         triangles.push( current, dEdges.origin(current), material );
-         current++;
-      }
-      
-      return new Int32Array(triangles);
-   }
 
    // Iterator for the HalfEdge connecting to the triangle.
    * halfEdgeLoop(face) {

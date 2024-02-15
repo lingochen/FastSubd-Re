@@ -90,24 +90,6 @@ function createProgram(gl, vs, fs) {
 }
 
 
-function updatePullBufferInfo(gl, buffer, pullBuffer) {
-   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-   gl.bufferData(gl.ARRAY_BUFFER, pullBuffer, gl.STATIC_DRAW);
-   
-   // return with triangle count
-   return {buffer, count: pullBuffer.length/3};    // 3 items per vertex.
-}
-
-function drawPullBuffer(gl, program, pullInfo) {
-   const loc = gl.getAttribLocation(program.program, "a_pullVertex");
-   gl.bindBuffer(gl.ARRAY_BUFFER, pullInfo.buffer);
-   gl.vertexAttribIPointer(0, 3, gl.INT, 3*4, 0);
-   gl.enableVertexAttribArray(0);
-   gl.bindAttribLocation(program.program, 0, "a_pullVertex");
-   // now draw, with size
-   gl.drawArrays(gl.TRIANGLES, 0, pullInfo.count);
-}
-
 function drawPull(gl, program, pullLength) {
    gl.drawArrays(gl.TRIANGLES, 0, pullLength);
 }
@@ -335,8 +317,6 @@ export {
    computeDataTextureLen,
    createProgram,
    setUniforms,
-   updatePullBufferInfo,
-   drawPullBuffer,
    drawPull,
    resizeCanvasToDisplaySize,
 }

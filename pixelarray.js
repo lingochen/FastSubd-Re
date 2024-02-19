@@ -1,7 +1,10 @@
 /**
  *  mainly to provide Uint32Array and Float32Array for use.
  * 2023/11/15 - backing buffer changed to be pluggable, either sharedarray or wasm sharable memory.
- * also eliminated auto capacity growth, backing buffer managed by outside 
+ * backing buffer can be managed by outside caller, but still provide the option of auto expansion.
+ * 
+ * 2024/02/15 - add the ability to prepend before index Zero. using negative int to access it.
+ * 
  * @module PixelArray
  * 
 */
@@ -58,9 +61,14 @@ class PixelArray {
    constructor(pixel, record) {
       this._pixel = pixel;
       this._rec = record;
-      this._blob = null;               // bufferInfo, byteOffset, length
+      this._blob = null;                     // bufferInfo, byteOffset, length
       this._dataView = null;
-      this._set = this._setNoCheck;    // NoCheck as default. Only turn on this._setWithCheck when necessary;
+      this._indexPos = this._alteredNotSet;  // NoCheck as default. Only turn on this._setWithCheck when necessary;
+      this._altered = {                      // position in native types
+         min: [0, 0],                        // 0th is front, 1st is back
+         max: [-1, -1],
+      }
+      // altered min
       this._fillValue = 0;
    }
    
@@ -88,11 +96,10 @@ class PixelArray {
          structStride: stride*channelCount,                       // number of pixels to store a structure.
          pixelStride: stride,
       //this._allocatedStruct = 0;                                   // number of structure allocated.
+         gpuSize: 0,                                              // current allocated gpu texture in native type. total size
          usedSize: 0,                                             // current allocated array in native type
-         gpuSize: 0,                                              // current allocated gpu texture in native type.
-         alteredMin: 0,                                           // in native type
-         alteredMax: -1,
-      }
+         usedSizePre: 0,                                          // allocated array in front, before Zero, (in implementation, start at back end of array)
+      };
       //self._set = this._setWithCheck;
       return [pixel, record];
    }
@@ -135,7 +142,7 @@ class PixelArray {
     */
    capacity() {
       if (this._dataView) {
-         const size = this._dataView.length - this._rec.usedSize;
+         const size = this._dataView.length - this._rec.usedSize - this._rec.usedSizePre;
          return (size / this._rec.structStride);
       } else {
          return 0;
@@ -147,7 +154,7 @@ class PixelArray {
     * @returns {number} - total used bytes.
     */
    byteLength() {
-      return this._rec.usedSize * this._pixel.byteCount;
+      return (this._rec.usedSize+this._rec.usedSizePre) * this._pixel.byteCount;
    }
    
    /**
@@ -175,14 +182,6 @@ class PixelArray {
     */
    getBuffer() {
       return this._dataView;
-   }
-   
-   /**
-    * return only the current used part of typedArray. safe access, creating a new typedArray, slight runtime cost.
-    * @returns {typedArray} - subarray of currently used typedArray 
-    */
-   makeUsedBuffer() {
-      return this._dataView.subarray(0, this._rec.usedSize);
    }
    
    isValidDataTexture() {
@@ -216,7 +215,7 @@ class PixelArray {
     * aligned to pixel, much easier to reason about.
     * @returns {Object} - return {offset, subArray} of current changed typedArray.
     */
-   getChanged() {
+/*   getChanged() {
       let start = Math.floor(this._rec.alteredMin/this._rec.structStride) * this._rec.structStride;
       let end =  (Math.floor(this._rec.alteredMax/this._rec.structStride)+1) * this._rec.structStride;
       return {byteOffset: start*this._pixel.byteCount,
@@ -230,7 +229,7 @@ class PixelArray {
          ret.end =  (Math.floor(this._rec.alteredMax/formatChannel)+1) * formatChannel;
       }
       return ret;
-   }
+   }*/
 
    //
    // delegate to appendRangeNew
@@ -258,6 +257,13 @@ class PixelArray {
       this._rec.usedSize -= this._rec.structStride * size;
       // return new end index
       return this._rec.useSize / this._rec.structStride;
+   }
+   
+   /**
+    *TODO: 
+    */
+   shrinkPre(size) {
+   
    }
    
    /**
@@ -300,26 +306,43 @@ class PixelArray {
    
    setFill(value) {
       this._fillValue = value;
-      this._dataView.fill(this._fillValue);
+      this._dataView?.fill(this._fillValue);
    }
    
    addToVec2(data, index, field) {
       index = index * this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
       data[0] += this._get(index);
-      data[1] += this._get(index+1);
+      data[1] += this._dataView[index+1];
       return data;
    }
       
    _get(index) {
       return this._dataView[index];
    }
+   
+   _set(index, newValue) {
+      this._dataView[index] = newValue;
+   }
 
+   /*
+    * use at() to handle wrap around.
+    */
    get(index, field) {
-      return this._dataView[index*this._rec.structStride + field];
+      index = index*this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
+      return this._get(index);
    }
 
    getVec2(index, field, data) {
       index = index * this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
       data[0] = this._get(index);
       data[1] = this._get(index+1);
       return data;
@@ -327,6 +350,9 @@ class PixelArray {
    
    getVec3(index, field, data) {
       index = index * this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
       data[0] = this._get(index);
       data[1] = this._get(index+1);
       data[2] = this._get(index+2);
@@ -335,6 +361,9 @@ class PixelArray {
    
    getVec4(index, field, data) {
       index = index * this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
       data[0] = this._get(index);
       data[1] = this._get(index+1);
       data[2] = this._get(index+2);
@@ -342,85 +371,80 @@ class PixelArray {
       return data;
    }
 
-   _setValues(index, array) {
-      this._dataView.set(array, index);
-      return true;
-   }
-   
-   _setNoCheck(index, newValue) {
-      this._dataView[index] = newValue;
-      return true;
-   }
-   
-   _setWithCheck(index, newValue) {
-      if (this._dataView[index] !== newValue) {
-         this._dataView[index] = newValue;
-         if (index < this._rec.alteredMin) {
-            this._rec.alteredMin = index;
-         }
-         if (index > this._rec.alteredMax) {
-            this._rec.alteredMax = index;
-         }
-         return true;
-      }
-      return false;
-   }
-
    set(index, field, newValue) {
-      index = index * this._rec.structStride + field;
-      return this._set(index, newValue);
+      index = this._indexPos(index, field, 1);
+      this._set(index, newValue);
+      return newValue;
    }
    
    setVec2(index, field, data) {
-      index = index * this._rec.structStride + field;
-      let ret = this._set(index, data[0]);            // TODO: is it better to use bitwise (!) ?
-      ret = this._set(index+1, data[1]) || ret;
-      return ret;
+      index = this._indexPos(index, field, 2);
+      this._set(index, data[0]);                // NOTE: we don't use set because the data might be larger than 2 data.
+      this._set(index+1, data[1]);
+      return data;
    }
    
    setVec3(index, field, data) {
-      index = index * this._rec.structStride + field;
-      let ret = this._set(index, data[0]);
-      ret = this._set(index+1, data[1]) || ret;
-      ret = this._set(index+2, data[2]) || ret;
-      return ret;
+      index = this._indexPos(index, field, 3);
+      this._set(index, data[0]);
+      this._set(index+1, data[1]);
+      this._set(index+2, data[2]);
+      return data;
    }
    
    setVec4(index, field, data) {
-      index = index * this._rec.structStride + field;
-      let ret = this._set(index, data[0]);
-      ret = this._set(index+1, data[1]) || ret;
-      ret = this._set(index+2, data[2]) || ret;
-      ret = this._set(index+3, data[3]) || ret;
-      return ret;
+      index = this._indexPos(index, field, 4);
+      this._set(index, data[0]);
+      this._set(index+1, data[1]);
+      this._set(index+2, data[2]);
+      this._set(index+3, data[3]);
+      return data;
    }
    
-   _setCheckOn() {
-      this._set = this._setWithCheck;
+   _setAlteredOn() {
+      this._indexPos = this._alteredSet;
    }  
    
-   _setCheckOff() {
-      this._set = this._setNoCheck;
+   _setAlteredOff() {
+      this._indexPos = this._alteredNotSet;
    }
 
    /**
     * after copying memory to gpu, reset the alteredXXX.
     */
-   _resetCounter() {
-      this._rec.alteredMin = this._blob ? this._blob.length : 0;
-      this._rec.alteredMax = -1;
+   _resetAlteredCounter() {
+      this._altered.minFront = this._altered.minBack = this._blob ? this._blob.length : 0;
+      this._altered.maxFront = this._altered.maxBack = -1;
    }
 
-   _resetLength() {
-      this._rec.gpuSize = this._rec.usedSize;
-   };
-
    isAltered() {
-      return (this._rec.alteredMin <= this._rec.alteredMax);
+      return (this._altered.min[0] <= this._altered.max[1]) ||
+              (this._altered.min[1] <= this._altered.max[1]);
    };
-
-   isLengthAltered() {
-      return (this._rec.gpuSize !== this._rec.usedSize);
+   
+   _alteredNotSet(index, field, length) {
+      index = index * this._rec.structStride + field;
+      if (index < 0) {
+         index += this._dataView.length;
+      }
+      return index;
+   }
+   
+   _alteredSet(index, field, length) {
+      index = index * this._rec.structStride + field;
+      let altId = 0;
+      if (index < 0) {
+         index += this._dataView.length;
+         altId = 1;
+      }
+      if (index < this._altered.min[altId]) {
+         this._altered.min[altId] = index;
+      } 
+      let indexEnd = index + length;
+      if (indexEnd > this._altered.max[altId]) {
+         this._altered.max[altId] = indexEnd;
+      }
+      return index;
    }
 }
 
@@ -601,19 +625,11 @@ class Float16PixelArray extends PixelArray {
    }
    
    _get(index) {
-      return fromHalf( super._get(index) );
+      return fromHalf( this._dataView[index] );
    }
    
-   get(index, field) {
-      return fromHalf( super.get(index, field) );
-   }
-   
-   _setNoCheck(index, newValue) {
-      return super._setNoCheck(index, toHalf(newValue) );
-   }
-   
-   _setWithCheck(index, newValue) {
-      return super._setWithCheck(index, toHalf(newValue) );
+   _set(index, newValue) {
+      this._dataView[index] = toHalf(newValue);
    }
 }
 

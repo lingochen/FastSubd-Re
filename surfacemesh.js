@@ -302,10 +302,6 @@ class VertexArray {
       return this._array.normal.createDataTexture(gl);
    }
    
-   makePositionBuffer() {
-      return this._array.pt.makeUsedBuffer();
-   }
-   
    positionBuffer() {
       return this._array.pt.getBuffer();
    }

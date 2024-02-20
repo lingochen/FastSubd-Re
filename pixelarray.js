@@ -328,7 +328,8 @@ class PixelArray {
    }
 
    /*
-    * use at() to handle wrap around.
+    * let _get() which is override in Float16, handle getting the data,
+    * get() only compute the real index position. 
     */
    get(index, field) {
       index = index*this._rec.structStride + field;

@@ -1205,7 +1205,7 @@ class HalfEdgeArray {
    }
    
    lengthH() {
-      return this._hArray.wEdge.length();
+      return (this._hArray.wEdge.length() - this._fmm.hArray.size);
    }
 
    sanityCheck() {

@@ -21,7 +21,6 @@ setBuffer() function for allocating memory buffer. either dynamic or static.
 
 pixelmemory stacked vertically in gpu because update become simpler for partial upload to GPU. (@done, 2024/02/09)
 
-TODO:
-eliminated DoubleBuffer, let negative ptr start from end of bufferA, reuse the same buffer. needs to rewrite shader code too?
+<s> eliminated DoubleBuffer, let negative ptr start from end of bufferA, reuse the same buffer. needs to rewrite shader code too? </s> Just eliminate DoubleBuffer, CC subdivision won't mixed boundary edge and triangle edge. (2024/02/20)
 
 checked if memory alignment really cached aligned.

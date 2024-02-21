@@ -12,9 +12,7 @@
 
 - <s>[dynamic properties](api_dynamicattribute.md) support</s> @done (2023/10/05)
 
-- Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)
-
-- using [wasm](dwasm.md) to do parallel subdivision. Use wasm with D language.
+- <s>Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)</s> @done (2024/02/20)
 
 - [MeshColors PatchTexture](meshcolors.md)
 
@@ -26,9 +24,11 @@
 
 - Complete PBR material support and rendering.
 
+- using [wasm](dwasm.md) to do parallel subdivision. Use wasm with D language.
+
 - Displaced Subdivision Surface?
 
-- webgpu compute shader.
+- webgpu compute shader?
 
-- adaptive subdivision using mesh shader? another project?
+- adaptive subdivision using compute shader. compute subdivisions then compute the adpative lod.
 

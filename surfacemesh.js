@@ -1193,7 +1193,7 @@ class HalfEdgeArray {
    }
    
    stat() {
-      return "WingedEdge Count: " + this.lengthW() + ";\nDirectedEdge Count: " + this.length() + ";\n";
+      return "WholeEdge Count: " + this.lengthW() + ";\nDirectedEdge Count: " + this.length() + ";\n";
    }
    
    length() {

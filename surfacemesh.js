@@ -18,7 +18,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, createDynamicProperty2, allocBuffer, freeBuffer} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, allocBuffer, freeBuffer} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {MAX_TEXTURE_SIZE, computeDataTextureLen} from "./glutil.js";
 
@@ -104,22 +104,6 @@ function setBufferAll(objs, bufferInfo, byteOffset, length) {
       } else {
          for (let array of buffer) {
             byteOffset = alignCache(array.setBuffer(bufferInfo, byteOffset, length));
-         }
-      }
-   }
-   return byteOffset;
-}
-
-/**
- * iterate over the array's DoubleBuffer, setBuffer accordingly.
- */
-function setBufferAllB(objs, bufferInfo, byteOffset, length) {
-   for (let [key, dBuffer] of Object.entries(objs)) {
-      if (!Array.isArray(dBuffer)){
-         byteOffset = alignCache(dBuffer.setBufferB(bufferInfo, byteOffset, length));
-      } else {
-         for (let array of dBuffer) {
-            byteOffset = alignCache(array.setBufferB(bufferInfo, byteOffset, length));
          }
       }
    }
@@ -648,8 +632,7 @@ class HalfEdgeArray {
    }
    
    computeBufferSizeB(length) {
-      return totalStructSize(this._hArray, length)
-            + totalStructSize(this._prop, length);    //structA/B size are the same
+      return totalStructSize(this._hArray, length);
    }
    
    computeBufferSizeW(length) {
@@ -681,9 +664,7 @@ class HalfEdgeArray {
          byteOffset = 0;
       }
       
-      byteOffset = setBufferAll(this._hArray, bufferInfo, byteOffset, length);
-      
-      return setBufferAllB(this._prop, bufferInfo, byteOffset, length);
+      return setBufferAll(this._hArray, bufferInfo, byteOffset, length);
    }
    
    setBufferW(bufferInfo, byteOffset, length) {
@@ -711,7 +692,7 @@ class HalfEdgeArray {
       //if (isValidVarName(name)) {
          if (this._prop[name] === undefined) { // don't already exist
             // create DynamicProperty for accessing data
-            this._prop[name] = createDynamicProperty2(type, this.length());
+            this._prop[name] = createDynamicProperty(type, this.length());
             return this._prop[name];
          }
       //}

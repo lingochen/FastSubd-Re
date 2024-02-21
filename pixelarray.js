@@ -733,90 +733,6 @@ function alignCache(byteOffset) {
 }
 
 
-/**
- * TODO: deprecated class, to be removed later when we implemented front/back deque like pixelarray for handling negative index.
- */
-class DoubleBuffer {
-   constructor(buffer, buffer2) {
-      this._bufferA = buffer;
-      this._bufferB = buffer2;
-   }
-   
-   static dummy = PixelArray.derived.set(this.name, this);   
-      
-   static rehydrate(self) {
-      const bufferA = rehydrateBuffer(self._bufferA);
-      const bufferB = rehydrateBuffer(self._bufferB);
-      return new DoubleBuffer(bufferA, bufferB);
-   }
-
-   getDehydrate(obj) {
-      obj.className = this.constructor.name;
-      obj._bufferA = this._bufferA.getDehydrate({});
-      obj._bufferB = this._bufferB.getDehydrate({});
-      return obj;
-   }
-   
-   computeBufferSize(length) {
-      return this._bufferA.computeBufferSize(length);    // bufferA and buuferB are the same
-   }
-   
-   setBuffer(buffer, byteOffset, length) {
-      return this._bufferA.setBuffer(buffer, byteOffset, length);
-      //return this._bufferB.setBuffer(buffer, byteOffset, bLength);
-   }
-   
-   setBufferB(buffer, byteOffset, length) {
-      return this._bufferB.setBuffer(buffer, byteOffset, length);
-   }
-   
-   appendRangeNew(size) {
-      return this._bufferA.appendRangeNew(size);
-   }
-   
-   getTextureParameter() {
-      return this._bufferA.getTextureParameter();   
-   }
-   
-   get(handle, offset) {
-      if (handle < 0) {
-         return this._bufferB.get(-(handle+1), offset);
-      } else {
-         return this._bufferA.get(handle, offset);
-      }
-   }
-   
-   getVec2(handle, offset, vec) {
-      if (handle < 0) {
-         return this._bufferB.getVec2(-(handle+1), offset, vec);
-      } else {
-         return this._bufferA.getVec2(handle, offset, vec);
-      }
-   }
-   
-   set(handle, offset, value) {
-      if (handle < 0) {
-         return this._bufferB.set(-(handle+1), offset, value);
-      } else {
-         return this._bufferA.set(handle, offset, value);
-      }
-   }
-   
-   setVec2(handle, offset, vec) {
-      if (handle < 0) {
-         return this._bufferB.setVec2(-(handle+1), offset, vec);
-      } else {
-         return this._bufferA.setVec2(handle, offset, vec);
-      }
-   }
-   
-   getBuffer() {
-      //return [this._bufferA.getBuffer(), this._bufferB.getBuffer()];
-      return this._bufferA.getBuffer();
-   }
-}
-
-
 //
 // type = {className, fields, sizeOf, numberOfChannel, initialSize}
 //
@@ -884,23 +800,6 @@ function createDynamicProperty(type, size) {
    }
 }
 
-function createDynamicProperty2(type, size, size2) {
-   const array = [];
-   const length = type.arraySize ? type.arraySize : 1;
-   for (let i = 0; i < length; ++i) {
-      const buffer = createTextureBuffer(type, size);
-      const buffer2 = createTextureBuffer(type, size2);
-      const prop = new DoubleBuffer(buffer, buffer2);
-      addProp(prop, type.fields);
-      array.push(prop);
-   }
-   if (type.arraySize === undefined) {
-      return array[0];
-   } else {
-      return array;
-   }
-}
-
 /**
  * eventually transition to WebAssembly linear memory
  */
@@ -924,7 +823,6 @@ export {
    rehydrateBuffer,
    createDataTexture3D,
    createDynamicProperty,
-   createDynamicProperty2,
    allocBuffer,
    freeBuffer,
 }

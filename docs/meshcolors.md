@@ -6,7 +6,7 @@ Although [Htex](https://onrendering.com/) by Jonathan Dupuy is elegant for Catmu
 
 We don't want uv coordinate because of seam and duplicate vertex problems.
 
-Mesh Colors with bindless textures give us. (According to Cem Yuksel)
+Mesh Color Patch Texture give us. (According to Cem Yuksel)
 
 - No mapping! (implicit uv mapping)
 - Local resolution readjustment
@@ -19,7 +19,28 @@ uv mapping is one of the most wasteful time sinks in asset creation.  No mapping
 
 Implementation detail
 
-tried to fit 2 triangle together as a quad if the texture is continuous. map one quad to patch texture.
-fit one triangle to one patch texture if no friend triangle is founded.
+tried to fit 2 triangle together to form a quad then map the quad to patch texture.
+fit one triangle to one patch texture if no good pair of triangle is founded.
+quadrangulation should be simple. Round the triangle pair with the best shape, which is as rectangle as possible, minimized slanting.
 
-triangle face index to patch texture's left or right triangle patch. (odd number to left, even number to right).
+triangle index to each Mesh Colors Patch.
+
+Implementation Steps:
+
+color material color working. shader code needed too.
+
+triangles in checkbox color pattern, so we can see triangles?
+
+pair triangles to form quad.
+
+quads in checkbox color pattern, so we can see quad pairing.
+
+compute the size of each quad/tri patch occupy. binned to sizes.
+
+render quad/tri to texture. packs and bins to one big texture.
+
+render mip-mapped textures. packs each level to one texture.
+
+show the packed textures.
+
+finally, render model with the new Mesh Colors Patch Texture.

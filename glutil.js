@@ -59,7 +59,7 @@ function setUniforms(gl, programInfo, uniformInfos) {
       if (locations[key]) {
          setUniform(gl, locations[key], info);
       } else {
-         console.log("no uniform: " + key);
+         console.log("no uniform: " + key + " used in this shader");
       }
    }
 }

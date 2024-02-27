@@ -80,8 +80,8 @@ function textureTypes() {
    return ['baseColorTexture', "roughnessTexture", 'normalTexture', 'occlusionTexture', "emissionTexture", ];
 }
 
-// https://github.com/AnalyticalGraphicsInc/obj2gltf
 /**
+  * https://github.com/AnalyticalGraphicsInc/obj2gltf
   * convert rgb to luminance
  */
 function luminance(rgb) {

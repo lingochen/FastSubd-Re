@@ -77,11 +77,11 @@ out vec4 outColor;
 
 void main () {
   
-  outColor = texture(u_baseColorTexture, v_texcoord);  
+  //outColor = texture(u_baseColorTexture, v_texcoord);  
 
   vec3 normal = normalize(v_normal);
   float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
-  outColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a) * outColor;
+  outColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a); // * outColor;
 
 }
 `;
@@ -189,7 +189,7 @@ function render(time) {
        u_projection: {type: "mat4", value: projection},
        u_position: renderData.position,
        //u_attribute: renderData.attribute,
-       u_uvs: renderData.uvs,
+       //u_uvs: renderData.uvs,
        u_vertex: renderData.vertex,
      };
  
@@ -207,14 +207,14 @@ function render(time) {
        u_diffuse: {type: "vec4", value: [1, 0.7, 0.5, 1]},
      });
  
-      for (let material of renderData.materials) {
+      //for (let material of renderData.materials) {
          // setup baseColorTexture
-         let current = material();
-         glUtil.setUniforms(info.gl, info.meshProgram, current);
+      //   let current = material();
+      //   glUtil.setUniforms(info.gl, info.meshProgram, current);
       
          // calls gl.drawArrays or gl.drawElements
          glUtil.drawPull(info.gl, info.meshProgram, info.pullLength);
-      }
+      //}
  
      requestAnimationFrame(render);
 }

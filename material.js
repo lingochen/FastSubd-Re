@@ -38,16 +38,6 @@ function defaultPBR() {
             metallic: 0.1,                                    // float, 0-1.0
             opacity: 1,                                       // float, 0-1.0
             emission: hexToRGB("#000000"),               // rgb, intensity
-/*            baseColorTexture: 0,
-            roughnessTexture: 0,
-            normalTexture: 0,
-            occlusionTexture: 0,
-            emissionTexture: 0,
-            baseColorTexcoord: 0,                              // uv channel # for texCoord
-            roughnessTexcoord: 0,
-            normalTexcoord: 0,
-            occlusionTexcoord: 0,
-            emissionTexcoord: 0 */
           };
 }
 
@@ -58,19 +48,8 @@ const PBRK = {
    roughness: 3,
    emission: 4,
    metallic: 7,                                                      
-   opacity: 8,                                    
-
-   baseColorTexture: 10,                            // color textre
-   baseColorTexcoord: 11,                          // uv channel # for texCoord, TODO: packed together with texture? 8 bit enough?  
-   roughnessTexture: 12,
-   roughnessTexcoord: 13,
-   normalTexture: 14,
-   normalTexcoord: 15,   
-   occlusionTexture: 16,
-   occlusionTexcoord: 17,   
-   emissionTexture: 18,
-   emissionTexcoord: 19,
-   sizeof: 20,
+   opacity: 8,
+   sizeOf: 9,
 };
 /**
  * PhysicallyBasedMaterial
@@ -120,12 +99,12 @@ function blinnPhongToPBR(material) {
 class MaterialDepot {
    constructor(gl) {
       glUtil.setConstant(gl);
-      this._gpu = Float32PixelArray.create(PBRK.sizeof, 4);
+      this._gpu = Float32PixelArray.create(PBRK.sizeOf, 4);
       this._warehouse = [];
-      this._textureDepot = new TextureDepot();
+      //this._textureDepot = new TextureDepot();
       // create initial white texture, 
-      this._WHITE = this._textureDepot.create(gl, "WHITE");
-      glUtil.setWHITE(gl, this._WHITE);
+      //this._WHITE = this._textureDepot.create(gl, "WHITE");
+      //glUtil.setWHITE(gl, this._WHITE);
       // create default Material
       this._default = this.create(gl, "default", defaultPBR());
    }
@@ -134,9 +113,9 @@ class MaterialDepot {
       return this._default;
    }
    
-   get t() {
-      return this._textureDepot;
-   }
+//   get t() {
+//      return this._textureDepot;
+//   }
    
    * getInUse() {
       for (let i = 0; i < this._warehouse.length; ++i) {
@@ -159,15 +138,15 @@ class MaterialDepot {
       const handle = this._gpu.appendNew();
       // set all texture to WHITE, BLACK?
       const attr = this._warehouse.push( {_name: name, 
-                                          _usageCount: 0,
-                                          _texture: { 
+                                          _usageCount: 0, } );
+ /*                                         _texture: { 
                                              baseColorTexture: this._WHITE,    // baseColor is 1.0, WHITE
                                              roughnessTexture: this._WHITE,    // all else is 0, BLACK
                                              normalTexture: this._WHITE,       
                                              occlusionTexture: this._WHITE,
                                              emissionTexture: this._WHITE,    
                                           }} );
-      this._textureDepot.addRef(this._WHITE, 5);
+      this._textureDepot.addRef(this._WHITE, 5); */
       if (input) {
          this.setValues(handle, input);
       }
@@ -221,9 +200,9 @@ class MaterialDepot {
    /**
    * return a string compose of texture's index, which act as hash. or should we packed the texture as int32?
    */
-   textureHash(handle) {
-      return `${this.getBaseColorTexture(handle)}`;
-   }
+//   textureHash(handle) {
+//      return `${this.getBaseColorTexture(handle)}`;
+//   }
 
    isInUse(handle) {
       if (this._isValid(handle)) {
@@ -232,7 +211,7 @@ class MaterialDepot {
       return false;
    }
    
-   removeTexture(handle, textureType) {
+/*   removeTexture(handle, textureType) {
       this.setTexture(handle, textureType, this._WHITE);
    }
    
@@ -257,7 +236,7 @@ class MaterialDepot {
       	}   
       }
       return false;
-   }
+   }*/
    
    setValues(handle, inputDat) {
       if (this._isValid(handle)) {
@@ -310,13 +289,13 @@ class MaterialDepot {
       return false;
    }
    
-   getBaseColorTexture(handle) {
+/*   getBaseColorTexture(handle) {
       return this.getTexture(handle, "baseColorTexture");
    }
     
    setBaseColorTexture(handle, color) {
       return this.setTexture(handle, "baseColorTexture", color);
-   }
+   }*/
    
    // roughness: 0.8,                                   // float, 0-1.0
    getRoughness(handle) {
@@ -333,13 +312,13 @@ class MaterialDepot {
       return false;
    }
    
-   getRoughnessTexture(handle) {
+/*   getRoughnessTexture(handle) {
       return this.getTexture(handle, "roughnessTexture");
    }
 
    setRoughnessTexture(handle, roughnessTexture) {
       return this.setTexture(handle, "roughnessTexture", roughnessTexture);
-   }
+   }*/
    
    // metallic: 0.1,                                    // float, 0-1.0
    getMetallic(handle) {
@@ -372,13 +351,13 @@ class MaterialDepot {
       return false;
    }
    
-   getEmissionTexture(handle) {
+/*   getEmissionTexture(handle) {
       return this.getTexture(handle, "emissionTexture");
    }
 
    setEmissionTexture(handle, emission) {
       this.setTexture(handle, "emissionTexture", emission);
-   }
+   }*/
    
    // opacity: 1,                                       // float, 0-1.0
    getOpacity(handle) {
@@ -395,7 +374,7 @@ class MaterialDepot {
       return false;
    }                        
    
-   getNormalTexture(handle) {
+/*   getNormalTexture(handle) {
       return this.getTexture(handle, "normalTexture");
    }
    
@@ -413,10 +392,10 @@ class MaterialDepot {
    
    getOcclusionTexcoord(handle) {
    
-   }
+   }*/
    
-   getUniforms(handle) {
-      if (this._isValid(handle)) {
+   getUniforms(handle) {                  // REMOVAL CANDIDATE.
+/*      if (this._isValid(handle)) {
          return ()=> {
             const baseColorTexture = this.getBaseColorTexture(handle);
             return {
@@ -424,7 +403,7 @@ class MaterialDepot {
             
             };
          }
-      }
+      } */
       return ()=>{
          return {};
       };
@@ -577,6 +556,7 @@ class TextureDepot {
 
 export {
    MaterialDepot,
+   TextureDepot,
    hexToRGB,
    rgbToHex,
    blinnPhongToPBR,

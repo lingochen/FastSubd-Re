@@ -173,6 +173,7 @@ class Importer {
    }
    
    addTexture(filename, flipY) {
+      return -1;
       let texture = this._library.texture.get(filename);
       if (!texture) {
          //const filename = getFilenameAndExtension(uri).join('.');  // uri
@@ -228,7 +229,7 @@ class Importer {
    }
    
    setBaseColorTexture(textureHandle) {
-      this._depot.setBaseColorTexture(this._currentMaterial, textureHandle);
+      //this._depot.setBaseColorTexture(this._currentMaterial, textureHandle);
    }
    
    setImage(textureHandle, image) {

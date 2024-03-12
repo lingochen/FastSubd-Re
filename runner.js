@@ -265,6 +265,14 @@ async function readFile(ccmUrl, options, camera) {
          console.log(mesh.stat());
       }*/
       let source = scene.world[0];
+      // readjust material
+      let red = info.depot.getRed();
+      for (let face of source.f) {
+         if (face & 1) {
+            source.f.setMaterial(face, red);
+         }
+      }
+      // end of readjust material
       modelRead.set(ccmUrl, source);               // save for later reuse
       source.sanityCheck();
       setRenderData(source);

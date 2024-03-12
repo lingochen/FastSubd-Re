@@ -1415,8 +1415,8 @@ class FaceArray {
       let oldMaterial = this.material(polygon);
       if (oldMaterial !== material) {
          this._setMaterial(polygon, material);
-         this._depot.releaseRef(oldMaterial, 1);
          this._depot.addRef(material, 1);
+         this._depot.releaseRef(oldMaterial, 1);
       }
    }
 

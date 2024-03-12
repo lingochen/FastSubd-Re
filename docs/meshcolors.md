@@ -27,9 +27,9 @@ triangle index to each Mesh Colors Patch.
 
 Implementation Steps:
 
-color material color working. shader code needed too.
+<s>color material color working. shader code needed too.</s> @done(2024/03/12)
 
-triangles in checkbox color pattern, so we can see triangles?
+<s>triangles in checkbox color pattern, so we can see triangles?</s> @done (2024/03/12)
 
 pair triangles to form quad.
 

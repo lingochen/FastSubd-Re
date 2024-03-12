@@ -1739,7 +1739,8 @@ class SurfaceMesh {
       nVertices = computeDataTextureLen(nVertices);
       nWEdges = computeDataTextureLen(nWEdges);
       nHfEdges = computeDataTextureLen(nHfEdges);
-      nBoundaries = computeDataTextureLen(nFaces);
+      nBoundaries = computeDataTextureLen(nBoundaries);
+      nFaces = computeDataTextureLen(nFaces);
       nHoles = computeDataTextureLen(nHoles);
       
       if (isStatic) {

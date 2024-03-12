@@ -8,7 +8,7 @@
 import {HalfEdgeArray} from './surfacemesh.js';
 import {QuadMesh} from './quadmesh.js';
 import {TriangleMesh} from './trimesh.js';
-import {blinnPhongToPBR, defaultPBR} from './material.js';
+import {blinnPhongToPBR} from './material.js';
 import * as Mat4 from './mat4.js';
 import {vec3a} from './vec3.js';
 
@@ -23,7 +23,7 @@ class Importer {
       this._library = {texture: new Map, material: new Map};
       this._objs = [];
       this._currentMesh = null;
-      this._currentMaterial = null;
+      this._currentMaterial = this._depot.getDefault();
       this._vertexMapping = []; // convert index
       this._uvMapping = {};
       this._non_manifold = [];
@@ -166,7 +166,7 @@ class Importer {
    useMaterial(matname) {
       let mat = this._library.material.get(matname);
       if (!mat) {
-         mat = this.addMaterial(matname, defaultPBR());  // create stub for later update
+         mat = this._depot.getDefault();  // create stub for later update
       }
       this._currentMaterial = mat;
       return mat;

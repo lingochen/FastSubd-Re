@@ -39,7 +39,15 @@ function defaultPBR() {
             metallic: 0.1,                                    // float, 0-1.0
             opacity: 1,                                       // float, 0-1.0
           };
-}
+};
+function redPBR() {
+   return { baseColor: hexToRGB("#FF0000"),              // rgb, baseColor, 
+            emission: hexToRGB("#000000"),               // rgb, intensity
+            roughness: 0.8,                                   // float, 0-1.0
+            metallic: 0.1,                                    // float, 0-1.0
+            opacity: 1,                                       // float, 0-1.0
+          };
+};
 
 
 
@@ -107,10 +115,15 @@ class MaterialDepot {
       //glUtil.setWHITE(gl, this._WHITE);
       // create default Material
       this._default = this.create(gl, "default", defaultPBR());
+      this._red = this.create(gl, "default_red", redPBR());
    }
    
    getDefault() {
       return this._default;
+   }
+   
+   getRed() {
+      return this._red;
    }
    
 //   get t() {
@@ -198,7 +211,7 @@ class MaterialDepot {
    }
    
    isDefault(handle) {
-      return (handle === 0);  // zeroth element is the default
+      return (handle === this._default);  // zeroth element is the default
    }
    
    /**
@@ -564,5 +577,4 @@ export {
    hexToRGB,
    rgbToHex,
    blinnPhongToPBR,
-   defaultPBR,
 };

@@ -25,11 +25,13 @@ uniform isampler2D u_vertex;          // HfEdge's origin(vertex) index.
 
 uniform sampler2D u_position;
 uniform sampler2D u_normal;
-uniform sampler2DArray u_uvs;
-//uniform sampler2D u_material;
+//uniform sampler2DArray u_uvs;
+uniform sampler2D u_pbr;
+uniform isampler2D u_material;
 
 out vec3 v_normal;
-out vec2 v_texcoord;
+//out vec2 v_texcoord;
+out vec3 v_color;
 
 ivec2 getPull(int texWidth, int index) {
    int col = index % texWidth;
@@ -41,18 +43,25 @@ void main() {
    int vertexID = gl_VertexID + gl_InstanceID*3;
    int texWidth = textureSize(u_vertex, 0).x;
    
-   v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, vertexID), 0), 0).xy;   
+   //v_texcoord = texelFetch(u_uvs, ivec3(getPull(texWidth, vertexID), 0), 0).xy;   
 
-   int origin = texelFetch(u_vertex, getPull(texWidth, vertexID), 0).x;
+   int fetchID = texelFetch(u_vertex, getPull(texWidth, vertexID), 0).x;
    
    texWidth = textureSize(u_position, 0).x;
-   vec3 tmp = texelFetch(u_position, getPull(texWidth, origin), 0).xyz;
+   vec3 tmp = texelFetch(u_position, getPull(texWidth, fetchID), 0).xyz;
    vec4 a_position = vec4(tmp, 1);
    
    //texWidth = textureSize(u_normal, 0).x;
-   vec3 a_normal = texelFetch(u_normal, getPull(texWidth, origin), 0).xyz;
+   vec3 a_normal = texelFetch(u_normal, getPull(texWidth, fetchID), 0).xyz;
    
-   //int face = gl_VertexID / 3;       // per face material
+   // per face material
+   texWidth = textureSize(u_material, 0).x;
+   fetchID = texelFetch(u_material, getPull(texWidth, gl_InstanceID), 0).x;
+   
+   texWidth = textureSize(u_pbr, 0).x;
+   v_color = texelFetch(u_pbr, getPull(texWidth, fetchID*3), 0).xyz;
+   //vec3 a_color = textelFetch()   
+   
    
    gl_Position = u_projection * u_view * u_world * a_position;
 
@@ -66,7 +75,8 @@ const pullFS = `#version 300 es
 precision highp float;
 
 in vec3 v_normal;
-in vec2 v_texcoord;
+//in vec2 v_texcoord;
+in vec3 v_color;
 
 uniform sampler2D u_baseColorTexture;
 
@@ -81,7 +91,7 @@ void main () {
 
   vec3 normal = normalize(v_normal);
   float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
-  outColor = vec4(u_diffuse.rgb * fakeLight, u_diffuse.a); // * outColor;
+  outColor = vec4(v_color.rgb * fakeLight, u_diffuse.a); // * outColor;
 
 }
 `;
@@ -130,6 +140,7 @@ const cameraData = {
 }; 
 const renderData = {
    materials: null,
+   pbr: null,
    position: null,
    attribute: null,
    uvs: null,
@@ -138,11 +149,19 @@ const renderData = {
 
 let renderOn = false;
 function setRenderData(source) {
+   // free gl resource first
+   for (let [key, data] of Object.entries(renderData)) {
+      if (data) { // delete from gpu
+         //console.log("render Data: " + key);
+      }
+   }
+   
    const data = source.makePullBuffer(info.gl);
    info.pullLength = data.pullLength;
 
    // data
-   renderData.materials = data.materials;
+   renderData.pbr = data.pbr;
+   renderData.material = data.material;
    renderData.position = data.position;
    renderData.attribute = data.attribute;
    renderData.uvs = data.uvs;
@@ -191,6 +210,8 @@ function render(time) {
        //u_attribute: renderData.attribute,
        //u_uvs: renderData.uvs,
        u_vertex: renderData.vertex,
+       u_pbr: renderData.pbr,
+       u_material: renderData.material,
      };
  
      info.gl.useProgram(info.meshProgram.program);

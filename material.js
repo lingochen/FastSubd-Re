@@ -34,10 +34,10 @@ function rgbToHex(r, g, b) {
    
 function defaultPBR() {
    return { baseColor: hexToRGB("#C9CFB1"),              // rgb, baseColor, 
+            emission: hexToRGB("#000000"),               // rgb, intensity
             roughness: 0.8,                                   // float, 0-1.0
             metallic: 0.1,                                    // float, 0-1.0
             opacity: 1,                                       // float, 0-1.0
-            emission: hexToRGB("#000000"),               // rgb, intensity
           };
 }
 
@@ -45,8 +45,8 @@ function defaultPBR() {
 
 const PBRK = {
    baseColor: 0,
-   roughness: 3,
-   emission: 4,
+   emission: 3,
+   roughness: 6,
    metallic: 7,                                                      
    opacity: 8,
    sizeOf: 9,
@@ -99,7 +99,7 @@ function blinnPhongToPBR(material) {
 class MaterialDepot {
    constructor(gl) {
       glUtil.setConstant(gl);
-      this._gpu = Float32PixelArray.create(PBRK.sizeOf, 4);
+      this._gpu = Float32PixelArray.create(PBRK.sizeOf, 3);
       this._warehouse = [];
       //this._textureDepot = new TextureDepot();
       // create initial white texture, 
@@ -158,16 +158,20 @@ class MaterialDepot {
       return create(gl, name, blinnPhongToPBR(old));
    }
    
+   createTexture(gl) {
+      return this._gpu.createDataTexture(gl);
+   }
+   
    delete(handle) {
       if ((handle > 0) && this._isValid(handle)) {
          const dead = this._warehouse[handle];
          if (dead._usageCount === 0) {
-            // release texture all
+/*          // release texture all
             for (let texture of textureTypes()) {
                this._textureDepot.releaseRef(dead._texture[texture]);
                dead._texture[texture] = null;
             }
-            // this._freeList.push(material);
+            // this._freeList.push(material);*/
             return true;
          }
       }

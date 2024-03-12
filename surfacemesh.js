@@ -1261,7 +1261,6 @@ class FaceArray {
    static _createInternal(depot, size) {
       const array = {
          material: Int32PixelArray.create(1, 1, size),
-         //color: Uint8PixelArray.create(4, 4, size),
       };
       const fmm = {
          size: 0,
@@ -1394,6 +1393,10 @@ class FaceArray {
    
    setHalfEdge(handle, hEdge) {  // implicit halfEdge, no needs to set
       throw("cannot set Face's halfEdge");
+   }
+   
+   createMaterialTexture(gl) {
+      return this._array.material.createDataTexture(gl);
    }
       
    _materialAddRef(material, count) {
@@ -1799,17 +1802,22 @@ class SurfaceMesh {
       const normalTexture = this.v.createNormalTexture(gl);
       const uvsTexture = this.h.createPropertyTexture('uvs', gl);
       
-      const materials = [];
+      const pbrTexture = this._material.depot.createTexture(gl);
+      const materialTexture = this.f.createMaterialTexture(gl);
+      
+/*      const materials = [];
       for (let [handle, count] of this._material.used) {
          materials.push( this._material.depot.getUniforms(handle) );
-      }
+      }*/
       
       return {pullLength: this.h.length(),
               vertex: {type:"isampler2D", value: vertexTexture},
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},
               uvs: {type: "sampler2DArray", value: uvsTexture},
-              materials, };
+              pbr: {type: "sampler2D", value: pbrTexture},
+              material: {type: "sampler2D", value: materialTexture},
+             };
    }
    
    //

@@ -31,17 +31,13 @@ function rgbToHex(r, g, b) {
 };
 
 
-   
-function defaultPBR() {
-   return { baseColor: hexToRGB("#C9CFB1"),              // rgb, baseColor, 
-            emission: hexToRGB("#000000"),               // rgb, intensity
-            roughness: 0.8,                                   // float, 0-1.0
-            metallic: 0.1,                                    // float, 0-1.0
-            opacity: 1,                                       // float, 0-1.0
-          };
-};
-function redPBR() {
-   return { baseColor: hexToRGB("#FF0000"),              // rgb, baseColor, 
+const defaultHex = "#C9CFB1";
+const redHex = "#FF0000";
+const greenHex = "#00FF00";
+const blueHex = "#0000FF";
+const blackHex = "#000000";
+function getPBR(hexColor) {
+   return { baseColor: hexToRGB(hexColor),               // rgb, baseColor, 
             emission: hexToRGB("#000000"),               // rgb, intensity
             roughness: 0.8,                                   // float, 0-1.0
             metallic: 0.1,                                    // float, 0-1.0
@@ -114,8 +110,11 @@ class MaterialDepot {
       //this._WHITE = this._textureDepot.create(gl, "WHITE");
       //glUtil.setWHITE(gl, this._WHITE);
       // create default Material
-      this._default = this.create(gl, "default", defaultPBR());
-      this._red = this.create(gl, "default_red", redPBR());
+      this._default = this.create(gl, "default", getPBR(defaultHex));
+      this._red = this.create(gl, "default_red", getPBR(redHex));
+      this._green = this.create(gl, "default_green", getPBR(greenHex));
+      this._blue = this.create(gl, "default_blue", getPBR(blueHex));
+      this._black = this.create(gl, "default_black", getPBR(blackHex));
    }
    
    getDefault() {
@@ -124,6 +123,18 @@ class MaterialDepot {
    
    getRed() {
       return this._red;
+   }
+   
+   getBlue() {
+      return this._green;
+   }
+   
+   getGreen() {
+      return this._blue;
+   }
+   
+   getBlack() {
+      return this._black;
    }
    
 //   get t() {

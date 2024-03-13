@@ -265,11 +265,15 @@ async function readFile(ccmUrl, options, camera) {
          console.log(mesh.stat());
       }*/
       let source = scene.world[0];
-      // readjust material
-      let red = info.depot.getRed();
+      // readjust material to show triangles.
       for (let face of source.f) {
-         if (face & 1) {
-            source.f.setMaterial(face, red);
+         let idx = face % 4;
+         if (idx === 1) {
+            source.f.setMaterial(face, info.depot.getRed());
+         } else if (idx === 2) {
+            source.f.setMaterial(face, info.depot.getGreen());
+         } else if (idx === 3) {
+            source.f.setMaterial(face, info.depot.getBlue());
          }
       }
       // end of readjust material

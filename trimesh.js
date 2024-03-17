@@ -76,13 +76,11 @@ class TriangleEdgeArray extends HalfEdgeArray {
    /**
     * assumed dEdge >= 0.
     */
-   face(dEdge, faceHndl) {
+   face(dEdge) {
       if (dEdge >= 0) {
-         faceHndl.handle = Math.trunc(dEdge/3);
-         return true;
+         return Math.trunc(dEdge/3);
       } else {
-         faceHndl.handle = this._hArray.hole.get(-(dEdge+1), 0);
-         return false;
+         return this._hArray.hole.get(-(dEdge+1), 0);
       }
    }
 }

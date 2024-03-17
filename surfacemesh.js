@@ -1341,15 +1341,15 @@ class FaceArray {
       }
    }
    
-   // * wEdgeLoop(face) 
-   // * faceAround(face)
+   /* * wEdgeLoop(face) {
+   }*/
    
-   * hEdgeIter(face, startH) {
-      throw("hEdgeIter should be implemented by sublass");
-      if (face < 0) {   // non-quad
-         
-      } else {          // quad
-         
+   * faceAround(face) {
+      for (const hEdge of this.halfEdgeLoop(face)) {
+         const pair = this._mesh.h.pair(hEdge);
+         if (pair >= 0) {  // must be face not hole
+            yield this._mesh.h.face(pair);
+         }
       }
    }
    

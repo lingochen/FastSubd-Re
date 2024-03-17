@@ -20,6 +20,14 @@ sub: function(out, k, a, i, b, j) {
    return out;
 },
 
+squaredDistance: function(a, i, b, j) {
+   const x = b[i]   - a[j];
+   const y = b[i+1] - a[j+1];
+   const z = b[i+2] - a[j+2];
+
+  return x * x + y * y + z * z;
+},
+
 copy: function(dest, i, source, j) {
    dest[i]   = source[j];
    dest[i+1] = source[j+1];

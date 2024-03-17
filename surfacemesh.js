@@ -949,19 +949,20 @@ class HalfEdgeArray {
    }
    
    *[Symbol.iterator] () {
-      yield* this.rangeIter(0, this._wEdgeArray.left.length());
+      yield* this.rangeIter(0, this._wEdgeArray.edge.length());
    }
    
    /**
     * walk over the wEdgeArray
     */
    * rangeIter(start, stop) {
-      stop = Math.min(this._wEdgeArray.left.length(), stop);
+      stop = Math.min(this._wEdgeArray.edge.length(), stop);
+      let leftRight = [0, 0];
       for (let i = start; i < stop; i++) {
          const sharpness = this._wEdgeArray.sharpness.get(i, 0);
          if (sharpness >= 0) {  // existed.
-            const left = this._wEdgeArray.left.get(i, 0);
-            yield [i, left, this.pair(left)];
+            this._wEdgeArray.edge.getVec2(i, 0, leftRight);
+            yield [i, leftRight[0], leftRight[1]];
          }
       }
    }

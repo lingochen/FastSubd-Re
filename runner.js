@@ -274,13 +274,15 @@ async function readFile(ccmUrl, options, camera) {
          const face1 = quad[i+1];
          if (idx === 1) {
             source.f.setMaterial(face, info.depot.getRed());
-            source.f.setMaterial(face1, info.depot.getRed());
+            source.f.setMaterial(face1, info.depot.getLightRed());
          } else if (idx === 2) {
             source.f.setMaterial(face, info.depot.getGreen());
-            source.f.setMaterial(face1, info.depot.getGreen());
+            source.f.setMaterial(face1, info.depot.getLightGreen());
          } else if (idx === 3) {
             source.f.setMaterial(face, info.depot.getBlue());
-            source.f.setMaterial(face1, info.depot.getBlue());
+            source.f.setMaterial(face1, info.depot.getLightBlue());
+         } else {
+            source.f.setMaterial(face1, info.depot.getWhite());
          }
       }
       for (let i = 0; i< tri.length;i++) {

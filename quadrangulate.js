@@ -96,10 +96,41 @@ function quadrangulate(mesh) {
             }
          }
          triangle.available = 0;
-      }
+      } 
    }
    
-   // now create the quad, and isolated tri list
+   // Another pass to find 2 dangling triangles that are separate by quad, break-up the quad and create 2 quad with the dangling triangles.
+   const isolated = new Map;
+   for (let tri of mesh.f) {
+      if (triangle.bestFit[tri] === tri) {   // isolated triangle, now find neighboring quad
+         for (let face of mesh.f.faceAround(tri)) {
+            const quadFace = triangle.bestFit[face];
+            // check if another dangling triangle
+            const dangling = isolated.get(face);
+            if (dangling) {   // got it now create 2 quad from (tri, face), (quadFace, dangling)
+               if (triangle.bestFit[dangling] === dangling) {
+                  triangle.bestFit[tri] = face;
+                  triangle.bestFit[face] = tri;
+                  triangle.bestFit[quadFace] = dangling;
+                  triangle.bestFit[dangling] = quadFace;
+                  triangle.paired[tri] = 1;
+                  triangle.paired[dangling] = 1;
+                  break;
+               } else { // oops, already paired, delete it
+                  isolated.delete(face);
+               }
+            } else { // put the quadFace for later matching.
+               if (isolated.has(quadFace)) {
+                  console.log("shared isolate");
+               }
+               isolated.set(quadFace, tri);
+            }
+         }
+      }
+   }
+     
+   
+   // now create the quad, and the isolated tri list
    const quad = [];
    const tri = [];
    for (let face of mesh.f) {

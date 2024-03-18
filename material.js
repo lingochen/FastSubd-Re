@@ -33,9 +33,13 @@ function rgbToHex(r, g, b) {
 
 const defaultHex = "#C9CFB1";
 const redHex = "#FF0000";
+const lightRedHex= "#FF7F7F";
 const greenHex = "#00FF00";
+const lightGreenHex = "#90EE90";
 const blueHex = "#0000FF";
+const lightBlueHex = "#ADD8E6";
 const blackHex = "#000000";
+const whiteHex = "#FFFFFF";
 function getPBR(hexColor) {
    return { baseColor: hexToRGB(hexColor),               // rgb, baseColor, 
             emission: hexToRGB("#000000"),               // rgb, intensity
@@ -112,9 +116,13 @@ class MaterialDepot {
       // create default Material
       this._default = this.create(gl, "default", getPBR(defaultHex));
       this._red = this.create(gl, "default_red", getPBR(redHex));
+      this._lightRed = this.create(gl, "default_lightRed", getPBR(lightRedHex));
       this._green = this.create(gl, "default_green", getPBR(greenHex));
+      this._lightGreen = this.create(gl, "default_lightGreen", getPBR(lightGreenHex));
       this._blue = this.create(gl, "default_blue", getPBR(blueHex));
+      this._lightBlue = this.create(gl, "default_lightBlue", getPBR(lightBlueHex));
       this._black = this.create(gl, "default_black", getPBR(blackHex));
+      this._white = this.create(gl, "default_white", getPBR(whiteHex));
    }
    
    getDefault() {
@@ -125,16 +133,32 @@ class MaterialDepot {
       return this._red;
    }
    
+   getLightRed() {
+      return this._lightRed;
+   }
+   
    getBlue() {
-      return this._green;
+      return this._blue;
+   }
+   
+   getLightBlue() {
+      return this._lightBlue;
    }
    
    getGreen() {
-      return this._blue;
+      return this._green;
+   }
+   
+   getLightGreen() {
+      return this._lightGreen;
    }
    
    getBlack() {
       return this._black;
+   }
+   
+   getWhite() {
+      return this._white;
    }
    
 //   get t() {

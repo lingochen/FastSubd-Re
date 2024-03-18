@@ -9,6 +9,7 @@ import {MaterialDepot} from './material.js';
 import * as m4 from './mat4.js';
 import {vec3a} from './vec3.js';
 import * as glUtil from './glutil.js';
+import {quadrangulate} from './quadrangulate.js';
 
 
 const pullTriVS = `#version 300 es
@@ -266,15 +267,25 @@ async function readFile(ccmUrl, options, camera) {
       }*/
       let source = scene.world[0];
       // readjust material to show triangles.
-      for (let face of source.f) {
-         let idx = face % 4;
+      const [quad, tri] = quadrangulate(source);
+      for (let i = 0; i < quad.length; i+=2) {
+         const idx = (i>>1) % 4;
+         const face = quad[i];
+         const face1 = quad[i+1];
          if (idx === 1) {
             source.f.setMaterial(face, info.depot.getRed());
+            source.f.setMaterial(face1, info.depot.getRed());
          } else if (idx === 2) {
             source.f.setMaterial(face, info.depot.getGreen());
+            source.f.setMaterial(face1, info.depot.getGreen());
          } else if (idx === 3) {
             source.f.setMaterial(face, info.depot.getBlue());
+            source.f.setMaterial(face1, info.depot.getBlue());
          }
+      }
+      for (let i = 0; i< tri.length;i++) {
+         const face = tri[i];
+         source.f.setMaterial(face, info.depot.getBlack());
       }
       // end of readjust material
       modelRead.set(ccmUrl, source);               // save for later reuse

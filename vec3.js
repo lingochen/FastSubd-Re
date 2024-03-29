@@ -20,6 +20,14 @@ sub: function(out, k, a, i, b, j) {
    return out;
 },
 
+negate: function(out, k, source, i) {
+   out[k]   = -source[i];
+   out[k+1] = -source[i+1];
+   out[k+2] = -source[i+2];
+   
+   return out;
+},
+
 squaredDistance: function(a, i, b, j) {
    const x = b[i]   - a[j];
    const y = b[i+1] - a[j+1];
@@ -95,6 +103,20 @@ transformMat4: function(out, a, m) {
 }
 
 const vec3a = {
+   
+/**
+ * use atan2 to find angle between 2 vector.
+ */
+angle: function(a, i, b, j) {
+   const ax = a[i], ay = a[i+1], az = a[i+2];
+   const bx = b[j], by = b[j+1], bz = b[j+2];
+
+   const length = Math.hypot(ay * bz - az * by,         // x
+                              az * bx - ax * bz,         // y
+                              ax * by - ay * bx);        // z
+   
+   return Math.atan2(length, vec3a.dot(a, i, b, j));
+},
 
 add: function(dest, i, source, j) {
    dest[i]   += source[j];
@@ -134,6 +156,25 @@ scaleAndAdd: function(dest, i, source, j, x) {
    dest[i+2] += source[j+2] * x;
 
    return dest;
+},
+
+/**
+ * a - vector
+ * b - vector
+ */
+dot: function(a, i, b, j) {
+   return a[i] * b[j] + a[i+1] * b[j+1] + a[i+2] * b[j+2];
+},
+
+/**
+ * length of a vec3
+ * 
+ * @param {vec} - vec array
+ * @param {Number} - offset into array.
+ * @return {Number} - length of a
+ */
+length: function(a, i) {
+   return Math.hypot(a[i], a[i+1], a[+2]);
 },
 
 normalize: function(dest, i) {

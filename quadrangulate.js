@@ -199,19 +199,26 @@ function quadrangulate(mesh, angleTolerance=(Math.PI/12)) {
    const wEdgeBIAS = [];
    for (let [_wEdge, leftH, rightH] of mesh.h) {
       // check both side of face, and see if they are within tolerance
-      const leftN = triNormal[ mesh.h.face(leftH) ];
-      const rightN = triNormal[ mesh.h.face(rightH) ];
-      let bias = Math.abs( vec3a.angle(leftN, 0, rightN, 0) );
-      if (bias > angleTolerance) {
-         bias = Math.PI;            // make the wEdge less desirable
-      }
+      let bias = -1;
+      const leftF = mesh.h.face(leftH);
+      const rightF = mesh.h.face(rightH);
+      if (leftF >= 0 && rightF >= 0) {
+         const leftN = triNormal[ leftF ];
+         const rightN = triNormal[ rightF ];
+         bias = Math.abs( vec3a.angle(leftN, 0, rightN, 0) );
+         if (bias > angleTolerance) {
+            bias = Math.PI;            // make the wEdge less desirable
+         } else {
+            bias = 0;
+         }
       
-      // get angle, add up, and compare to 90 degree
-      const leftNext = mesh.h.next(leftH);
-      const rightNext = mesh.h.next(rightH);
-      const origin = hEdgeAngle[leftH] + hEdgeAngle[rightNext];
-      const dest = hEdgeAngle[rightH] + hEdgeAngle[leftNext];
-      bias += Math.abs(origin - NinetyDeg) + Math.abs(dest - NinetyDeg);
+         // get angle, add up, and compare to 90 degree
+         const leftNext = mesh.h.next(leftH);
+         const rightNext = mesh.h.next(rightH);
+         const origin = hEdgeAngle[leftH] + hEdgeAngle[rightNext];
+         const dest = hEdgeAngle[rightH] + hEdgeAngle[leftNext];
+         bias += Math.abs(origin - NinetyDeg) + Math.abs(dest - NinetyDeg);
+      }
       wEdgeBIAS.push(bias);
    }
    

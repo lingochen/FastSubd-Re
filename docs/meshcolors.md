@@ -28,17 +28,20 @@ triangle index to each Mesh Colors Patch.
 Implementation Steps:
 
 quad-forming
+
 <s>color material color working. shader code needed too.</s> @done(2024/03/12)
 
 <s>triangles in checkbox color pattern, so we can see triangles?</s> @done (2024/03/12)
 
 <s>pair triangles to form quad.</s> @done (2024/03/18)
 
-<s>quads in checkbox color pattern, so we can see quad pairing.</s> @done (2024/03/16), @redone(2024/03/29), new method.
+<s>quads in checkbox color pattern, so we can see quad pairing.</s> @done (2024/03/16)
+
+<s>new method of computing quad pairing, use angle of quad as metric(as rect as possible)</s>@done(2024/03/29)
 
 texture-packing
 
-compute the size of each quad/tri patch occupy. 
+<s>compute the size of each quad/tri patch occupy. </s> @done(2024/03/30)
 
 binned quad/tri to sizes.
 

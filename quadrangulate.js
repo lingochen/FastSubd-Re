@@ -177,7 +177,7 @@ const NinetyDeg = Math.PI / 2;
  * 3) if best pair agreed then the quad is done. the best pair can be removed.
  * 4) loop back to (2) if there is still triangles available. 
  */
-function quadrangulate(mesh) {
+function quadrangulate(mesh, angleTolerance=(Math.PI/12)) {
    // compute all hEdge Angle and face normal
    const position = mesh.v.positionBuffer();
    const hEdgeAngle = [];
@@ -199,13 +199,19 @@ function quadrangulate(mesh) {
    const wEdgeBIAS = [];
    for (let [_wEdge, leftH, rightH] of mesh.h) {
       // check both side of face, and see if they are within tolerance
+      const leftN = triNormal[ mesh.h.face(leftH) ];
+      const rightN = triNormal[ mesh.h.face(rightH) ];
+      let bias = Math.abs( vec3a.angle(leftN, 0, rightN, 0) );
+      if (bias > angleTolerance) {
+         bias = Math.PI;            // make the wEdge less desirable
+      }
       
       // get angle, add up, and compare to 90 degree
       const leftNext = mesh.h.next(leftH);
       const rightNext = mesh.h.next(rightH);
       const origin = hEdgeAngle[leftH] + hEdgeAngle[rightNext];
       const dest = hEdgeAngle[rightH] + hEdgeAngle[leftNext];
-      let bias = Math.abs(origin - NinetyDeg) + Math.abs(dest - NinetyDeg);
+      bias += Math.abs(origin - NinetyDeg) + Math.abs(dest - NinetyDeg);
       wEdgeBIAS.push(bias);
    }
    
@@ -319,7 +325,7 @@ function quadrangulate(mesh) {
       }
    }
    
-   return [quad, tri];
+   return [quad, tri, triArea];
 }
 
 

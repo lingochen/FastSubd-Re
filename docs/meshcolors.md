@@ -20,8 +20,10 @@ uv mapping is one of the most wasteful time sinks in asset creation.  No mapping
 Implementation detail
 
 tried to fit 2 triangle together to form a quad then map the quad to patch texture.
+
 fit one triangle to one patch texture if no good pair of triangle is founded.
-quadrangulation should be simple. Round the triangle pair with the best shape, which is as rectangle as possible, minimized slanting.
+
+[quadrangulation](quarangulate.md) should be simple. Round the triangle pair with the best shape, which is as rectangle as possible, minimized slanting.
 
 triangle index to each Mesh Colors Patch.
 
@@ -43,7 +45,7 @@ texture-packing
 
 <s>compute the size of each quad/tri patch occupy. </s> @done(2024/03/30)
 
-binned quad/tri to sizes.
+binned quad/tri to sizes(power of 2), power of 2 make a lot of operation much easier.
 
 render quad/tri to texture. packs and bins to one big texture.
 

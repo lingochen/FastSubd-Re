@@ -45,12 +45,16 @@ texture-packing
 
 <s>compute the size of each quad/tri patch occupy. </s> @done(2024/03/30)
 
-binned quad/tri to sizes(power of 2), power of 2 make a lot of operation much easier.
+binned quad/tri to sizes(power of 2), power of 2 make a lot of operation much easier and more correct.
 
-render quad/tri to texture. packs and bins to one big texture.
+render quad/tri to texture. 
 
-render mip-mapped textures. packs each level to one texture.
+<s>packs and bins to one big texture. aka texture atlas</s>
 
-show the packed textures.
+<s>render mip-mapped textures. packs each level to one texture.</s>
+
+<s>show the packed textures.</s> 
+
+will use multiple array of texture instead of packing to big texture.
 
 finally, render model with the new Mesh Colors Patch Texture.

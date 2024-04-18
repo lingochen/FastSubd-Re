@@ -1,12 +1,13 @@
 /**
  * pairing triangle to form quad, the criteria are
  *  0) as many quad as possible.
- *  1) pair triangles with longest diagonal
+ *  1) pair triangles to be as rectangle as possible.
  *  2) nearly same normal?
  *  3) 2 dangling triangle with quad can be transform to 2 quad.
- *  4) how about flipping triangle to form more quad?
+ *  4) how about flipping triangle edge to form more quad?
  * 
  * this is for mesh color patch, so 2) is not as important?
+ * 
  */
  
 import {SurfaceMesh} from './surfacemesh.js';
@@ -44,6 +45,8 @@ const NinetyDeg = Math.PI / 2;
  * 2) every triangles determined it best pair if any. if isolated triangles then removed from list
  * 3) if best pair agreed then the quad is done. the best pair can be removed.
  * 4) loop back to (2) if there is still triangles available. 
+ * 
+ * @return 
  */
 function quadrangulate(mesh, angleTolerance=(Math.PI/12)) {
    // compute all hEdge Angle and face normal

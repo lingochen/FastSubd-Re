@@ -50,6 +50,7 @@ traversal of vertex, edge, and face.
     - #### around a face
         - f.vertexLoop
         - f.halfEdgeLoop
+        - f.halfEdgeLoopEntries
         - f.wEdgeLoop
         - f.faceAround
 

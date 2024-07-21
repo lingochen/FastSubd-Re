@@ -1346,10 +1346,16 @@ class FaceArray {
    }*/
    
    * faceAround(face) {
+      for (let [hEdge, face] of this.faceAroundEntries(face)) {
+         yield face;
+      }
+   }
+   
+   * faceAroundEntries(face) {
       for (const hEdge of this.halfEdgeLoop(face)) {
          const pair = this._mesh.h.pair(hEdge);
-         if (pair >= 0) {  // must be face not hole
-            yield this._mesh.h.face(pair);
+         if (pair >= 0) { // we want face not hole
+            yield [hEdge, this._mesh.h.face(pair)];
          }
       }
    }

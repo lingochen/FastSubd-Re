@@ -829,4 +829,5 @@ export {
    createDynamicProperty,
    allocBuffer,
    freeBuffer,
+   alignCache,
 }

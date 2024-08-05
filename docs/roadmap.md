@@ -14,7 +14,7 @@
 
 - <s>Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)</s> @done (2024/02/20)
 
-- refactor DirecedEdgeArray. add (pair,twin) data memebers since it a fairly common operation 
+- refactor DirectedEdgeArray. add (pair/twin) data memeber since it a fairly common operation to refernce pair. 
 
 - [MeshColors PatchTexture](meshcolors.md)
 

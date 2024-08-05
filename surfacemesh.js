@@ -18,7 +18,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, allocBuffer, freeBuffer} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
@@ -99,14 +99,6 @@ function setBufferAll(objs, bufferInfo, byteOffset, length) {
       }
    }
    return byteOffset;
-}
-
-/**
- * padded the offset so it align on 64 bytes boundary.
- * why 64 bytes? alignment on cache boundary. current standard.
- */
-function alignCache(byteOffset) {
-   return Math.floor((byteOffset + 63) / 64) * 64;
 }
 
 

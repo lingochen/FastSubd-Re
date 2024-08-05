@@ -20,17 +20,8 @@
 
 import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, allocBuffer, freeBuffer} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
-import {MAX_TEXTURE_SIZE, computeDataTextureLen} from "./glutil.js";
+import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
-
-const kExpandSize = 1.5;
-function allocSizeExpand(size) {
-   if (size < MAX_TEXTURE_SIZE) {
-      return MAX_TEXTURE_SIZE;
-   } else {
-      return computeDataTextureLen( Math.ceil(size * kExpandSize) );    // padded to dataTexture's dimension.
-   }
-}
 
 /**
  * let browser decided if it validVarName, copy from stackoverflow
@@ -465,7 +456,7 @@ class VertexArray {
     */
    _allocEx(size) {
       if (this._array.hEdge.capacity() < size) {  // realloc if no capacity.
-         this.setBuffer(null, 0, allocSizeExpand(this._array.hEdge.maxLength()+size));
+         this.setBuffer(null, 0, expandAllocLen(this._array.hEdge.maxLength()+size));
       }
       
       const start = this.length();
@@ -581,10 +572,12 @@ class HalfEdgeArray {
    static _createInternal(size) {
       const dArray = { // odd number of index and odd number of polygon(triangle) created false sharing, so we have to separate everything out
          vertex: Int32PixelArray.create(1, 1, size),
+         pair: Int32PixelArray.create(1, 1, size),             // pair, twin, 
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
       };
       const hArray = {
-         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
+         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex,
+         pair: Int32PixelArray.create(1, 1, size),             // point to pair,
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
@@ -746,7 +739,7 @@ class HalfEdgeArray {
     */
    _allocEx(size) {
       if (this._dArray.vertex.capacity() < size) {
-         this.setBuffer(null, 0, allocSizeExpand(this._dArray.vertex.maxLength()+size));
+         this.setBuffer(null, 0, expandAllocLen(this._dArray.vertex.maxLength()+size));
       }
       
       const index = this._dArray.vertex.appendRangeNew(size);
@@ -779,7 +772,7 @@ class HalfEdgeArray {
    _allocWEdge(size) {
       if (this._wEdgeArray.edge.capacity() < size) {  // expand by 1.5
          const maxLen = this._dArray.vertex.maxLength(); // directedEdge should used it by now.
-         this.setBufferW(null, 0, allocSizeExpand(maxLen+size) );
+         this.setBufferW(null, 0, expandAllocLen(maxLen+size) );
       }
       
       const start = this._wEdgeArray.edge.appendRangeNew(size);
@@ -787,10 +780,14 @@ class HalfEdgeArray {
       return start;
    }
 
+   /**
+    * to be used by subdivision. next level block allocation.
+    * 
+    */
    _allocHEdge(size) {
-      if (this._hArray.next.capacity() < size) {   // not enough backLength
+      if (this._hArray.next.capacity() < size) {   // not enough blockLength
          const maxLen = this._hArray.next.maxLength();
-         this.setBufferB(null, 0, allocSizeExpand(maxLen+size) );
+         this.setBufferB(null, 0, expandAllocLen(maxLen+size) );
       }
       
       const index = this._hArray.vertex.appendRangeNew(size);
@@ -822,7 +819,7 @@ class HalfEdgeArray {
    _allocDirectedEdge(hEdge, length) {
       if (this._dArray.vertex.capacity() < length) {
          let maxLen = this._dArray.vertex.maxLength();
-         maxLen = allocSizeExpand(maxLen+length);
+         maxLen = expandAllocLen(maxLen+length);
          this.setBuffer(null, 0, maxLen, computeDataTextureLen(Math.floor(maxLen/3*2)) );   // TODO: What the optimal wEdge expansion size? 
       }
             
@@ -1346,8 +1343,8 @@ class FaceArray {
    }*/
    
    * faceAround(face) {
-      for (let [hEdge, face] of this.faceAroundEntries(face)) {
-         yield face;
+      for (let [hEdge, neighborFace] of this.faceAroundEntries(face)) {
+         yield neighborFace;
       }
    }
    
@@ -1369,7 +1366,7 @@ class FaceArray {
     */
    _allocEx(size) {
       if (this._array.material.capacity() < size) { // resize array if not enough free space.
-         this.setBuffer(null, 0, allocSizeExpand( this._array.material.maxLength()+size ) );
+         this.setBuffer(null, 0, expandAllocLen( this._array.material.maxLength()+size ) );
       }
       
       const start = this._array.material.length();
@@ -1567,7 +1564,7 @@ class HoleArray {
          return this._allocFromFree();
       } else {
          if (this._holes.capacity() < 1) {
-            this.setBuffer(null, 0, allocSizeExpand(this._holes.maxLength()) );
+            this.setBuffer(null, 0, expandAllocLen(this._holes.maxLength()) );
          }
          
          let handle = this._holes.appendNew();

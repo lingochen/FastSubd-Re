@@ -272,6 +272,9 @@ class PixelArray {
     * 
     */
    setBuffer(bufferInfo, byteOffset, length) {
+      if (isNaN(length)) {
+         throw("nan detected");
+      }
       const dataView = this._createView(bufferInfo.buffer, byteOffset, length*this._rec.structStride);
       if (this._dataView) { // remember to copy old blob if any.
          dataView.set(this._dataView.subarray(0, this.length()));
@@ -295,10 +298,11 @@ class PixelArray {
     * compute buffer size that is padded to dataTexture's rect dimension.
     */
    computeBufferSize(length) {
-      if (!length) {
-         length = this.length();
+      if (isNaN(length)) {
+         throw("Nan detected");
+         return 0;
       }
-      
+         
       const [width, height] = computeDataTextureDim(length, this._rec.pixelStride);
 
       return (width * height * this._pixel.channelCount * this._pixel.byteCount);

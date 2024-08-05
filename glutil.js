@@ -97,8 +97,10 @@ function drawPull(gl, program, pullLength) {
 
 
 let MAX_TEXTURE_SIZE = 0;
+let MIN_DATATEXTURE_LENGTH = 1;
 function setConstant(gl) {
    MAX_TEXTURE_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+   MIN_DATATEXTURE_LENGTH = MAX_TEXTURE_SIZE;
    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 };
 
@@ -298,9 +300,29 @@ function computeDataTextureDim(length, stride) {
  * given an array length, compute the length that will fitted the dataTexture's rect dimension.
  * 
  */
-function computeDataTextureLen(length) {
-   const [width, height] = computeDataTextureDim(length, 1);
+function computeDataTextureLen(length, stride=1) {
+   if (length < MIN_DATATEXTURE_LENGTH) {
+      length = MIN_DATATEXTURE_LENGTH;
+   }
+   
+   const [width, height] = computeDataTextureDim(length, stride);
    return (width * height);
+}
+
+
+let kExpandSize = 1.5;
+/**
+ * given the current length, give next length that align the gpu texture.
+ * 
+ */
+function expandAllocLen(length) {
+   if (length < MIN_DATATEXTURE_LENGTH) {
+      length = MIN_DATATEXTURE_LENGTH;
+   } else {
+      length = Math.ceil( length * kExpandSize );
+   }
+   
+   return computeDataTextureLen(length, 1);        // padded to texture size
 }
 
 
@@ -312,9 +334,9 @@ export {
    setImage,
    setWHITE,
    setConstant,
-   MAX_TEXTURE_SIZE,
    computeDataTextureDim,
    computeDataTextureLen,
+   expandAllocLen,
    createProgram,
    setUniforms,
    drawPull,

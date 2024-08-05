@@ -175,13 +175,9 @@ class MaterialDepot {
 
    create(gl, name, input) {
       if (this._gpu.capacity() < 1) {  // expand if no capacity
-         let size = this._gpu.maxLength();
-         if (size === 0) {
-            size = glUtil.MAX_TEXTURE_SIZE;
-         } else {
-            size *= 1.5;
-         }
-         this._gpu.setBuffer(allocBuffer(this._gpu.computeBufferSize(size)), 0, size);
+         let expandLen = glUtil.expandAllocLen( this._gpu.maxLength() );
+
+         this._gpu.setBuffer(allocBuffer(this._gpu.computeBufferSize(expandLen)), 0, expandLen);
       }
       const handle = this._gpu.appendNew();
       // set all texture to WHITE, BLACK?

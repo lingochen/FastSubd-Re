@@ -49,7 +49,7 @@ function createNextLevelTriMesh(source) {
    const subd = TriangleMesh.create(source._material.depot);
    subd.v._valenceMax = source.v.valenceMax();
    // remember to add "uvs" dynamic property
-   HalfEdgeArray.addUvs(subd.h, 1);
+   HalfEdgeArray.addUV(subd.h, 0);
    
    // compute size
    const nVertices = source.v.length() + source.h.lengthW();

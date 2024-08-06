@@ -38,15 +38,7 @@ function isValidVarName(name) {
 function dehydrateObject(obj) {
    const json = {};
    for (let [key, prop] of Object.entries(obj)) {
-      if (Array.isArray(prop)) {
-         const array = [];
-         for (let entry of prop) {
-            array.push( entry.getDehydrate({}) );
-         }
-         json[key] = array;
-      } else {
-         json[key] = prop.getDehydrate({});
-      }
+      json[key] = prop.getDehydrate({});
    }
    
    return json;
@@ -55,15 +47,7 @@ function dehydrateObject(obj) {
 function rehydrateObject(json) {
    const retObj = {};
    for (let [key, prop] of Object.entries(json)) {
-      if (Array.isArray(prop)) {
-         const array = [];
-         for (let pixelObj of prop) {
-            array.push( rehydrateBuffer(pixelObj) );
-         }
-         retObj[key] = array;
-      } else {
-         retObj[key] = rehydrateBuffer(prop);
-      }
+      retObj[key] = rehydrateBuffer(prop);
    }
    return retObj;
 }
@@ -74,13 +58,7 @@ function rehydrateObject(json) {
 function totalStructSize(objs, length) {
    let totalByte = 0;
    for (let [key, buffer] of Object.entries(objs)) {
-      if (!Array.isArray(buffer)) {
-         totalByte += alignCache(buffer.computeBufferSize(length));
-      } else {
-         for (let array of buffer) {
-            totalByte += alignCache(array.computeBufferSize(length));
-         }
-      }
+      totalByte += alignCache(buffer.computeBufferSize(length));
    }
    return totalByte;
 }
@@ -90,13 +68,7 @@ function totalStructSize(objs, length) {
  */
 function setBufferAll(objs, bufferInfo, byteOffset, length) {
    for (let [key, buffer] of Object.entries(objs)) {
-      if (!Array.isArray(buffer)) {
-         byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
-      } else {
-         for (let array of buffer) {
-            byteOffset = alignCache(array.setBuffer(bufferInfo, byteOffset, length));
-         }
-      }
+      byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
    }
    return byteOffset;
 }
@@ -707,11 +679,7 @@ class HalfEdgeArray {
    createPropertyTexture(name, gl) {
       const prop = this._prop[name];
       if (prop) {
-         if (Array.isArray(prop)) {
-            return createDataTexture3D(prop, gl);
-         } else {
-            return prop.createDataTexture(gl);
-         }
+         return prop.createDataTexture(gl);
       }
       throw("unknown dynamic property: " + name);
       return null;
@@ -737,13 +705,7 @@ class HalfEdgeArray {
       const index = this._dArray.vertex.appendRangeNew(size);
       this._dArray.wEdge.appendRangeNew(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
-         if (Array.isArray(prop)) {
-            for (let realProp of prop) {
-               realProp.appendRangeNew(size);
-            }
-         } else {
-            prop.appendRangeNew(size);
-         }
+         prop.appendRangeNew(size);
       }
       return index;
    }
@@ -1209,9 +1171,9 @@ class HalfEdgeArray {
    }
    
    //
-   // convenient utility functions for adding dynamic property.
+   // convenient utility functions for adding dynamic uv(index).
    //
-   static addUvs(halfEdgeArray, numberOfLayer) {
+   static addUV(halfEdgeArray, index=0) {
       const type = {
          className: 'Float16PixelArray',
          sizeOf: 2,
@@ -1223,11 +1185,7 @@ class HalfEdgeArray {
             UV: [0, 2],
          }
       }
-      type.arraySize = 1;
-      if (numberOfLayer) {
-         type.arraySize = numberOfLayer;
-      }
-      return halfEdgeArray.addProperty('uvs', type);
+      return halfEdgeArray.addProperty(`uv${index}`, type);
    }
 }
 
@@ -1797,7 +1755,7 @@ class SurfaceMesh {
       const vertexTexture = this.h.createVertexTexture(gl);
       const positionTexture = this.v.createPositionTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
-      const uvsTexture = this.h.createPropertyTexture('uvs', gl);
+      const uvsTexture = this.h.createPropertyTexture('uv0', gl);
       
       const pbrTexture = this._material.depot.createTexture(gl);
       const materialTexture = this.f.createMaterialTexture(gl);

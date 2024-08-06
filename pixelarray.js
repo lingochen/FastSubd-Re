@@ -789,19 +789,11 @@ function addProp(obj, fields) {
 }
 
 function createDynamicProperty(type, size) {
-   const array = [];
-   const length = type.arraySize ? type.arraySize : 1;
-   for (let i = 0; i < length; ++i) {
-      const prop = createTextureBuffer(type, size);
-      // add fields getter/setter.
-      addProp(prop, type.fields);
-      array.push( prop );
-   }
-   if (type.arraySize === undefined) {
-      return array[0];
-   } else {
-      return array;
-   }
+   const prop = createTextureBuffer(type, size);
+   // add fields getter/setter.
+   addProp(prop, type.fields);
+      
+   return prop;
 }
 
 /**
@@ -825,7 +817,7 @@ export {
    Float32PixelArray,
    Float16PixelArray,
    rehydrateBuffer,
-   createDataTexture3D,
+//   createDataTexture3D,
    createDynamicProperty,
    allocBuffer,
    freeBuffer,

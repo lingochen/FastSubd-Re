@@ -1073,6 +1073,13 @@ class HalfEdgeArray {
    }
    
    _computeLeftRight(hEdge, pair) {
+      // make sure small index is on the left, consistency
+      if (hEdge < pair) {
+         return [hEdge, pair];
+      } else {
+         return [pair, hEdge];
+      }
+      /*
       // make sure lower index is the left qEdge(except for boudnary and polyg), consistency helps in various way   
       if ((hEdge >= 0) && (pair >= 0)) { // normal case.
          if (hEdge > pair) {
@@ -1087,11 +1094,11 @@ class HalfEdgeArray {
             return [pair, hEdge];
          }
       }
-      return [hEdge, pair];
+      return [hEdge, pair];*/
    }
    
    _setWEdge(wEdge, left, right) {
-      this._wEdgeArray.edge.setVec2(wEdge, 0, this._computeLeftRight(left, right));
+      this._wEdgeArray.edge.setVec2(wEdge, 0, [left, right]);//this._computeLeftRight(left, right));
    }
    
    setWEdge(wEdge, left, right) {
@@ -1145,6 +1152,9 @@ class HalfEdgeArray {
       let length = this._wEdgeArray.edge.length();
       for (let i = 0; i < length; ++i) {
          const [left,right] = this.wEdgePair(i);
+         if (left > right) {
+            console.log("wEdge left is larger than right");
+         }
          let wEdge = this.wEdge(left);
          if (wEdge !== i) {
             console.log("hEdge's wEdge("+ i +") disagree about wEdge's left("+ left +")'s wEdge ("+ wEdge +")");

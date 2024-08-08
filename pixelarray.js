@@ -817,7 +817,7 @@ export {
    Float32PixelArray,
    Float16PixelArray,
    rehydrateBuffer,
-//   createDataTexture3D,
+   createDataTexture3D,
    createDynamicProperty,
    allocBuffer,
    freeBuffer,

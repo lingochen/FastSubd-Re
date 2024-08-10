@@ -685,6 +685,10 @@ class HalfEdgeArray {
       return null;
    }
    
+   pBuffer() {
+      return this._dArray.pair.getBuffer();
+   }
+   
    vBuffer() {
       return this._dArray.vertex.getBuffer();
    }
@@ -703,6 +707,7 @@ class HalfEdgeArray {
       }
       
       const index = this._dArray.vertex.appendRangeNew(size);
+      this._dArray.pair.appendRangeNew(size);
       this._dArray.wEdge.appendRangeNew(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
          prop.appendRangeNew(size);
@@ -745,6 +750,7 @@ class HalfEdgeArray {
       }
       
       const index = this._hArray.vertex.appendRangeNew(size);
+      this._hArray.next.appendRangeNew(size);
       this._hArray.prev.appendRangeNew(size);
       this._hArray.next.appendRangeNew(size);
       this._hArray.hole.appendRangeNew(size);
@@ -852,6 +858,7 @@ class HalfEdgeArray {
       // new buffer
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
+         pair: Int32PixelArray.create(1, 1, size),             // twin/pair
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
@@ -878,6 +885,10 @@ class HalfEdgeArray {
             hArray.vertex.set(i, 0, boundaryArray.vertex.get(hEdge, 0));
             const wEdge = boundaryArray.wEdge.get(hEdge, 0);
             hArray.wEdge.set(i, 0, wEdge);
+            // fix pair
+            let twin = boundaryArray.pair.get(hEdge, 0);
+            this._dArray.pair.set(twin, 0, -(i+1));
+            hArray.pair.set(i, 0, twin);
             // remember to update wEdge too
             const leftOrRight = wEdge % 2;
             this._wEdgeArray.edge.set(Math.trunc(wEdge/2), leftOrRight, -(i+1));
@@ -1015,6 +1026,12 @@ class HalfEdgeArray {
    }
 
    pair(hEdge) {
+      if (hEdge < 0) {
+         return this._hArray.pair.get(-(hEdge+1), 0);
+      } else {
+         return this._dArray.pair.get(hEdge, 0);
+      }
+      /*
       let edge;
       if (hEdge < 0) {
          edge = this._hArray.wEdge.get(-(hEdge+1), 0);
@@ -1027,7 +1044,7 @@ class HalfEdgeArray {
          return this.wEdgeLeft(wEdge);
       } else {
          return this.wEdgeRight(wEdge);
-      }
+      }*/
    }
       
    _wEdge(hEdge) {
@@ -1064,11 +1081,13 @@ class HalfEdgeArray {
       return this._wEdgeArray.edge.get(wEdge, wEdgeK.right);
    }
    
-   _setHEdgeWEdge(hEdge, wEdgePosition) {
+   _setHEdgeWEdge(hEdge, wEdgePosition, pair) {
       if (hEdge < 0) {
          this._hArray.wEdge.set(-(hEdge+1), 0, wEdgePosition);
+         this._hArray.pair.set(-(hEdge+1), 0, pair);
       } else {
          this._dArray.wEdge.set(hEdge, 0, wEdgePosition);
+         this._dArray.pair.set(hEdge, 0, pair);
       }
    }
    
@@ -1104,9 +1123,9 @@ class HalfEdgeArray {
    setWEdge(wEdge, left, right) {
       [left, right] = this._computeLeftRight(left, right);
       // reset all
-      this._setHEdgeWEdge(left, wEdge * 2 + wEdgeK.left);
+      this._setHEdgeWEdge(left, wEdge * 2 + wEdgeK.left, right);
       this._wEdgeArray.edge.set(wEdge, wEdgeK.left, left);
-      this._setHEdgeWEdge(right, wEdge * 2 + wEdgeK.right);
+      this._setHEdgeWEdge(right, wEdge * 2 + wEdgeK.right, left);
       this._wEdgeArray.edge.set(wEdge, wEdgeK.right, right);
    }
    

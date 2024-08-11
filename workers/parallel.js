@@ -13,11 +13,11 @@ class WebWorkerPool {
       this._tasksQueue = [];         // Promise that is waiting to resolved.
       this._pool = [];               // worker thread pool all, (free/non-free)
       this._freePool = [];           // freed worker pool 
-      const forBuffer = new SharedArrayBuffer(64*3);     // forLoop webworker indexing purpose
+      const forBuffer = new SharedArrayBuffer(64*6);     // forLoop webworker indexing purpose
       this._for = {current: 0, index: []};
-      this._for.index.push( new Int32Array(forBuffer, 0, 16) );
-      this._for.index.push( new Int32Array(forBuffer, 64, 16) );
-      this._for.index.push( new Int32Array(forBuffer, 128, 16) );
+      for (let i = 0; i < 6; ++i) {
+         this._for.index.push( new Int32Array(forBuffer, i*64, 16) );
+      }
       
       // precreate webWorker for working purpose
       for (let i = 0; i < maxWorkers; ++i) {
@@ -103,8 +103,8 @@ class WebWorkerPool {
    execFor(taskGroup, start, end, blockSize, fnName) {
       // get for Index and build msg
       const curIndex = this._for.current;
-      this._for.current = (this._for.current + 1) % 3;   // advance to next available index ?
-      this._for.index[curIndex][0] = start;              // NOTE:　do we needs to check for availability
+      this._for.current = (this._for.current + 1) % 6;   // advance to next available index ?
+      this._for.index[curIndex][0] = start;              // NOTE:　do we needs to check for availability, yes and yes.
       const msg = {index: curIndex, end, blockSize, action: fnName};
       
       // grab as much worker as possible. NOTE, but less then end

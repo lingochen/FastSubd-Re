@@ -31,7 +31,7 @@ function loopSubdivide(subd, source) {
    tasker.setup({subd: dest, source: src, task}, 'loop');
    
    // compute blockSize, 
-   
+
    const blockSize = 64;
    // copy/refine vertex and add middle edge points.
    tasker.pFor(0, task.vMix.length, blockSize*4, 'vertexTask');
@@ -40,6 +40,9 @@ function loopSubdivide(subd, source) {
    
    // setup all face's hEdge
    tasker.pFor(0, source.f.length(), blockSize, 'faceTask');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskV');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskW');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskP');
    
    // setup wEdge's halfEdge
    tasker.pFor(0, task.wMix.length, blockSize, 'wEdgeTask');

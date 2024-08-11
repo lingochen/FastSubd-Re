@@ -19,10 +19,11 @@ function* nextTask(indexBuffer, hardEnd, blockSize) {
       const start = Atomics.add(index, 0, blockSize);
       current = start;
       let end = Math.min(start+blockSize, hardEnd);
-      while (current < end) {
+      /*while (current < end) {
          yield current;
          current++
-      }
+      }*/
+      yield [current, end];
    } while (current < hardEnd);
 }
 
@@ -40,8 +41,10 @@ function loopSubdivide(subd, source) {
 //
 const loopState = {
    vertexTask: function(msg) {
-      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
-         Tri.vertexTask(_mData, i);
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.vertexTask(_mData, i);
+         }
       }
    },
    
@@ -54,14 +57,42 @@ const loopState = {
    },
    
    faceTask: function(msg) {
-      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
-         Tri.triTask(_mData, i);
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.triTask(_mData, i);
+         }
+      }
+   },
+   
+   faceTaskV: function(msg) {
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.triTaskV(_mData, i);
+         }
+      }
+   },
+   
+   faceTaskP: function(msg) {
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.triTaskP(_mData, i);
+         }
+      }
+   },   
+   
+   faceTaskW: function(msg) {
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.triTaskW(_mData, i);
+         }
       }
    },
    
    wEdgeTask: function(msg) {
-      for (let i of nextTask(msg.index, msg.end, msg.blockSize)) {
-         Tri.wEdgeTask(_mData, i);
+      for (let [start, end] of nextTask(msg.index, msg.end, msg.blockSize)) {
+         for (let i = start; i < end; ++i) {
+            Tri.wEdgeTask(_mData, i);
+         }
       }
    },
    
@@ -103,9 +134,9 @@ let gHandler = initState;
  
 // the main function passing
 onmessage = (e)=> {
-   _mIndex.push( new Int32Array(e.data, 0, 16)  ); // thread startup needs to get the sharedIndexBuffer
-   _mIndex.push( new Int32Array(e.data, 64, 16) );
-   _mIndex.push( new Int32Array(e.data, 128, 16) );
+   for (let i = 0; i < 6; ++i) {
+      _mIndex.push( new Int32Array(e.data, i*64, 16)  ); // thread startup needs to get the sharedIndexBuffer
+   }
    // change to normal message handling.
    onmessage = (e)=> {
       const fn = gHandler[e.data.action];

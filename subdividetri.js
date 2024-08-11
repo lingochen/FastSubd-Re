@@ -273,6 +273,86 @@ function triTask(mThis, face) {
    }
 }
 
+function triTaskW(mThis, face) {
+   // 1 face grow to 4 face, each face has 3 hEdge
+   let srcHEdge = face * 3;         // get hEdge idx
+   let destHEdge = srcHEdge * 4;    // dest expand by 4.
+   
+   // new WEdge, pair, new Vertex position computation
+   const faceW = computeNewFaceWEdgeIndex(mThis, face);
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
+   const index = [[0,2], [1,0], [2,1]];
+   for (let [i, prev] of index) {
+      mThis.desthw[destHEdge++] = edgeW[i][0];
+      
+      // middle new edge
+      mThis.desthw[destHEdge++] = faceW[i];
+
+      // original 2nd hEdge upper side
+      mThis.desthw[destHEdge++] = edgeW[prev][1];
+   }
+   // final inner triangle.
+   for (let [i, prev] of index) {
+      mThis.desthw[destHEdge++] = faceW[i]+1;
+   }   
+   
+}
+
+function triTaskV(mThis, face) {
+   // 1 face grow to 4 face, each face has 3 hEdge
+   let srcHEdge = face * 3;         // get hEdge idx
+   let destHEdge = srcHEdge * 4;    // dest expand by 4.
+   
+   // new WEdge, pair, new Vertex position computation
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
+
+   const index = [[0,2], [1,0], [2,1]];
+   for (let [i, prev] of index) {
+      let vertex = computeNewVertex(mThis, mThis.srch.origin(srcHEdge+i) );
+      mThis.desthv[destHEdge++] = vertex;
+      
+      // middle new edge
+      mThis.desthv[destHEdge++] = edgeW[i][2];
+
+      // original 2nd hEdge upper side
+      mThis.desthv[destHEdge++] = edgeW[prev][2];
+   }
+   // final inner triangle.
+   for (let [i, prev] of index) {
+      mThis.desthv[destHEdge++] = edgeW[prev][2];
+
+   }   
+   
+}
+function triTaskP(mThis, face) {
+   // 1 face grow to 4 face, each face has 3 hEdge
+   let srcHEdge = face * 3;         // get hEdge idx
+   let destHEdge = srcHEdge * 4;    // dest expand by 4.
+   const destHEdgeBase = destHEdge;
+   
+   const pairW = [computeSubdivideDEdge(mThis.srch._dArray.pair.get(srcHEdge, 0)),
+                  computeSubdivideDEdge(mThis.srch._dArray.pair.get(srcHEdge+1, 0)),
+                  computeSubdivideDEdge(mThis.srch._dArray.pair.get(srcHEdge+2, 0)),];
+   const index = [[0,2], [1,0], [2,1]];
+   for (let [i, prev] of index) {
+      mThis.desthp[destHEdge++] = pairW[i][1];
+      
+      // middle new edge
+      mThis.desthp[destHEdge++] = destHEdgeBase+i+9;
+
+      // original 2nd hEdge upper side
+      mThis.desthp[destHEdge++] = pairW[prev][0];
+   }
+   // final inner triangle.
+   for (let [i, prev] of index) {
+      mThis.desthp[destHEdge++] = destHEdgeBase+ i*3 + 1;
+   }   
+   
+}
 
 function computeSubdivideFaceDEdge(face) {
    const base = face * 12;
@@ -365,6 +445,9 @@ export {
    vertexTaskRemainder,
    boundaryLoopTask,
    triTask,
+   triTaskV,
+   triTaskP,
+   triTaskW,
    wEdgeTask,              // actually, 12 wEdge per task (3wEdges, 2Faces)
    wEdgeTaskRemainder,
 }

@@ -203,9 +203,8 @@ class VertexArray {
       }
    }
    
-   * outHalfEdgeAround(vert) {
+   * outHalfEdgeAround(hEdgeContainer, vert) {
       if (this._prop.valence.get(vert, 0) >= 0) { // initialized yet?
-         const hEdgeContainer = this._mesh.h;
          const start = this._base.hEdge.get(vert, 0);
          let current = start;
          do {
@@ -322,14 +321,15 @@ class VertexArray {
       const temp = [0, 0, 0];
       const handle = {face: 0};
       const pt = this._base.pt.getBuffer();
+      const hEdgeContainer = this._mesh.h;
       for (let v of this) {     
          const valence = this.valence(v);
          const radStep = 2*Math.PI / valence;
                   
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outHalfEdgeAround(v)) {
-            let p = this._mesh.h.destination(hEdge);
+         for (let hEdge of this.outHalfEdgeAround(hEdgeContainer, v)) {
+            let p = hEdgeContainer.destination(hEdge);
             let coseff = Math.cos(i*radStep);
             let sineff = Math.sin(i*radStep);
             vec3a.scaleAndAdd(tangentL, 0, pt, p * sizeOfPointK, coseff);
@@ -358,6 +358,7 @@ class VertexArray {
       const temp = [0, 0, 0];
       const handle = {face: 0};
       const pt = this._base.pt.getBuffer();
+      const hEdgeContainer = this._mesh.h;
       for (let v of this) {
          // compute angleStep (primary, secondary ring), 
          const valence = this.valence(v);
@@ -366,9 +367,9 @@ class VertexArray {
          
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outHalfEdgeAround(v)) {
+         for (let hEdge of this.outHalfEdgeAround(hEdgecontainer, v)) {
             const hEdges = [];
-            for (let dEdge of this._mesh.h.faceIter(hEdge)) { 
+            for (let dEdge of hEdgeContainer.faceIter(hEdge)) { 
                hEdges.push( dEdge );
             }
             // first(the ring), add up primary
@@ -482,7 +483,7 @@ class VertexArray {
             sanity = false;
          } else { // check prev,next are the same. 
             let iterationCount = 0;    // make sure, no infinite loop
-            for (let outEdge of this.outHalfEdgeAround(vertex)) {
+            for (let outEdge of this.outHalfEdgeAround(hEdgeContainer, vertex)) {
                const orig = hEdgeContainer.origin(outEdge);
                if (orig !== vertex) {
                   console.log("vertex: " + vertex + "'s circulator is broken");
@@ -1877,7 +1878,7 @@ class SurfaceMesh {
    }
    
    findHalfEdge(v0, v1) {
-      for (let outEdge of this._vertices.outHalfEdgeAround(v0)) {
+      for (let outEdge of this._vertices.outHalfEdgeAround(this._hEdges, v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             return outEdge;
          }
@@ -2013,7 +2014,7 @@ class SurfaceMesh {
    */
    findFreeEdge(v0, v1) {
       let freeEdge = 0;
-      for (let outEdge of this._vertices.outHalfEdgeAround(v0)) {
+      for (let outEdge of this._vertices.outHalfEdgeAround(this._hEdges, v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             if (!this._hEdges.isBoundary(outEdge)) {  // non-free
                return [true, 1];

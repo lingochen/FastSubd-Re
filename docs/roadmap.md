@@ -14,15 +14,15 @@
 
 - <s>Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)</s> @done (2024/02/20)
 
-- refactor DirectedEdgeArray. add (pair/twin) data memeber since it a fairly common operation to refernce pair. 
+- <s>refactor DirectedEdgeArray. add (pair/twin) data memeber since it a fairly common operation to refernce pair.</s> @done (2024/08/10)- no speedup, going to drop it.
 
 - [MeshColors PatchTexture](meshcolors.md)
 
-- Modified Butterfly scheme support
+- <s>Modified Butterfly scheme support</s> - drop
 
-- Catmull-Clark scheme support
+- <s>Catmull-Clark scheme support</s> - drop
 
-- More file formats support.
+- <s>More file formats support.</s> - drop
 
 - Complete PBR material support and rendering.
 

@@ -1,10 +1,11 @@
 /**
  * DirectedEdge instead of traditional HalfEdge. 
- * Same operation as HalfEdge,  but implicit next/prev and explicit pair data member.
+ * Same operation as HalfEdge, implicit next/prev and explicit pair data member.
  * Traditional HalfEdge is explicit next/prev but implicit pair data member.
  * AddFace() different logic from HalfEdge.
  * better cache coherence and more similar to traditional face/vertex representation.
  * easier to optimize for parallel subdivision.
+ * Only triangle mesh here, general polygon is better handle of traditional HalfEdge. (2024/08/14)
  * 
  * triangle ratio vertex(4):edge(5):triangle(3)
  * quad ratio vertex(4):edge(4):quad(2)
@@ -14,11 +15,11 @@
  * HalfEdgeArray
  * FaceArray
  * HoleArray
- * BaseMesh
+ * SurfaceMesh
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDataTexture3D, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
@@ -101,37 +102,38 @@ const sizeOfPointK = 4;
 */
 class VertexArray {
    constructor(array, props, valenceMax) {
-      this._array = array;
+      this._base = array;
+      this._prop = props;           // custom properties.
       this._valenceMax = valenceMax;
       this._mesh = null;            // to be setup by Mesh
-      this._prop = props;           // custom properties.
    }
    
    static create(size) {
       const array = {
          hEdge: Int32PixelArray.create(1, 1, size),               // point back to the one of the hEdge ring that own the vertex. 
-         // point attribute
          pt: Float32PixelArray.create(sizeOfPointK, 4, size),     // pts = {x, y, z}, 3 layers of float32 each? or 
+      };
+      const prop = {
          color: Uint8PixelArray.create(4, 4, size),               // should we packed to pts as 4 channels(rgba)/layers of textures? including color?
          // cached value
          normal: Float16PixelArray.create(3, 3, size),
          valence: Int32PixelArray.create(1, 1, size),
       };
 
-      return new VertexArray(array, {}, 0);
+      return new VertexArray(array, prop, 0);
    }
 
    static rehydrate(self) {
-      if (self._array && self._prop) {
-         const array = rehydrateObject(self._array);
-         const props = rehydrateObject(self._prop);
-         return new VertexArray(array, props, self._valenceMax);
+      if (self._base && self._prop) {
+         const array = rehydrateObject(self._base);
+         const prop = rehydrateObject(self._prop);
+         return new VertexArray(array, prop, self._valenceMax);
       }
       throw("VertexArray rehydrate: bad input");
    }
 
    getDehydrate(obj) {
-      obj._array = dehydrateObject(this._array);
+      obj._base = dehydrateObject(this._base);
       obj._prop = dehydrateObject(this._prop);
       
       obj._valenceMax = this._valenceMax;
@@ -143,7 +145,7 @@ class VertexArray {
     * 
     */
    computeBufferSize(length) {
-      return totalStructSize(this._array, length)
+      return totalStructSize(this._base, length)
              + totalStructSize(this._prop, length);
    }
    
@@ -155,7 +157,7 @@ class VertexArray {
          bufferInfo = allocBuffer(this.computeBufferSize(length));
       }
       
-      byteOffset = setBufferAll(this._array, bufferInfo, byteOffset, length);
+      byteOffset = setBufferAll(this._base, bufferInfo, byteOffset, length);
       byteOffset = setBufferAll(this._prop, bufferInfo, byteOffset, length);
       
       return byteOffset;
@@ -189,11 +191,11 @@ class VertexArray {
    }
    
    *[Symbol.iterator] () {
-      yield* this.rangeIter(0, this._array.hEdge.length());
+      yield* this.rangeIter(0, this._base.hEdge.length());
    }
 
    * rangeIter(start, stop) {
-      stop = Math.min(this._array.hEdge.length(), stop);
+      stop = Math.min(this._base.hEdge.length(), stop);
       for (let i = start; i < stop; i++) {
          if (!this.isFree(i)) {
             yield i;
@@ -202,9 +204,9 @@ class VertexArray {
    }
    
    * outHalfEdgeAround(vert) {
-      if (this._array.valence.get(vert, 0) >= 0) { // initialized yet?
+      if (this._prop.valence.get(vert, 0) >= 0) { // initialized yet?
          const hEdgeContainer = this._mesh.h;
-         const start = this._array.hEdge.get(vert, 0);
+         const start = this._base.hEdge.get(vert, 0);
          let current = start;
          do {
             const outEdge = current;
@@ -217,9 +219,9 @@ class VertexArray {
    
    // ccw ordering
    * inHalfEdgeAround(vert) {
-      if (this._array.valence.get(vert, 0) >= 0) { // initialized yet?
+      if (this._prop.valence.get(vert, 0) >= 0) { // initialized yet?
          const hEdgeContainer = this._mesh.h;
-         const start = this._array.hEdge.get(vert, 0);
+         const start = this._base.hEdge.get(vert, 0);
          let current = start;
          do {
             const inEdge = hEdgeContainer.pair(current);
@@ -234,15 +236,15 @@ class VertexArray {
    // wEdgeAround(vert)
 
    createPositionTexture(gl) {
-      return this._array.pt.createDataTexture(gl);
+      return this._base.pt.createDataTexture(gl);
    }
    
    createNormalTexture(gl) {
-      return this._array.normal.createDataTexture(gl);
+      return this._prop.normal.createDataTexture(gl);
    }
    
    positionBuffer() {
-      return this._array.pt.getBuffer();
+      return this._base.pt.getBuffer();
    }
 
    // the maximum valence ever in this VertexArray.
@@ -251,26 +253,26 @@ class VertexArray {
    }
 
    valence(vertex) {
-      return this._array.valence.get(vertex, 0);
+      return this._prop.valence.get(vertex, 0);
    }
    
    setValence(vertex, valence) {
-      this._array.valence.set(vertex, 0, valence);
+      this._prop.valence.set(vertex, 0, valence);
    }
 
    crease(vertex) {
-      return this._array.pt.get(vertex, PointK.c);
+      return this._base.pt.get(vertex, PointK.c);
    }
 
    setCrease(vertex, crease) {
-      this._array.pt.set(vertex, PointK.c, crease);
+      this._base.pt.set(vertex, PointK.c, crease);
    }
 
    computeValence() {
       const hEdges = this._mesh.h;
       let valenceMax = 0;
       for (let i of this) {
-         const start = this._array.hEdge.get(i, 0);
+         const start = this._base.hEdge.get(i, 0);
          if (start >= 0) {
             let count = 0;
             let current = start;
@@ -319,7 +321,7 @@ class VertexArray {
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
-      const pt = this._array.pt.getBuffer();
+      const pt = this._base.pt.getBuffer();
       for (let v of this) {     
          const valence = this.valence(v);
          const radStep = 2*Math.PI / valence;
@@ -337,7 +339,7 @@ class VertexArray {
          // now we have bi-tangent, compute the normal
          vec3.cross(temp, 0, tangentL, 0, tangentR, 0);
          vec3a.normalize(temp, 0);
-         this._array.normal.setVec3(v, 0, temp);      
+         this._prop.normal.setVec3(v, 0, temp);      
          
       }
    }
@@ -355,7 +357,7 @@ class VertexArray {
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
-      const pt = this._array.pt.getBuffer();
+      const pt = this._base.pt.getBuffer();
       for (let v of this) {
          // compute angleStep (primary, secondary ring), 
          const valence = this.valence(v);
@@ -403,7 +405,7 @@ class VertexArray {
          // now we have bi-tangent, compute the normal
          vec3.cross(temp, 0, tangentL, 0, tangentR, 0);
          vec3a.normalize(temp, 0);
-         this._array.normal.setVec3(v, 0, temp);
+         this._prop.normal.setVec3(v, 0, temp);
       }
    }
 
@@ -419,40 +421,41 @@ class VertexArray {
     * used by subdivision, and alloc()
     */
    _allocEx(size) {
-      if (this._array.hEdge.capacity() < size) {  // realloc if no capacity.
-         this.setBuffer(null, 0, expandAllocLen(this._array.hEdge.maxLength()+size));
+      if (this._base.hEdge.capacity() < size) {  // realloc if no capacity.
+         this.setBuffer(null, 0, expandAllocLen(this._base.hEdge.maxLength()+size));
       }
       
       const start = this.length();
-      this._array.hEdge.appendRangeNew(size);
-      this._array.pt.appendRangeNew(size);
-      this._array.color.appendRangeNew(size);
-      this._array.normal.appendRangeNew(size);
-      this._array.valence.appendRangeNew(size);
+      for (let key of Object.keys(this._base)) {
+         this._base[key].appendRangeNew(size);
+      }
+      for (let key of Object.keys(this._prop)) {
+         this._prop[key].appendRangeNew(size);
+      }
       return start;
    }
 
    isFree(vert) {
-      const c = this._array.pt.get(vert, PointK.c);
+      const c = this._base.pt.get(vert, PointK.c);
       return (c < -1);
    }
 
    copyPt(vertex, inPt, inOffset) {
-      vec3.copy(this._array.pt.getBuffer(), vertex * sizeOfPointK, inPt, inOffset);
-      //this._array.pt.set(vertex, 0, 0, inPt[inOffset]);
-      //this._array.pt.set(vertex, 0, 1, inPt[inOffset+1]);
-      //this._array.pt.set(vertex, 0, 2, inPt[inOffset+2]);
+      vec3.copy(this._base.pt.getBuffer(), vertex * sizeOfPointK, inPt, inOffset);
+      //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
+      //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
+      //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
    }
    
    halfEdge(vert) {
-      return this._array.hEdge.get(vert, 0);
+      return this._base.hEdge.get(vert, 0);
    }
    
    setHalfEdge(vert, hEdge) {
-      this._array.hEdge.set(vert, 0, hEdge);
-      let valence = this._array.valence.get(vert, 0); // check for init
+      this._base.hEdge.set(vert, 0, hEdge);
+      let valence = this._prop.valence.get(vert, 0);  // check for init
       if (valence < 0) {
-         this._array.valence.set(vert, 0, 1);
+         this._prop.valence.set(vert, 0, 1);
       }
    }
    
@@ -500,11 +503,11 @@ class VertexArray {
    };
    
    stat() {
-      return "Vertices Count: " + this._array.hEdge.length() + ";\n";
+      return "Vertices Count: " + this._base.hEdge.length() + ";\n";
    }
    
    length() {
-      return this._array.pt.length();
+      return this._base.pt.length();
    }
 }
 

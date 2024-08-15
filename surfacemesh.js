@@ -539,12 +539,10 @@ class HalfEdgeArray {
    static _createInternal(size) {
       const dArray = { // odd number of index and odd number of polygon(triangle) created false sharing, so we have to separate everything out
          vertex: Int32PixelArray.create(1, 1, size),
-         pair: Int32PixelArray.create(1, 1, size),             // pair, twin, 
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
       };
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex,
-         pair: Int32PixelArray.create(1, 1, size),             // point to pair,
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
@@ -688,10 +686,6 @@ class HalfEdgeArray {
       return null;
    }
    
-   pBuffer() {
-      return this._dArray.pair.getBuffer();
-   }
-   
    vBuffer() {
       return this._dArray.vertex.getBuffer();
    }
@@ -710,7 +704,6 @@ class HalfEdgeArray {
       }
       
       const index = this._dArray.vertex.appendRangeNew(size);
-      this._dArray.pair.appendRangeNew(size);
       this._dArray.wEdge.appendRangeNew(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
          prop.appendRangeNew(size);
@@ -861,7 +854,6 @@ class HalfEdgeArray {
       // new buffer
       const hArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
-         pair: Int32PixelArray.create(1, 1, size),             // twin/pair
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
          hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
@@ -888,10 +880,6 @@ class HalfEdgeArray {
             hArray.vertex.set(i, 0, boundaryArray.vertex.get(hEdge, 0));
             const wEdge = boundaryArray.wEdge.get(hEdge, 0);
             hArray.wEdge.set(i, 0, wEdge);
-            // fix pair
-            let twin = boundaryArray.pair.get(hEdge, 0);
-            this._dArray.pair.set(twin, 0, -(i+1));
-            hArray.pair.set(i, 0, twin);
             // remember to update wEdge too
             const leftOrRight = wEdge % 2;
             this._wEdgeArray.edge.set(Math.trunc(wEdge/2), leftOrRight, -(i+1));
@@ -1029,12 +1017,6 @@ class HalfEdgeArray {
    }
 
    pair(hEdge) {
-      if (hEdge < 0) {
-         return this._hArray.pair.get(-(hEdge+1), 0);
-      } else {
-         return this._dArray.pair.get(hEdge, 0);
-      }
-      /*
       let edge;
       if (hEdge < 0) {
          edge = this._hArray.wEdge.get(-(hEdge+1), 0);
@@ -1047,7 +1029,7 @@ class HalfEdgeArray {
          return this.wEdgeLeft(wEdge);
       } else {
          return this.wEdgeRight(wEdge);
-      }*/
+      }
    }
       
    _wEdge(hEdge) {
@@ -1087,21 +1069,12 @@ class HalfEdgeArray {
    _setHEdgeWEdge(hEdge, wEdgePosition, pair) {
       if (hEdge < 0) {
          this._hArray.wEdge.set(-(hEdge+1), 0, wEdgePosition);
-         this._hArray.pair.set(-(hEdge+1), 0, pair);
       } else {
          this._dArray.wEdge.set(hEdge, 0, wEdgePosition);
-         this._dArray.pair.set(hEdge, 0, pair);
       }
    }
    
    _computeLeftRight(hEdge, pair) {
-      // make sure small index is on the left, consistency
-      if (hEdge < pair) {
-         return [hEdge, pair];
-      } else {
-         return [pair, hEdge];
-      }
-      /*
       // make sure lower index is the left qEdge(except for boudnary and polyg), consistency helps in various way   
       if ((hEdge >= 0) && (pair >= 0)) { // normal case.
          if (hEdge > pair) {
@@ -1116,7 +1089,7 @@ class HalfEdgeArray {
             return [pair, hEdge];
          }
       }
-      return [hEdge, pair];*/
+      return [hEdge, pair];
    }
    
    _setWEdge(wEdge, left, right) {
@@ -1763,11 +1736,11 @@ class SurfaceMesh {
    /**
     * simple wrapper around FaceArray.halfEdgeLoop 
     */ 
-   halfEdgeLoop(face) {
+   halfEdgeAroundFace(face) {
       return this._faces.halfEdgeLoop(this._hEdges, face);
    }
    
-   //halfEdgeEntriesLoop(face) {
+   //halfEdgeEntriesAroundFace(face) {
    //   return this._faces.halfEdgeEntriesLoop(this._hEdges, faces);
    //}
    

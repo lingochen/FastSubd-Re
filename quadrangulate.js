@@ -106,7 +106,7 @@ function quadrangulate(mesh, angleTolerance=(Math.PI/12)) {
          if (!triangle.paired[tri]) {  // is available? tried to find pair
             let bestFit = [tri, Math.PI*2];  // self, at worst an isolated triangle
             // try to find best available pair of triangle.
-            for (let hEdge of mesh.halfEdgeLoop(tri)) {
+            for (let hEdge of mesh.halfEdgeAroundFace(tri)) {
                const pair = mesh.h.pair(hEdge);
                if (pair >= 0) {        // not boundary loop, so valid face
                   const candidateFace = mesh.h.face(pair);

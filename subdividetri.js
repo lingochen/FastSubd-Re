@@ -15,11 +15,13 @@ function setupSubdivide(dest, source, task, edgeVertex, refineVertex) {
    const mDat = {};
    mDat.vMix = task.vMix;
    mDat.wMix = task.wMix;
+   mDat.src = source;
    mDat.srcv = source.v;
    mDat.srcvp = source.v.positionBuffer();
    mDat.srch = source.h;
    mDat.srcf = source.f;
    mDat.srco = source.o;
+   mDat.dest = dest;
    mDat.destv = dest.v;
    mDat.destvp = dest.v.positionBuffer();
    mDat.desth = dest.h;

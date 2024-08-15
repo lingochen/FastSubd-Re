@@ -217,9 +217,8 @@ class VertexArray {
    }
    
    // ccw ordering
-   * inHalfEdgeAround(vert) {
+   * inHalfEdgeAround(hEdgeContainer, vert) {
       if (this._prop.valence.get(vert, 0) >= 0) { // initialized yet?
-         const hEdgeContainer = this._mesh.h;
          const start = this._base.hEdge.get(vert, 0);
          let current = start;
          do {
@@ -460,14 +459,14 @@ class VertexArray {
       }
    }
    
-   findFreeInEdge(vert) {
-      for (let inEdge of this.inHalfEdgeAround(vert)) {
+/*   findFreeInEdge(hEdgeContainer, vert) {
+      for (let inEdge of this.inHalfEdgeAround(hEdgeContainer, vert)) {
          if (hEdges.face(inEdge) < 0) {
             return inEdge;
          }
       }
       return -1;
-   }
+   } */
 
    sanityCheck() {
       const hEdgeContainer = this._mesh.h;
@@ -1755,6 +1754,20 @@ class SurfaceMesh {
    }
    
    /**
+    * simple wrapper for VertexArray.inHalfEdgeAround()
+    */
+   inHalfEdgeAroundVertex(vert) {
+      return this._vertices.inHalfEdgeAround(this._hEdges, vert);
+   }
+   
+   /**
+    * simple wrapper around VertexArray.outHalfEdgeAround()
+    */
+   outHalfEdgeAroundVertex(vert) {
+      return this._vertices.outHalfEdgeAround(this._hEdges, vert);
+   }
+   
+   /**
     * free unused memory from all the pixel's array.
     * TODO: 
     */
@@ -2014,7 +2027,7 @@ class SurfaceMesh {
    */
    findFreeEdge(v0, v1) {
       let freeEdge = 0;
-      for (let outEdge of this._vertices.outHalfEdgeAround(this._hEdges, v0)) {
+      for (let outEdge of this.outHalfEdgeAroundVertex(v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             if (!this._hEdges.isBoundary(outEdge)) {  // non-free
                return [true, 1];

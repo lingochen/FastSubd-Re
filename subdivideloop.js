@@ -92,7 +92,7 @@ function vertexRefine(mThis, destVertex, vertex) {
       vec3.copy(mThis.destvp, destVertex*4, mThis.srcvp, vertex*4);
    } else if (crease >= 1) {     // crease
       vec3.scale(pt, 0, mThis.srcvp, vertex*4, 3/4);
-      for (let inEdge of mThis.srcv.inHalfEdgeAround(vertex)) {
+      for (let inEdge of mThis.src.inHalfEdgeAroundVertex(vertex)) {
          if (mThis.srch.sharpness(inEdge) !== 0) {
             const out = mThis.srch.origin(inEdge);
             vec3a.scaleAndAdd(pt, 0, mThis.srcvp, out*4, 1/8);
@@ -109,14 +109,14 @@ function vertexRefine(mThis, destVertex, vertex) {
       // smooth or blend
       if (crease === 0) {        // smooth
          vec3.scale(pt, 0, mThis.srcvp, vertex*4, 1 - k*beta);
-         for (let inEdge of mThis.srcv.inHalfEdgeAround(vertex)) {
+         for (let inEdge of mThis.src.inHalfEdgeAroundVertex(vertex)) {
             const out = mThis.srch.origin(inEdge);
             vec3a.scaleAndAdd(pt, 0, mThis.srcvp, out*4, beta);
          }
       } else { // (0,1) blend between smooth and crease
          const smooth = 1 - crease;
          vec3.scale(pt, 0, mThis.srcvp, vertex*4, smooth*(1 - k*beta) + crease*(3/4));
-         for (let inEdge of mThis.srcv.inHalfEdgeAround(vertex)) {
+         for (let inEdge of mThis.srcv.inHalfEdgeAroundVertex(vertex)) {
             const out = srchEdges.origin(inEdge);
             if (srchEdges.sharpness(inEdge) !== 0) {
                vec3a.scaleAndAdd(pt, 0, mThis.srcvp, out*4, beta * smooth + 1/8 * crease);

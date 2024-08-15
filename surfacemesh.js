@@ -853,8 +853,8 @@ class HalfEdgeArray {
    // remove hole, make the buffer contiguous. 
    // boundaryLoop make it contiguous too.
    //
-   compactBuffer() {
-      if (this._mesh.o.length() === 0) {
+   compactBuffer(holeContainer) {
+      if (holeContainer.length() === 0) {
          return;
       }
       
@@ -879,9 +879,9 @@ class HalfEdgeArray {
       const boundaryArray = this._hArray;
       // redo boundaryLoop, one by one
       let i = 0;
-      for (let hole of this._mesh.o) {
+      for (let hole of holeContainer) {
          let head = i;
-         for (let dEdge of this._mesh.o.halfEdgeLoop(hole)) {   // walk over boundaryLoop
+         for (let dEdge of holeContainer.halfEdgeLoop(this, hole)) { // walk over boundaryLoop
             const hEdge = -(dEdge+1);
             hArray.hole.set(i, 0, hole);
             hArray.next.set(i, 0, -(i+2));
@@ -1519,13 +1519,12 @@ class HoleArray {
       }
    }
 
-   * halfEdgeLoop(hole) {
-      const hEdges = this._mesh.h;
+   * halfEdgeLoop(hEdgeContainer, hole) {
       const start = this.halfEdge(hole);
       let current = start;
       do {
          yield current;
-         current = hEdges.next(current);
+         current = hEdgeContainer.next(current);
       } while (current !== start);
    }
 
@@ -1831,7 +1830,7 @@ class SurfaceMesh {
       const changed = {};
       //changed.v = this.v.compactBuffer();
       //changed.f = this.f.compactBuffer();
-      changed.h = this.h.compactBuffer();
+      changed.h = this.h.compactBuffer(this.o);
       
       return changed;
    }

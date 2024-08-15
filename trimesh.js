@@ -108,7 +108,7 @@ class TriangleArray extends FaceArray {
    
 
    // Iterator for the HalfEdge connecting to the triangle.
-   * halfEdgeLoop(face) {
+   * halfEdgeLoop(_h, face) {
       face *= 3;
       yield face;
       yield (face+1);
@@ -119,14 +119,14 @@ class TriangleArray extends FaceArray {
     * similar to array.entries
     * @param {handle} face 
     */
-   * halfEdgeLoopEntries(face) {
+   * halfEdgeLoopEntries(_h, face) {
       face *= 3;
       yield [0, face];
       yield [1, face+1];
       yield [2, face+2];
    }
    
-   halfEdgeLoopArray(tri) {   // static possible,
+   halfEdgeLoopArray(_h, tri) {   // static possible,
       tri *= 3;
       return [tri, tri+1, tri+2];
    }

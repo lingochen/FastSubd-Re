@@ -1315,26 +1315,26 @@ class FaceArray {
       }
    }
    
-   * vertexLoop(face) {
-      for (const hEdge of this.halfEdgeLoop(face)) {
-         yield this._mesh.h.origin(hEdge);
+   * vertexLoop(hEdgeContainer, face) {
+      for (const hEdge of this.halfEdgeLoop(hEdgeContainer, face)) {
+         yield hEdgeContainer.origin(hEdge);
       }
    }
    
    /* * wEdgeLoop(face) {
    }*/
    
-   * faceAround(face) {
-      for (let [hEdge, neighborFace] of this.faceAroundEntries(face)) {
+   * faceAround(hEdgeContainer, face) {
+      for (let [hEdge, neighborFace] of this.faceAroundEntries(hEdgeContainer, face)) {
          yield neighborFace;
       }
    }
    
-   * faceAroundEntries(face) {
+   * faceAroundEntries(hEdgeContainer, face) {
       for (const hEdge of this.halfEdgeLoop(face)) {
-         const pair = this._mesh.h.pair(hEdge);
+         const pair = hEdgeContainer.pair(hEdge);
          if (pair >= 0) { // we want face not hole
-            yield [hEdge, this._mesh.h.face(pair)];
+            yield [hEdge, hEdgeContainer.face(pair)];
          }
       }
    }
@@ -1419,9 +1419,9 @@ class FaceArray {
       
    sanityCheck(hEdgeContainer) {   // halfEdge and Triangle are align automatically, always true.
       for (let face of this) {
-         for (let hEdge of this.halfEdgeLoop(face)) {
+         for (let hEdge of this.halfEdgeLoop(hEdgeContainer, face)) {
             const pair = hEdgeContainer.pair(hEdge);
-            //if (this._mesh.h.isBoundary(pair)) {
+            //if (hEdgeContainer.isBoundary(pair)) {
             //   console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
             //}
          }
@@ -1656,7 +1656,6 @@ class SurfaceMesh {
       this._hEdges = hEdges;
       this._vertices = vertices;
       this._faces = faces;
-      this._faces._mesh = this;
       this._holes = holes;
    }
 
@@ -1759,6 +1758,21 @@ class SurfaceMesh {
     */
    outHalfEdgeAroundVertex(vert) {
       return this._vertices.outHalfEdgeAround(this._hEdges, vert);
+   }
+   
+   /**
+    * simple wrapper around FaceArray.halfEdgeLoop 
+    */ 
+   halfEdgeLoop(face) {
+      return this._faces.halfEdgeLoop(this._hEdges, face);
+   }
+   
+   //halfEdgeEntriesLoop(face) {
+   //   return this._faces.halfEdgeEntriesLoop(this._hEdges, faces);
+   //}
+   
+   faceAroundFace(face) {
+      return this._faces.faceAround(this._hEdges, face);
    }
    
    /**
@@ -1919,7 +1933,7 @@ class SurfaceMesh {
           
       // create Polygon directEdge
       const newPoly = this._allocPolygon(material, length);
-      const polyLoop = this._faces.halfEdgeLoopArray(newPoly);
+      const polyLoop = this._faces.halfEdgeLoopArray(this.h, newPoly);
       const boundaryLoop = this._hEdges.allocBoundaryEdge(polyLoop);
       
       let nextIndex = start;

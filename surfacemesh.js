@@ -532,7 +532,6 @@ class HalfEdgeArray {
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
       // 
-      this._mesh = null;
       this._prop = props;
       this._bufferInfo = null;
    }
@@ -901,7 +900,7 @@ class HalfEdgeArray {
          // fix next, prev.
          hArray.next.set(i-1, 0, -(head+1));
          hArray.prev.set(head, 0, -i);             // -i = -(i-1+1)
-         this._mesh.o.setHalfEdge(hole, -(head+1));
+         holeContainer.setHalfEdge(hole, -(head+1));
       }
       // dealloc extra.
       const extra = size - i;
@@ -1418,10 +1417,10 @@ class FaceArray {
    } */
    
       
-   sanityCheck(dEdges) {   // halfEdge and Triangle are align automatically, always true.
+   sanityCheck(hEdgeContainer) {   // halfEdge and Triangle are align automatically, always true.
       for (let face of this) {
          for (let hEdge of this.halfEdgeLoop(face)) {
-            const pair = this._mesh.h.pair(hEdge);
+            const pair = hEdgeContainer.pair(hEdge);
             //if (this._mesh.h.isBoundary(pair)) {
             //   console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
             //}
@@ -1442,7 +1441,6 @@ class FaceArray {
  */
 class HoleArray {
    constructor(holes) {
-      this._mesh = null;
       this._holes = holes;
       this._fmm = {
          size: 0,
@@ -1610,12 +1608,11 @@ class HoleArray {
       }
    }
 
-   sanityCheck() {
-      const hEdges = this._mesh.h;
+   sanityCheck(hEdgeContainer) {
       let sanity = true;
       for (let hole of this) {
-         for (let hEdge of this.halfEdgeLoop(hole)) {
-            if (hEdges.hole(hEdge) !== hole) {
+         for (let hEdge of this.halfEdgeLoop(hEdgeContainer, hole)) {
+            if (hEdgeContainer.hole(hEdge) !== hole) {
                sanity = false;
                break;
             }
@@ -1657,12 +1654,10 @@ class SurfaceMesh {
       this._bin = bin;
       this._material = material;
       this._hEdges = hEdges;
-      this._hEdges._mesh = this;
       this._vertices = vertices;
       this._faces = faces;
       this._faces._mesh = this;
       this._holes = holes;
-      this._holes._mesh = this;
    }
 
    static _createInternal(materialDepot) {
@@ -2110,8 +2105,8 @@ class SurfaceMesh {
    sanityCheck() { 
       const hOk = this.h.sanityCheck();
       const vOk = this.v.sanityCheck(this.h);
-      const fOk = this.f.sanityCheck();
-      const oOk = this.o.sanityCheck();
+      const fOk = this.f.sanityCheck(this.h);
+      const oOk = this.o.sanityCheck(this.h);
       return (vOk && hOk && fOk && oOk);
    }
    

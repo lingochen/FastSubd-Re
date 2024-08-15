@@ -473,8 +473,7 @@ class VertexArray {
       return -1;
    } */
 
-   sanityCheck() {
-      const hEdgeContainer = this._mesh.h;
+   sanityCheck(hEdgeContainer) {
       let sanity = true;
       for (let vertex of this) {
          let outEdge = this.halfEdge(vertex);
@@ -2115,7 +2114,7 @@ class SurfaceMesh {
     
    sanityCheck() { 
       const hOk = this.h.sanityCheck();
-            const vOk = this.v.sanityCheck();
+      const vOk = this.v.sanityCheck(this.h);
       const fOk = this.f.sanityCheck();
       const oOk = this.o.sanityCheck();
       return (vOk && hOk && fOk && oOk);

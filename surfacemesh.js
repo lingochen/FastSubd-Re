@@ -266,8 +266,7 @@ class VertexArray {
       this._base.pt.set(vertex, PointK.c, crease);
    }
 
-   computeValence() {
-      const hEdges = this._mesh.h;
+   computeValence(hEdgeContainer) {
       let valenceMax = 0;
       for (let i of this) {
          const start = this._base.hEdge.get(i, 0);
@@ -278,7 +277,7 @@ class VertexArray {
             let creaseCount = 0;
             do {
                if (creaseCount < 3) {
-                  let value = hEdges.sharpness(current);
+                  let value = hEdgeContainer.sharpness(current);
                   if (value > 0) {
                      if (sharpness !== 0) {  // get minimum excluding zero
                         sharpness = Math.min(sharpness, value);
@@ -290,8 +289,8 @@ class VertexArray {
                      creaseCount = 3;
                   }
                }
-               const pair = hEdges.pair(current);
-               current = hEdges.next( pair );
+               const pair = hEdgeContainer.pair(current);
+               current = hEdgeContainer.next( pair );
                count++;
             } while (current !== start);
             if (count > valenceMax) {
@@ -351,7 +350,9 @@ class VertexArray {
     * take loop's ideas, using cos/sin to approximating bi-tanent.
     * on connecting edges, cos(i)*4/k *p, sin(i)*4/k *p.  for secondary ring cos/sin(i+offset)/k * p.
     */
-   computeCCNormal() {
+/* Note: to be removed
+ * 
+ *    computeCCNormal() {
       const tangentL = [0, 0, 0];
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
@@ -408,6 +409,7 @@ class VertexArray {
          this._prop.normal.setVec3(v, 0, temp);
       }
    }
+*/
 
    /**
     * should be allocated from free first.
@@ -459,7 +461,10 @@ class VertexArray {
       }
    }
    
-/*   findFreeInEdge(hEdgeContainer, vert) {
+/* Note: to be removed.  
+ * 
+ * 
+ * findFreeInEdge(hEdgeContainer, vert) {
       for (let inEdge of this.inHalfEdgeAround(hEdgeContainer, vert)) {
          if (hEdges.face(inEdge) < 0) {
             return inEdge;
@@ -1863,7 +1868,7 @@ class SurfaceMesh {
    doneEdit() {
       this.fillBoundary();
       // now compute valence, crease 
-      this.v.computeValence();
+      this.v.computeValence(this.h);
       this._computeNormal();       // and normal?
       // commpaction
       this.compactBuffer();

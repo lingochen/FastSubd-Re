@@ -313,13 +313,12 @@ class VertexArray {
    /**
     * Loop bitangent scheme
     */
-   computeLoopNormal() {
+   computeLoopNormal(hEdgeContainer) {
       const tangentL = [0, 0, 0];
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
       const pt = this._base.pt.getBuffer();
-      const hEdgeContainer = this._mesh.h;
       for (let v of this) {     
          const valence = this.valence(v);
          const radStep = 2*Math.PI / valence;

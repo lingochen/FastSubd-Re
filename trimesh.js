@@ -202,7 +202,7 @@ class TriangleMesh extends SurfaceMesh {
    }
    
    _computeNormal() {
-      this.v.computeLoopNormal();
+      this.v.computeLoopNormal(this.h);
    }
    
    _allocPolygon(material, side) {

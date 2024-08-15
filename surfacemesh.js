@@ -105,7 +105,6 @@ class VertexArray {
       this._base = array;
       this._prop = props;           // custom properties.
       this._valenceMax = valenceMax;
-      this._mesh = null;            // to be setup by Mesh
    }
    
    static create(size) {
@@ -351,13 +350,12 @@ class VertexArray {
     */
 /* Note: to be removed
  * 
- *    computeCCNormal() {
+ *    computeCCNormal(hEdgeContainer) {
       const tangentL = [0, 0, 0];
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
       const pt = this._base.pt.getBuffer();
-      const hEdgeContainer = this._mesh.h;
       for (let v of this) {
          // compute angleStep (primary, secondary ring), 
          const valence = this.valence(v);
@@ -372,7 +370,7 @@ class VertexArray {
                hEdges.push( dEdge );
             }
             // first(the ring), add up primary
-            let p = this._mesh.h.origin(hEdges[1]);
+            let p = hEdgeContainer.origin(hEdges[1]);
             let coseff = Math.cos(i*radStep) * 2.9;
             let sineff = Math.sin(i*radStep) * 2.9;
             vec3.addAndScale(tangentL, 0, pt, p * sizeOfPointK, coseff);
@@ -382,18 +380,18 @@ class VertexArray {
             coseff = Math.cos(i*radStep+offset);
             sineff = Math.sin(i*radStep+offset);
             if (hEdges.length === 4) { // normal quad
-               p = this._mesh.h.origin(hEdges[2]);
+               p = hEdgeContainer.origin(hEdges[2]);
                vec3a.scaleAndAdd(tangentL, 0, pt, p * sizeOfPointK, coseff);
                vec3a.scaleAndAdd(tangentR, 0, pt, p * sizeOfPointK, sineff);
             } else {
                if (hEdges.length === 3) {       // use diagonal avg
-                  vec3a.addAndScale(temp, 0, pt, p * sizeOfPointK, pt, this._mesh.h.origin(hEdges[2]) * sizeOfPointK, 0.5);
+                  vec3a.addAndScale(temp, 0, pt, p * sizeOfPointK, pt, hEdgeContainer.origin(hEdges[2]) * sizeOfPointK, 0.5);
                } else { //if (hEdges.length > 4) { // avg all ring
                   let length = hEdges.length - 3;
                   const scale = 1/length;
-                  vec3.scale(temp, 0,  pt, this._mesh.h.origin(hEdges[2]) * sizeOfPointK, scale); 
+                  vec3.scale(temp, 0,  pt, hEdgeContainer.origin(hEdges[2]) * sizeOfPointK, scale); 
                   for (let j = 3; j < (length+2); ++j) {
-                     vec3a.scaleAndAdd(temp, 0, pt, this._mesh.h.origin(hEdges[j])*sizeOfPointK, scale);
+                     vec3a.scaleAndAdd(temp, 0, pt, hEdgeContainer.origin(hEdges[j])*sizeOfPointK, scale);
                   }
                }
                vec3a.scaleAndAdd(tangentL, 0, temp, 0, coseff);
@@ -1662,7 +1660,6 @@ class SurfaceMesh {
       this._hEdges = hEdges;
       this._hEdges._mesh = this;
       this._vertices = vertices;
-      this._vertices._mesh = this;
       this._faces = faces;
       this._faces._mesh = this;
       this._holes = holes;

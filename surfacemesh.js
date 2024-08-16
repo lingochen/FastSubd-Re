@@ -1144,7 +1144,7 @@ class HalfEdgeArray {
       let length = this._wEdgeArray.edge.length();
       for (let i = 0; i < length; ++i) {
          const [left,right] = this.wEdgePair(i);
-         if (left > right) {
+         if (right >= 0 && left > right) {
             console.log("wEdge left is larger than right");
          }
          let wEdge = this.wEdge(left);

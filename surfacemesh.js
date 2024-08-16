@@ -700,6 +700,10 @@ class HalfEdgeArray {
       return this._dArray.wEdge.getBuffer();
    }
    
+   wEdgeBuffer() {
+      return this._wEdgeArray.edge.getBuffer();
+   }
+   
    // allocation/free routines.
    /**
     * 

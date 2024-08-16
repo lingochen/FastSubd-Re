@@ -27,6 +27,7 @@ function setupSubdivide(dest, source, task, edgeVertex, refineVertex) {
    mDat.desth = dest.h;
    mDat.desthv = dest.h.vBuffer();
    mDat.desthw = dest.h.wBuffer();
+   mDat.desthwe = dest.h.wEdgeBuffer();
    mDat.destf = dest.f;
    mDat.desto = dest.o;
    mDat.edgeNewVertex = edgeVertex;
@@ -355,30 +356,54 @@ function computeSubdivideWEdge(mThis, wEdge) {
 function wEdgeTask(mThis, i) {
    let wEdge = i * 3;
    let wFace = i * 2;
-   i *= 12;                   // destination wEdge expand by 2.
+   i *= 12*2;                  // destination wEdge expand by 2. (left, right) is 2 struct
    
    // 0Wedge
    let loHi = computeSubdivideWEdge(mThis, wEdge++);
-   mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
+   mThis.desthwe[i++] = loHi[0][0];
+   mThis.desthwe[i++] = loHi[1][1];
+   //mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
    // 0face
    const faceW = computeSubdivideFaceDEdge(wFace);
-   mThis.desth._setWEdge(i++, faceW[0][0], faceW[0][1]);
-   mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
-   mThis.desth._setWEdge(i++, faceW[1][0], faceW[1][1]);
+   mThis.desthwe[i++] = faceW[0][0];
+   mThis.desthwe[i++] = faceW[0][1];
+   //mThis.desth._setWEdge(i++, faceW[0][0], faceW[0][1]);
+   mThis.desthwe[i++] = loHi[0][1];
+   mThis.desthwe[i++] = loHi[1][0];
+   //mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
+   mThis.desthwe[i++] = faceW[1][0];
+   mThis.desthwe[i++] = faceW[1][1];
+   //mThis.desth._setWEdge(i++, faceW[1][0], faceW[1][1]);
    // 1Wedge
    loHi = computeSubdivideWEdge(mThis, wEdge++);
-   mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
-   mThis.desth._setWEdge(i++, faceW[2][0], faceW[2][1]);
-   mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
+   mThis.desthwe[i++] = loHi[0][0];
+   mThis.desthwe[i++] = loHi[1][1];
+   //mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
+   mThis.desthwe[i++] = faceW[2][0];
+   mThis.desthwe[i++] = faceW[2][1];
+   //mThis.desth._setWEdge(i++, faceW[2][0], faceW[2][1]);
+   mThis.desthwe[i++] = loHi[0][1];
+   mThis.desthwe[i++] = loHi[1][0];
+   //mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
    // 1face
    //faceW = computeSubdivideFaceDEdge(wFace+1);
-   mThis.desth._setWEdge(i++, faceW[0][0]+12, faceW[0][1]+12);
+   mThis.desthwe[i++] = faceW[0][0]+12;
+   mThis.desthwe[i++] = faceW[0][1]+12;
+   //mThis.desth._setWEdge(i++, faceW[0][0]+12, faceW[0][1]+12);
    // 2wEdge
    loHi = computeSubdivideWEdge(mThis, wEdge);
-   mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
-   mThis.desth._setWEdge(i++, faceW[1][0]+12, faceW[1][1]+12);
-   mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
-   mThis.desth._setWEdge(i++, faceW[2][0]+12, faceW[2][1]+12);
+   mThis.desthwe[i++] = loHi[0][0];
+   mThis.desthwe[i++] = loHi[1][1];
+   //mThis.desth._setWEdge(i++, loHi[0][0], loHi[1][1]);
+   mThis.desthwe[i++] = faceW[1][0]+12;
+   mThis.desthwe[i++] = faceW[1][1]+12;
+   //mThis.desth._setWEdge(i++, faceW[1][0]+12, faceW[1][1]+12);
+   mThis.desthwe[i++] = loHi[0][1];
+   mThis.desthwe[i++] = loHi[1][0];
+   //mThis.desth._setWEdge(i++, loHi[0][1], loHi[1][0]);
+   mThis.desthwe[i++] = faceW[2][0]+12;
+   mThis.desthwe[i++] = faceW[2][1]+12;
+   //mThis.desth._setWEdge(i++, faceW[2][0]+12, faceW[2][1]+12);
 }
 //
 // from incomplete (i) to end of wEdge/face, real end.

@@ -911,6 +911,11 @@ class HalfEdgeArray {
       this._hArray = hArray;
    }
    
+   
+   //
+   // iterator routines
+   //
+   
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this._wEdgeArray.edge.length());
    }
@@ -943,8 +948,10 @@ class HalfEdgeArray {
       }
    }
 
-   
-   * boundaryIter() {
+   /**
+    * iterator for unassigned boundary edges.
+    */
+   * unassignedBoundary() {
       const length = this._hArray.hole.length();
       for (let i = 0; i < length; ++i) {
          if (this._hArray.vertex.get(i, 0) >= 0) {    // in used
@@ -954,7 +961,6 @@ class HalfEdgeArray {
          }
       }
    }
-
 
    /**
     * work through all the halfEdge, boundary, nGon, freed face.
@@ -1812,8 +1818,8 @@ class SurfaceMesh {
    // post process
    // fill boundaryLoop with holes.
    fillBoundary() {
-      // walk through all boundaryEdge, assign hole to each boundary group. 
-      for (let boundary of this._hEdges.boundaryIter()) {
+      // walk through all unassigned boundaryEdge, assign hole to each boundary group. 
+      for (let boundary of this._hEdges.unassignedBoundary()) {
          let hole = this._hEdges.hole(boundary);
          if (hole === 0) {   // unassigned hEdge, get a new Hole and start assigning the whole group.
             hole = this._holes.alloc();

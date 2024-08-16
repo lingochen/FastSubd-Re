@@ -1095,12 +1095,11 @@ class HalfEdgeArray {
    }
    
    setWEdge(wEdge, left, right) {
-      [left, right] = this._computeLeftRight(left, right);
+      const leftRight = this._computeLeftRight(left, right);
       // reset all
-      this._setHEdgeWEdge(left, wEdge * 2 + wEdgeK.left, right);
-      this._wEdgeArray.edge.set(wEdge, wEdgeK.left, left);
-      this._setHEdgeWEdge(right, wEdge * 2 + wEdgeK.right, left);
-      this._wEdgeArray.edge.set(wEdge, wEdgeK.right, right);
+      this._setHEdgeWEdge(leftRight[0], wEdge * 2 + wEdgeK.left, leftRight[1]);
+      this._setHEdgeWEdge(leftRight[1], wEdge * 2 + wEdgeK.right, leftRight[0]);
+      this._wEdgeArray.edge.setVec2(wEdge, 0, leftRight);
    }
    
    /**

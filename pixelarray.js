@@ -382,6 +382,12 @@ class PixelArray {
       return newValue;
    }
    
+   setValue2(index, field, data0, data1) {
+      index = this._indexPos(index, field, 2);
+      this._set(index, data0);
+      this._set(index+1, data1);
+   }
+   
    setVec2(index, field, data) {
       index = this._indexPos(index, field, 2);
       this._set(index, data[0]);                // NOTE: we don't use set because the data might be larger than 2 data.
@@ -429,9 +435,9 @@ class PixelArray {
    
    _alteredNotSet(index, field, length) {
       index = index * this._rec.structStride + field;
-      if (index < 0) {
+/*      if (index < 0) {
          index += this._dataView.length;
-      }
+      }*/
       return index;
    }
    

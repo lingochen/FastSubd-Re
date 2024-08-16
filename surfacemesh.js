@@ -1082,7 +1082,7 @@ class HalfEdgeArray {
    }
    
    _setWEdge(wEdge, left, right) {
-      this._wEdgeArray.edge.setVec2(wEdge, 0, [left, right]);//this._computeLeftRight(left, right));
+      this._wEdgeArray.edge.setValue2(wEdge, 0, left, right);  //this._computeLeftRight(left, right));
    }
    
    setWEdge(wEdge, left, right) {

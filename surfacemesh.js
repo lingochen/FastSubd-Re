@@ -926,11 +926,19 @@ class HalfEdgeArray {
       }
    }
 
-   //
+   /**
+    * direct access to the main directedEdge
+    */
    * halfEdgeIter() {
-      yield this._directEdgeIter();
-      yield this._nGonEdgeIter();
+      for (let i = 0; i < this._dArray.vertex.length(); ++i) {
+         if (this._dArray.vertex.get(i, 0) >= 0) {
+            if (!this.isFree(i)) {
+               yield i;
+            }
+         }
+      }
    }
+
    
    * boundaryIter() {
       const length = this._hArray.hole.length();
@@ -943,28 +951,11 @@ class HalfEdgeArray {
       }
    }
 
-   /**
-    * direct access to the main directedEdge
-    */
-   * _directedEdgeIter() {
-      for (let i = 0; i < this._dArray.vertex.length(); ++i) {
-         if (this._dArray.vertex.get(i, 0) >= 0) {
-            if (!this.isFree(i)) {
-               yield i;
-            }
-         }
-      }
-   }
-         
-   /**
-    * provide for compatiblity with QuadEdgeArray
-    */
-   * _nGonEdgeIter() {}
 
    /**
     * work through all the halfEdge, boundary, nGon, freed face.
     */
-   * _bEdgeIter() {
+   * _boundaryEdgeIter() {
       for (let i = 0; i < this._hArray.hole.length(); ++i) {
          yield -(i+1);
       }
@@ -1007,18 +998,18 @@ class HalfEdgeArray {
     * return incident vertex position.
     */
    origin(hEdge) {
-      if (hEdge < 0) {
-         return this._hArray.vertex.get(-(hEdge+1), 0);  
-      } else {
+      if (hEdge >= 0) {
          return this._dArray.vertex.get(hEdge, 0);
-      }
+      } else {
+         return this._hArray.vertex.get(-(hEdge+1), 0);  
+      } 
    }
    
    setOrigin(hEdge, vertex) {
-      if (hEdge < 0) {
-         this._hArray.vertex.set(-(hEdge+1), 0, vertex);
+      if (hEdge >= 0) {
+         this._dArray.vertex.set(hEdge, 0, vertex);         
       } else {
-         this._dArray.vertex.set(hEdge, 0, vertex);
+         this._hArray.vertex.set(-(hEdge+1), 0, vertex);
       }
    }
 
@@ -1031,23 +1022,23 @@ class HalfEdgeArray {
    }
       
    _wEdge(hEdge) {
-      if (hEdge < 0) {
-         return this._hArray.wEdge.get(-(hEdge+1), 0);
-      } else {
+      if (hEdge >= 0) {
          return this._dArray.wEdge.get(hEdge, 0);
+      } else {
+         return this._hArray.wEdge.get(-(hEdge+1), 0);
       }
    }
    
    wEdge(hEdge) {
-      return Math.trunc( this._wEdge(hEdge) / 2 );
+      return this._wEdge(hEdge) >> 1;
    }
    
    isWEdgeLeft(hEdge) {
-      return (this._wEdge(hEdge)+1) % 2;
+      return (this._wEdge(hEdge) & 1) === 0;
    }
    
    isWEdgeRight(hEdge) {
-      return this._wEdge(hEdge) % 2;
+      return this._wEdge(hEdge) & 1;
    }
    
    wEdgePair(wEdge) {

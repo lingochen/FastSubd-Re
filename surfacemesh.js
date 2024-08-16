@@ -513,6 +513,12 @@ class VertexArray {
 }
 
 
+// more than 2b, but less than 4b data support? 
+//const UINT_MAX = 4294967295;
+//let BOUNDARY_MAX = 16,777,215;                // 24bit max, around 16 million boundary edges. NOTE: Is it enough?
+//let HALFEDGE_MAX = UINT_MAX - BOUNDARY_MAX;   // number of halfEdge we can use.
+
+
 const wEdgeK = {
    left: 0,                      // pair directedEdge/halfEdge
    right: 1,
@@ -527,7 +533,7 @@ class HalfEdgeArray {
       this._dArray = dArray;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
-      // wEdge specific value
+      // wholeEdge specific value
       this._wEdgeArray = wEdgeArray;
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
@@ -546,7 +552,7 @@ class HalfEdgeArray {
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
          next: Int32PixelArray.create(1, 1, size),             // negative value
-         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
+         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, 0 for empty
       };
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
@@ -1017,18 +1023,10 @@ class HalfEdgeArray {
    }
 
    pair(hEdge) {
-      let edge;
-      if (hEdge < 0) {
-         edge = this._hArray.wEdge.get(-(hEdge+1), 0);
+      if (hEdge >= 0) {
+         return this._wEdgeArray.edge._get( this._dArray.wEdge.get(hEdge, 0) ^ 1 );       // left to right, right to left
       } else {
-         edge = this._dArray.wEdge.get(hEdge, 0);
-      }
-      const position = (edge+1)%2;           // next is pair.
-      const wEdge = Math.trunc(edge / 2);
-      if (position === 0) {
-         return this.wEdgeLeft(wEdge);
-      } else {
-         return this.wEdgeRight(wEdge);
+         return this._wEdgeArray.edge._get( this._hArray.wEdge.get(-(hEdge+1), 0) ^ 1 );  // left to right, right to left
       }
    }
       

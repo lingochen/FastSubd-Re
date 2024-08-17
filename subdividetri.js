@@ -134,7 +134,7 @@ function computeEdgeVertex(mThis, wEdge) {
 // return [loWhandle, hiWhandle, newVertex]
 function computeNewWEdge(mThis, wHandle) { //oldhEdge) {
    //const wHandle = mThis.srch._wEdge(oldhEdge);
-   const isRight = wHandle % 2;
+   const isRight = wHandle & 1;           // % 2
    //const oldWEdge = Math.trunc(wHandle / 2);
    const oldWEdge = wHandle >> 1;
    
@@ -143,7 +143,8 @@ function computeNewWEdge(mThis, wHandle) { //oldhEdge) {
    if (diff < 0) {
       loHi = [[0, 4], [5, 1]];      // wedge's right 2*2
       const idx = oldWEdge % 3;
-      newWEdge = ((Math.trunc(oldWEdge/3) * 12) + idx * 4) * 2;
+      //newWEdge = ((Math.trunc(oldWEdge/3) * 12) + idx * 4) * 2;
+      newWEdge = (((oldWEdge-idx)*4) + idx * 4) * 2;
    } else { // over the wMix
       loHi = [[0, 2], [3, 1]];
       // compute extra faceW first,
@@ -156,7 +157,7 @@ function computeNewWEdge(mThis, wHandle) { //oldhEdge) {
 function computeNewFaceWEdgeIndex(mThis, oldFace) {
    const diff = oldFace - mThis.wMix.fLength;
    if (diff < 0) {
-      const idx = oldFace % 2;
+      const idx = oldFace & 1;         // == %2
       //const newFaceWEdge = Math.trunc(oldFace/2) * 12;
       const newFaceWEdge = (oldFace >> 1) * 12;
       const faceW = (newFaceWEdge + 1 + 6*idx) * 2;
@@ -331,11 +332,16 @@ function computeSubdivideFaceDEdge(face) {
             [base+4, base+10],
             [base+7, base+11]];
 }
+const kNext3 = [1*3, 2*3, 0*3];
 function computeSubdivideDEdge(dEdge) {
    if (dEdge >= 0) {
-      const base = Math.trunc(dEdge / 3) *  12;    // compute subdivide face base dEdge
-      const idxLo = (dEdge % 3) * 3;
-      const idxHi = ((dEdge+1) % 3) * 3 + 2;
+      //const base = Math.trunc(dEdge / 3) *  12;    // compute subdivide face base dEdge
+      //const idxLo = (dEdge % 3) * 3;
+      //const idxHi = ((dEdge+1) % 3) * 3 + 2;
+      const rem = dEdge % 3;
+      const base = (dEdge-rem)*4;
+      const idxLo = rem * 3;
+      const idxHi = kNext3[rem] + 2;
       return [base+idxLo, base+idxHi];
    } else { // 
       dEdge = -(dEdge+1);

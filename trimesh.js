@@ -12,7 +12,8 @@ import {SurfaceMesh, FaceArray, HoleArray, HalfEdgeArray, VertexArray} from './s
 import {Int32PixelArray, Float32PixelArray} from './pixelarray.js';
 
 
-
+const kNextEdge = [1, 2, 0, 1];
+//const kPrevEdge = [2, 0, 1];
 /** 
  * triangle use 3 directEdge(HalfEdge) as an unit
  * 
@@ -55,9 +56,11 @@ class TriangleEdgeArray extends HalfEdgeArray {
 
    next(dEdge) {
       if (dEdge >= 0) {
-         let i = (dEdge+1) % 3;                // remainder.
-         dEdge = Math.trunc(dEdge/3) * 3;
-         return (dEdge + i);
+         //let i = (dEdge+1) % 3;                // remainder.
+         //dEdge = Math.trunc(dEdge/3) * 3;
+         //return  dEdge + i;
+         const i = dEdge % 3;
+         return dEdge - i + kNextEdge[i];
       } else {
          return this._hArray.next.get(-(dEdge+1), 0);
       }
@@ -65,9 +68,11 @@ class TriangleEdgeArray extends HalfEdgeArray {
    
    prev(dEdge) {
       if (dEdge >= 0) {
-         let i = (dEdge+2) % 3;                // prev
-         dEdge = Math.trunc(dEdge/3) * 3;
-         return dEdge + i;
+         //let i = (dEdge+2) % 3;                // prev
+         //dEdge = Math.trunc(dEdge/3) * 3;
+         //return dEdge + i;
+         const i = dEdge % 3;
+         return dEdge - i + kNextEdge[i+1];
       } else {
          return this._hArray.prev.get(-(dEdge+1), 0);
       }

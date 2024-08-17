@@ -189,6 +189,58 @@ class VertexArray {
       return false;
    }
    
+   createPositionTexture(gl) {
+      return this._base.pt.createDataTexture(gl);
+   }
+   
+   createNormalTexture(gl) {
+      return this._prop.normal.createDataTexture(gl);
+   }
+   
+   positionBuffer() {
+      return this._base.pt.getBuffer();
+   }
+   
+   //
+   // memory routines.
+   //
+
+   /**
+    * should be allocated from free first.
+    * 
+    */
+   alloc() {
+      return this._allocEx(1);
+   }
+
+   /**
+    * used by subdivision, and alloc()
+    */
+   _allocEx(size) {
+      if (this._base.hEdge.capacity() < size) {  // realloc if no capacity.
+         this.setBuffer(null, 0, expandAllocLen(this._base.hEdge.maxLength()+size));
+      }
+      
+      const start = this.length();
+      for (let key of Object.keys(this._base)) {
+         this._base[key].appendRangeNew(size);
+      }
+      for (let key of Object.keys(this._prop)) {
+         this._prop[key].appendRangeNew(size);
+      }
+      return start;
+   }
+
+   isFree(vert) {
+      const c = this._base.pt.get(vert, PointK.c);
+      return (c < -1);
+   }
+   
+
+   //
+   // iterator start
+   //
+   
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this._base.hEdge.length());
    }
@@ -231,18 +283,29 @@ class VertexArray {
    // faceAround(vert)
    // vertexAround(vert)
    // wEdgeAround(vert)
-
-   createPositionTexture(gl) {
-      return this._base.pt.createDataTexture(gl);
+   
+   copyPt(vertex, inPt, inOffset) {
+      vec3.copy(this._base.pt.getBuffer(), vertex * sizeOfPointK, inPt, inOffset);
+      //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
+      //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
+      //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
    }
    
-   createNormalTexture(gl) {
-      return this._prop.normal.createDataTexture(gl);
+   length() {
+      return this._base.pt.length();
    }
    
-   positionBuffer() {
-      return this._base.pt.getBuffer();
+   halfEdge(vert) {
+      return this._base.hEdge.get(vert, 0);
    }
+   
+   setHalfEdge(vert, hEdge) {
+      this._base.hEdge.set(vert, 0, hEdge);
+      let valence = this._prop.valence.get(vert, 0);  // check for init
+      if (valence < 0) {
+         this._prop.valence.set(vert, 0, 1);
+      }
+   }   
 
    // the maximum valence ever in this VertexArray.
    valenceMax() {
@@ -408,55 +471,6 @@ class VertexArray {
    }
 */
 
-   /**
-    * should be allocated from free first.
-    * 
-    */
-   alloc() {
-      return this._allocEx(1);
-   }
-
-   /**
-    * used by subdivision, and alloc()
-    */
-   _allocEx(size) {
-      if (this._base.hEdge.capacity() < size) {  // realloc if no capacity.
-         this.setBuffer(null, 0, expandAllocLen(this._base.hEdge.maxLength()+size));
-      }
-      
-      const start = this.length();
-      for (let key of Object.keys(this._base)) {
-         this._base[key].appendRangeNew(size);
-      }
-      for (let key of Object.keys(this._prop)) {
-         this._prop[key].appendRangeNew(size);
-      }
-      return start;
-   }
-
-   isFree(vert) {
-      const c = this._base.pt.get(vert, PointK.c);
-      return (c < -1);
-   }
-
-   copyPt(vertex, inPt, inOffset) {
-      vec3.copy(this._base.pt.getBuffer(), vertex * sizeOfPointK, inPt, inOffset);
-      //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
-      //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
-      //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
-   }
-   
-   halfEdge(vert) {
-      return this._base.hEdge.get(vert, 0);
-   }
-   
-   setHalfEdge(vert, hEdge) {
-      this._base.hEdge.set(vert, 0, hEdge);
-      let valence = this._prop.valence.get(vert, 0);  // check for init
-      if (valence < 0) {
-         this._prop.valence.set(vert, 0, 1);
-      }
-   }
    
 /* Note: to be removed.  
  * 
@@ -506,10 +520,7 @@ class VertexArray {
    stat() {
       return "Vertices Count: " + this._base.hEdge.length() + ";\n";
    }
-   
-   length() {
-      return this._base.pt.length();
-   }
+
 }
 
 
@@ -533,12 +544,12 @@ class HalfEdgeArray {
       this._dArray = dArray;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
+      // external props.
+      this._prop = props;
       // wholeEdge specific value
       this._wEdgeArray = wEdgeArray;
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
-      // 
-      this._prop = props;
       this._bufferInfo = null;
    }
    
@@ -970,6 +981,22 @@ class HalfEdgeArray {
          yield -(i+1);
       }
    }
+   
+   //
+   // main api
+   //
+   
+   length() {
+      return this._dArray.wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
+   }
+   
+   lengthW() {
+      return this._wEdgeArray.edge.length() - this._fmm.wEdgeArray.size;
+   }
+   
+   lengthH() {
+      return (this._hArray.wEdge.length() - this._fmm.hArray.size);
+   }  
 
    isBoundary(dEdge) {  // not true for Quad, needs to override
       return (dEdge < 0);
@@ -979,7 +1006,7 @@ class HalfEdgeArray {
       if (hEdge < 0) {
          return this._hArray.hole.get(-(hEdge+1), 0);
       } else {
-         throw("bad boundaryEdge");
+         throw("not boundaryEdge");
       }
    }
 
@@ -987,7 +1014,7 @@ class HalfEdgeArray {
       if (hEdge < 0) {
          this._hArray.hole.set(-(hEdge+1), 0, hole);
       } else {
-         throw("bad boundaryEdge");
+         throw("not boundaryEdge");
       }
    }
    
@@ -996,12 +1023,12 @@ class HalfEdgeArray {
          this._hArray.next.set(-(hEdge+1), 0, next);
          this._hArray.prev.set(-(next+1), 0, hEdge);
       } else {
-         throw("linkNext connecting non-boundary HalfEdge");
+         throw("linkNext connecting to non-boundary HalfEdge");
       }
    }   
    
    destination(hEdge) {
-      return this.origin( this.next(hEdge) );   // next is better than pair because no lookup only computation in most cases.
+      return this.origin( this.next(hEdge) );   // next is better than pair because no pair lookup only computation in most cases.
    }
    
    /**
@@ -1127,18 +1154,6 @@ class HalfEdgeArray {
    
    stat() {
       return "WholeEdge Count: " + this.lengthW() + ";\nDirectedEdge Count: " + this.length() + ";\n";
-   }
-   
-   length() {
-      return this._dArray.wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
-   }
-   
-   lengthW() {
-      return this._wEdgeArray.edge.length() - this._fmm.wEdgeArray.size;
-   }
-   
-   lengthH() {
-      return (this._hArray.wEdge.length() - this._fmm.hArray.size);
    }
 
    sanityCheck() {
@@ -1475,10 +1490,6 @@ class HoleArray {
       }
    }
    
-   length() {
-      return this._holes.length()-1;
-   }
-   
    *[Symbol.iterator] () {
       const len = this._holes.length();
       for (let i = 1; i < len; ++i) {  // skipped 0, it sentinel
@@ -1561,6 +1572,10 @@ class HoleArray {
       this._holes.set(-hole, 0, oldHead);
       this._holes.set(1, 0, -hole);
       this._holes.set(0, 0, this._holes.get(0,0)+1);   // update freecount;
+   }
+   
+   length() {
+      return this._holes.length()-1;
    }
 
    halfEdge(handle) {

@@ -25,7 +25,7 @@ Simple to implemented, used and fast.
 ## Implementation Info
 Inspired by [A HalfEdge Refinement Rule for Parallel Catmull-Clark Subdivision](https://onrendering.com/) by Jonathan Dupuy, Kenneth Vanhoey
 
-Major difference is that instead of using quad after one subdivision, we use the same DirectedEdge representation for subdivision.
+Editable Polygon Mesh, internal use DirectedEdge representation for Loop subdivision.
 
 [design_note](docs/design_note.md)
 

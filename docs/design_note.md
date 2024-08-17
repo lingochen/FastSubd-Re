@@ -12,7 +12,7 @@ DirectedEdge Array, (performance, easy update, subdivision)
 
 use meshcolortexture/ptex/htex.
 
-avoid false sharing
+avoid false sharing.
 
 parallel implementation (gpu), [cpu](multithread.md)
 
@@ -29,6 +29,8 @@ Limitation/PitFall
 directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.
 
 so we needs flexibility to handle the editing operation, and the underlying data can be optimized and contiguous at will.(@done, 2023/12)
+
+now design an halfEdge based PolygonMesh to handle editing, and internally we use triangle directEdge mesh to handle the subdivision, drawing, and collision.
 
 nice to have?
 

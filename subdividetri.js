@@ -95,13 +95,17 @@ function vertexTaskRemainder(mThis) {
 function edgeNewVertex(mThis, destVertex, vertex) {
    const dEdge = mThis.edgeNewVertex(mThis, destVertex, vertex);
    
-   const hEdge = Math.trunc(dEdge / 3)*3*4 + (dEdge % 3)*3 + 1;
+   const rem = dEdge % 3;
+   //const hEdge = Math.trunc(dEdge / 3)*3*4 + (dEdge % 3)*3 + 1;
+   const hEdge = (dEdge - rem)*4 + rem*3 + 1;
    mThis.destv.setHalfEdge(destVertex, hEdge);
 }
 function vertexRefine(mThis, destVertex, vertex) {
    const dEdge = mThis.vertexRefine(mThis, destVertex, vertex);
 
-   const hEdge = Math.trunc(dEdge / 3)*3*4 + (dEdge % 3)*3;    // new dEdge position
+   const rem = dEdge % 3;
+   //const hEdge = Math.trunc(dEdge / 3)*3*4 + (dEdge % 3)*3;    // new dEdge position
+   const hEdge = (dEdge - rem)*4 + rem*3;
    mThis.destv.setHalfEdge(destVertex, hEdge);
 }
    

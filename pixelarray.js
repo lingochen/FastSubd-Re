@@ -802,6 +802,7 @@ function createDynamicProperty(type, size) {
    return prop;
 }
 
+   
 /**
  * eventually transition to WebAssembly linear memory
  */
@@ -814,7 +815,8 @@ function allocBuffer(totalBytes) {
  */
 function freeBuffer(buffer) {
    // do nothing for now
-}
+}   
+   
 
 
 
@@ -877,11 +879,32 @@ class ExtensiblePropertyArray {
    }   
    
    /**
-    * iterator. can be override
+    * iterator. can be override 
     * 
     */
    * properties() {
       yield* Object.values(this._prop);
+   }
+
+   /**
+    * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.
+    */
+   static totalStructSize(objs, length) {
+      let totalByte = 0;
+      for (let buffer of Object.values(objs)) {
+         totalByte += alignCache(buffer.computeBufferSize(length));
+      }
+      return totalByte;
+   }
+
+   /**
+    * iterate over the array, setBuffer accordingly.
+    */
+   static setBufferAll(objs, bufferInfo, byteOffset, length) {
+      for (let buffer of Object.values(objs)) {
+         byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
+      }
+      return byteOffset;
    }
 }
 
@@ -894,9 +917,7 @@ export {
    Float16PixelArray,
    rehydrateBuffer,
    createDataTexture3D,
-   createDynamicProperty,
    allocBuffer,
    freeBuffer,
-   alignCache,
    ExtensiblePropertyArray,
 }

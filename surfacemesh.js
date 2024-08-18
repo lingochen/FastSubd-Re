@@ -19,7 +19,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, ExtensiblePropertyArray, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePropertyArray} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
@@ -53,26 +53,7 @@ function rehydrateObject(json) {
    return retObj;
 }
 
-/**
- * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.
- */
-function totalStructSize(objs, length) {
-   let totalByte = 0;
-   for (let [key, buffer] of Object.entries(objs)) {
-      totalByte += alignCache(buffer.computeBufferSize(length));
-   }
-   return totalByte;
-}
 
-/**
- * iterate over the array, setBuffer accordingly.
- */
-function setBufferAll(objs, bufferInfo, byteOffset, length) {
-   for (let [key, buffer] of Object.entries(objs)) {
-      byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
-   }
-   return byteOffset;
-}
 
 
 /**
@@ -494,14 +475,13 @@ const wEdgeK = {
 
 
 
-class HalfEdgeArray {
+class HalfEdgeArray extends ExtensiblePropertyArray {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
+      super(props);
       // tri/quad directededge
       this._dArray = dArray;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
-      // external props.
-      this._prop = props;
       // wholeEdge specific value
       this._wEdgeArray = wEdgeArray;
       // freed array slot memory manager, should tried to keep array slots packed
@@ -558,20 +538,16 @@ class HalfEdgeArray {
    }
    
    * properties() {
-      
-   }
-   
-   computeBufferSize(length) {
-      return totalStructSize(this._dArray, length)
-            + totalStructSize(this._prop, length);
+      yield* Object.values(this._dArray);
+      yield* super.properties();
    }
    
    computeBufferSizeB(length) {
-      return totalStructSize(this._hArray, length);
+      return ExtensiblePropertyArray.totalStructSize(this._hArray, length);
    }
    
    computeBufferSizeW(length) {
-      return totalStructSize(this._wEdgeArray, length);
+      return ExtensiblePropertyArray.totalStructSize(this._wEdgeArray, length);
    }
    
    computeBufferSizeAll(length, bLength, wLength) {
@@ -580,26 +556,13 @@ class HalfEdgeArray {
             + this.computeBufferSizeW(wLength);
    }
    
-   setBuffer(bufferInfo, byteOffset, length) {
-      if (!bufferInfo) {
-         bufferInfo = allocBuffer(this.computeBufferSize(length));
-         byteOffset = 0;
-      }
-      
-      // necessary property
-      byteOffset = setBufferAll(this._dArray, bufferInfo, byteOffset, length);
-   
-      // set custom property's buffer
-      return setBufferAll(this._prop, bufferInfo, byteOffset, length);   //, bLength);
-   }
-   
    setBufferB(bufferInfo, byteOffset, length) {
       if (!bufferInfo) {
          bufferInfo = allocBuffer(this.computeBufferSizeB(length));
          byteOffset = 0;
       }
       
-      return setBufferAll(this._hArray, bufferInfo, byteOffset, length);
+      return ExtensiblePropertyArray.setBufferAll(this._hArray, bufferInfo, byteOffset, length);
    }
    
    setBufferW(bufferInfo, byteOffset, length) {
@@ -608,7 +571,7 @@ class HalfEdgeArray {
          byteOffset = 0;
       }
       
-      return setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
+      return ExtensiblePropertyArray.setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
    }
    
    setBufferAll(bufferInfo, byteOffset, length, bLength, wLength) {
@@ -622,34 +585,7 @@ class HalfEdgeArray {
       
       return this.setBufferW(bufferInfo, byteOffset, wLength);
    }
-   
-   addProperty(name, type) {
-      //if (isValidVarName(name)) {
-         if (this._prop[name] === undefined) { // don't already exist
-            // create DynamicProperty for accessing data
-            this._prop[name] = createDynamicProperty(type, this.length());
-            return this._prop[name];
-         }
-      //}
-      return false;
-   }
-   
-   getProperty(name, index) {
-      if (index === undefined) {
-         return this._prop[name];
-      } else {
-         return this._prop[name][index];
-      }
-   }
-   
-   removeProperty(name) {
-      if (this._prop[name]) {
-         delete this._prop[name];
-         return true;
-      }
-      return false;
-   }
-   
+
    createVertexTexture(gl) {
        return this._dArray.vertex.createDataTexture(gl);
    }

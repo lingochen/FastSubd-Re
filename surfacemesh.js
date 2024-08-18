@@ -557,6 +557,10 @@ class HalfEdgeArray {
       return obj;
    }
    
+   * properties() {
+      
+   }
+   
    computeBufferSize(length) {
       return totalStructSize(this._dArray, length)
             + totalStructSize(this._prop, length);
@@ -1166,12 +1170,12 @@ class HalfEdgeArray {
 
 
 
-class FaceArray {
+class FaceArray extends ExtensiblePropertyArray {
    constructor(materialDepot, array, fmm) {
+      super({});
       this._depot = materialDepot;
       this._array = array;
       this._fmm = fmm;        // freed array slot memory manager.
-      this._prop = {};
    }
 
    static _rehydrateInternal(self) {
@@ -1197,54 +1201,11 @@ class FaceArray {
       return obj;
    }
    
-   /**
-    * given length(number of faces), return the required memory size.
-    * 
-    */
-   computeBufferSize(length) {
-      return totalStructSize(this._array, length)
-            + totalStructSize(this._prop, length);
+   * properties() {
+      yield* Object.values(this._array);
+      yield* super.properties();
    }
-   
-   /**
-    * update all 
-    */
-   setBuffer(bufferInfo, byteOffset, length) {
-      if (!bufferInfo) {
-         bufferInfo = allocBuffer(this.computeBufferSize(length));
-         byteOffset = 0;
-      }
-      
-      byteOffset = setBufferAll(this._array, bufferInfo, byteOffset, length);
-      return setBufferAll(this._prop, bufferInfo, byteOffset, length);
-   }
-   
-   addProperty(name, type) {
-      //if (isValidVarName(name)) {
-         if (this._prop[name] === undefined) { // don't already exist
-            // create DynamicProperty for accessing data
-            this._prop[name] = createDynamicProperty(type, this.length());
-            return this._prop[name];
-         }
-      //}
-      return false;
-   }
-   
-   getProperty(name, index) {
-      if (index === undefined) {
-         return this._prop[name];
-      } else {
-         return this._prop[name][index];
-      }
-   }
-   
-   removeProperty(name) {
-      if (this._prop[name]) {
-         delete this._prop[name];
-         return true;
-      }
-      return false;
-   }   
+
    
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this.length());

@@ -19,7 +19,7 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, ExtensiblePropertyArray, createDynamicProperty, allocBuffer, freeBuffer, alignCache} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
@@ -100,10 +100,10 @@ const sizeOfPointK = 4;
 // valence: 
 // crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
 */
-class VertexArray {
+class VertexArray extends ExtensiblePropertyArray {
    constructor(array, props, valenceMax) {
+      super(props);                 // custom properies
       this._base = array;
-      this._prop = props;           // custom properties.
       this._valenceMax = valenceMax;
    }
    
@@ -140,53 +140,9 @@ class VertexArray {
       return obj;
    }
    
-   /**
-    * 
-    */
-   computeBufferSize(length) {
-      return totalStructSize(this._base, length)
-             + totalStructSize(this._prop, length);
-   }
-   
-   /**
-    * use new buffer with length as capacity
-    */
-   setBuffer(bufferInfo, byteOffset, length) {
-      if (!bufferInfo) {   // no buffer, so that meant new separate buffer
-         bufferInfo = allocBuffer(this.computeBufferSize(length));
-      }
-      
-      byteOffset = setBufferAll(this._base, bufferInfo, byteOffset, length);
-      byteOffset = setBufferAll(this._prop, bufferInfo, byteOffset, length);
-      
-      return byteOffset;
-   }
-   
-   addProperty(name, type) {
-      //if (isValidVarName(name)) {
-         if (this._prop[name] === undefined) { // don't already exist
-            // create DynamicProperty for accessing data
-            this._prop[name] = createDynamicProperty(type, this.length());
-            return this._prop[name];
-         }
-      //}
-      return false;
-   }
-   
-   getProperty(name, index) {
-      if (index === undefined) {
-         return this._prop[name];
-      } else {
-         return this._prop[name][index];
-      }
-   }
-   
-   removeProperty(name) {
-      if (this._prop[name]) {
-         delete this._prop[name];
-         return true;
-      }
-      return false;
+   * properties() {
+      yield* Object.values(this._base);
+      yield* super.properties();
    }
    
    createPositionTexture(gl) {

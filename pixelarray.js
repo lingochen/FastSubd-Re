@@ -817,6 +817,76 @@ function freeBuffer(buffer) {
 }
 
 
+
+class ExtensiblePropertyArray {
+   constructor(prop) {
+      this._prop = prop;
+   }
+   
+   /**
+    * 
+    */
+   computeBufferSize(length) {
+      let totalSize = 0;
+      for (let prop of this.properties()) {
+         totalSize += alignCache(prop.computeBufferSize(length));;
+      }
+      return totalSize;
+   }
+   
+   /**
+    * use new buffer with length as capacity
+    */
+   setBuffer(bufferInfo, byteOffset, length) {
+      if (!bufferInfo) {   // no buffer, so that meant new separate buffer
+         bufferInfo = allocBuffer(this.computeBufferSize(length));
+      }
+      
+      for (let prop of this.properties()) {
+         byteOffset = alignCache(prop.setBuffer(bufferInfo, byteOffset, length));
+      }
+      
+      return byteOffset;
+   }
+   
+   addProperty(name, type) {
+      //if (isValidVarName(name)) {
+         if (this._prop[name] === undefined) { // don't already exist
+            // create DynamicProperty for accessing data
+            this._prop[name] = createDynamicProperty(type, this.length());
+            return this._prop[name];
+         }
+      //}
+      return false;
+   }
+   
+   getProperty(name, index) {
+      if (index === undefined) {
+         return this._prop[name];
+      } else {
+         return this._prop[name][index];
+      }
+   }
+   
+   removeProperty(name) {
+      if (this._prop[name]) {
+         delete this._prop[name];
+         return true;
+      }
+      return false;
+   }   
+   
+   /**
+    * iterator. can be override
+    * 
+    */
+   * properties() {
+      yield* Object.values(this._prop);
+   }
+}
+
+
+
 export {
    Uint8PixelArray,
    Int32PixelArray,
@@ -828,4 +898,5 @@ export {
    allocBuffer,
    freeBuffer,
    alignCache,
+   ExtensiblePropertyArray,
 }

@@ -567,7 +567,7 @@ class HalfEdgeArray {
       };
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
-         sharpness: Float32PixelArray.create(1, 1, size),   // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+         sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
       };
       const fmm = {  // freed array slot memory manager. using linklist for freedlist
          // dArray: {size: 0, head: 0},      // freed syncronized with faceArray

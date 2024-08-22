@@ -5,27 +5,27 @@
  * AddFace() different logic from HalfEdge.
  * better cache coherence and more similar to traditional face/vertex representation.
  * easier to optimize for parallel subdivision.
- * Only triangle mesh here, general polygon is better handle of traditional HalfEdge. (2024/08/14)
+ * Only triangle mesh here, general polygon is better handle by traditional HalfEdge. (2024/08/14)
+ * 
+ * directed edges for triangles(can be used for quads) only meshes. halfEdges with implicit triangles.
+ * S. Campagna, L. Kobbelt, H.-P. Seidel, Directed Edges - A Scalable Representation For Triangle Meshes , ACM Journal of Graphics Tools 3 (4), 1998.
+ * 
+ * The idea of FreeEdge(boundary edge) is the key in making DirectedEdge works like HalfEdge. 
+ * boundaryLoop is handle by negative value and separate array for pairing/next/prev traversal.
+ * 
  * 
  * triangle ratio vertex(4):edge(5):triangle(3)
  * quad ratio vertex(4):edge(4):quad(2)
  * 
  * Provided 5 classes.
  * VertexArray
- * HalfEdgeArray
- * FaceArray
+ * TriangleEdgeArray
+ * TriangleArray
  * HoleArray
- * SurfaceMesh
+ * TriangleMesh
+ * 
+ * Note: Gino van den Bergen has an interesting implementation. http://www.dtecta.com/files/GDC17_VanDenBergen_Gino_Brep_Triangle_Meshes.pdf
  */
-/**
-   directed edges for triangles(can be used for quads) only meshes. halfEdges with implicit triangles.
-   S. Campagna, L. Kobbelt, H.-P. Seidel, Directed Edges - A Scalable Representation For Triangle Meshes , ACM Journal of Graphics Tools 3 (4), 1998.
-
-   The idea of FreeEdge(boundary edge) is the key in making DirectedEdge works like HalfEdge. 
-   boundaryLoop is handle by negative value and separate array for pairing/next/prev traversal.
-
-   Note: Gino van den Bergen has an interesting implementation. http://www.dtecta.com/files/GDC17_VanDenBergen_Gino_Brep_Triangle_Meshes.pdf
-*/
  
 
 import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePropertyArray} from './pixelarray.js';
@@ -357,78 +357,6 @@ class VertexArray extends ExtensiblePropertyArray {
     * take loop's ideas, using cos/sin to approximating bi-tanent.
     * on connecting edges, cos(i)*4/k *p, sin(i)*4/k *p.  for secondary ring cos/sin(i+offset)/k * p.
     */
-/* Note: to be removed
- * 
- *    computeCCNormal(hEdgeContainer) {
-      const tangentL = [0, 0, 0];
-      const tangentR = [0, 0, 0];
-      const temp = [0, 0, 0];
-      const handle = {face: 0};
-      const pt = this._base.pt.getBuffer();
-      for (let v of this) {
-         // compute angleStep (primary, secondary ring), 
-         const valence = this.valence(v);
-         const radStep = 2*Math.PI / valence;
-         const offset = radStep / 2;
-         
-         let i = 0;
-         tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outHalfEdgeAround(hEdgecontainer, v)) {
-            const hEdges = [];
-            for (let dEdge of hEdgeContainer.faceIter(hEdge)) { 
-               hEdges.push( dEdge );
-            }
-            // first(the ring), add up primary
-            let p = hEdgeContainer.origin(hEdges[1]);
-            let coseff = Math.cos(i*radStep) * 2.9;
-            let sineff = Math.sin(i*radStep) * 2.9;
-            vec3.addAndScale(tangentL, 0, pt, p * sizeOfPointK, coseff);
-            vec3.addAndScale(tangentR, 0, pt, p * sizeOfPointK, sineff);
-            
-            // 2-nextToLast(ring, avg), the secondary ring if any
-            coseff = Math.cos(i*radStep+offset);
-            sineff = Math.sin(i*radStep+offset);
-            if (hEdges.length === 4) { // normal quad
-               p = hEdgeContainer.origin(hEdges[2]);
-               vec3a.scaleAndAdd(tangentL, 0, pt, p * sizeOfPointK, coseff);
-               vec3a.scaleAndAdd(tangentR, 0, pt, p * sizeOfPointK, sineff);
-            } else {
-               if (hEdges.length === 3) {       // use diagonal avg
-                  vec3a.addAndScale(temp, 0, pt, p * sizeOfPointK, pt, hEdgeContainer.origin(hEdges[2]) * sizeOfPointK, 0.5);
-               } else { //if (hEdges.length > 4) { // avg all ring
-                  let length = hEdges.length - 3;
-                  const scale = 1/length;
-                  vec3.scale(temp, 0,  pt, hEdgeContainer.origin(hEdges[2]) * sizeOfPointK, scale); 
-                  for (let j = 3; j < (length+2); ++j) {
-                     vec3a.scaleAndAdd(temp, 0, pt, hEdgeContainer.origin(hEdges[j])*sizeOfPointK, scale);
-                  }
-               }
-               vec3a.scaleAndAdd(tangentL, 0, temp, 0, coseff);
-               vec3a.scaleAndAdd(tangentR, 0, temp, 0, sineff);
-            }
-            // next face, 
-            i++
-         }
-         // now we have bi-tangent, compute the normal
-         vec3.cross(temp, 0, tangentL, 0, tangentR, 0);
-         vec3a.normalize(temp, 0);
-         this._prop.normal.setVec3(v, 0, temp);
-      }
-   }
-*/
-
-   
-/* Note: to be removed.  
- * 
- * 
- * findFreeInEdge(hEdgeContainer, vert) {
-      for (let inEdge of this.inHalfEdgeAround(hEdgeContainer, vert)) {
-         if (hEdges.face(inEdge) < 0) {
-            return inEdge;
-         }
-      }
-      return -1;
-   } */
 
    sanityCheck(hEdgeContainer) {
       let sanity = true;

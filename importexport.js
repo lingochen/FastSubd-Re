@@ -7,7 +7,7 @@
 //
 //import {HalfEdgeArray} from './surfacemesh.js';
 //import {QuadMesh} from './quadmesh.js';
-import {TriangleMesh, HalfEdgeArray} from './surfacemesh.js';
+import {TriangleMesh, TriangleEdgeArray} from './surfacemesh.js';
 import {blinnPhongToPBR} from './material.js';
 import * as Mat4 from './mat4.js';
 import {vec3a} from './vec3.js';
@@ -54,7 +54,7 @@ class Importer {
             this._currentMesh = QuadMesh.create(this._depot);
          }
          // remember to add uvs dynamic property.
-         this._currentUvs = HalfEdgeArray.addUV(this._currentMesh.h, 0);
+         this._currentUvs = TriangleEdgeArray.addUV(this._currentMesh.h, 0);
 
          this._objs.push( this._currentMesh );
       }

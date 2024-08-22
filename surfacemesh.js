@@ -481,10 +481,11 @@ const wEdgeK = {
    right: 1,
    sizeOf: 2,   
 }
-
-
-
-class HalfEdgeArray extends ExtensiblePropertyArray {
+/** 
+ * triangle use 3 directEdge(HalfEdge) as an unit
+ * 
+ */
+class TriangleEdgeArray extends ExtensiblePropertyArray {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
       super(props);
       // tri/quad directededge
@@ -498,7 +499,7 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
       this._bufferInfo = null;
    }
    
-   static _createInternal(size) {
+   static create(size) {
       const dArray = { // odd number of index and odd number of polygon(triangle) created false sharing, so we have to separate everything out
          vertex: Int32PixelArray.create(1, 1, size),
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
@@ -519,10 +520,10 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
          hArray: {size: 0, head: 0},
          wEdgeArray: {size: 0, head: 0},
       }
-      return [dArray, hArray, wEdgeArray, fmm, {}];
+      return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, {});
    }
    
-   static _rehydrateInternal(self) {
+   static rehydrate(self) {
       const dArray = rehydrateObject(self._dArray);
       
       const hArray = rehydrateObject(self._hArray);
@@ -530,7 +531,7 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
       const fmm = self._fmm;
  
       const props = rehydrateObject(self._prop);
-      return [dArray, hArray, wEdgeArray, fmm, props];
+      return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, props);
    }
    
    getDehydrate(obj) {
@@ -786,9 +787,9 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
       };
       // do allocation
-      const totalBytes = totalStructSize(hArray, size);
+      const totalBytes = ExtensiblePropertyArray.totalStructSize(hArray, size);
       const hArrayBuffer = allocBuffer(totalBytes);
-      setBufferAll(hArray, hArrayBuffer, 0, size);
+      ExtensiblePropertyArray.setBufferAll(hArray, hArrayBuffer, 0, size);
       for (let i in hArray) {
          hArray[i].appendRangeNew(size);
       }
@@ -886,6 +887,15 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
          yield -(i+1);
       }
    }
+
+   /**
+    * iterate over face's inner edge staring from input hEdge
+    */
+   * faceIter(hEdge) {
+      yield (hEdge);
+      yield (hEdge+1) % 3;
+      yield (hEdge+2) % 3;
+   }
    
    //
    // main api
@@ -902,6 +912,38 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
    lengthH() {
       return (this._hArray.wEdge.length() - this._fmm.hArray.size);
    }  
+
+   static kNextEdge = [1, 1, -2];
+   static kPrevEdge = [-2, 1, 1];
+
+   next(dEdge) {
+      if (dEdge >= 0) {
+         const i = dEdge % 3;       // remainder
+         return dEdge + TriangleEdgeArray.kNextEdge[i];
+      } else {
+         return this._hArray.next.get(-(dEdge+1), 0);
+      }
+   }
+   
+   prev(dEdge) {
+      if (dEdge >= 0) {
+         const i = dEdge % 3;
+         return dEdge - TriangleEdgeArray.kPrevEdge[i];
+      } else {
+         return this._hArray.prev.get(-(dEdge+1), 0);
+      }
+   }
+   
+   /**
+    * assumed dEdge >= 0.
+    */
+   face(dEdge) {
+      if (dEdge >= 0) {
+         return Math.trunc(dEdge/3);
+      } else {
+         return this._hArray.hole.get(-(dEdge+1), 0);
+      }
+   }
 
    isBoundary(dEdge) {  // not true for Quad, needs to override
       return (dEdge < 0);
@@ -1111,89 +1153,13 @@ class HalfEdgeArray extends ExtensiblePropertyArray {
       return halfEdgeArray.addProperty(`uv${index}`, type);
    }
 }
-/** 
- * triangle use 3 directEdge(HalfEdge) as an unit
- * 
- */
-class TriangleEdgeArray extends HalfEdgeArray {
-   constructor(internal) {
-      super(...internal);
-   }
-   
-   static kNextEdge = [1, 1, -2];
-   static kPrevEdge = [-2, 1, 1];
-   
-   static create(size) {
-      const params = HalfEdgeArray._createInternal(size);
-
-      return new TriangleEdgeArray(params);
-   }
-
-   static rehydrate(self) {
-      const params = HalfEdgeArray._rehydrateInternal(self);
-      return new TriangleEdgeArray(params);
-   }
-/*
-   getDehydrate(obj) {
-      return super.getDehydrate(obj);
-   } */
-   
-   /**
-    * iterate over face's inner edge staring from input hEdge
-    */
-   * faceIter(hEdge) {
-      yield (hEdge);
-      yield (hEdge+1) % 3;
-      yield (hEdge+2) % 3;
-   }
-
-   /* DELETED
-   alloc(face) {   // alloc 3 directedEdge.
-      const hEdge = face * 3;
-      const handle = this._allocDirectedEdge(hEdge, 3);
-      return hEdge;
-   } */
-
-   next(dEdge) {
-      if (dEdge >= 0) {
-         //let i = (dEdge+1) % 3;                // remainder.
-         //dEdge = Math.trunc(dEdge/3) * 3;
-         //return  dEdge + i;
-         const i = dEdge % 3;
-         return dEdge + TriangleEdgeArray.kNextEdge[i];
-      } else {
-         return this._hArray.next.get(-(dEdge+1), 0);
-      }
-   }
-   
-   prev(dEdge) {
-      if (dEdge >= 0) {
-         //let i = (dEdge+2) % 3;                // prev
-         //dEdge = Math.trunc(dEdge/3) * 3;
-         //return dEdge + i;
-         const i = dEdge % 3;
-         return dEdge - TriangleEdgeArray.kPrevEdge[i];
-      } else {
-         return this._hArray.prev.get(-(dEdge+1), 0);
-      }
-   }
-   
-   /**
-    * assumed dEdge >= 0.
-    */
-   face(dEdge) {
-      if (dEdge >= 0) {
-         return Math.trunc(dEdge/3);
-      } else {
-         return this._hArray.hole.get(-(dEdge+1), 0);
-      }
-   }
-}
 
 
 
 
-class FaceArray extends ExtensiblePropertyArray {
+
+
+class TriangleArray extends ExtensiblePropertyArray {
    constructor(materialDepot, array, fmm) {
       super({});
       this._depot = materialDepot;
@@ -1201,13 +1167,13 @@ class FaceArray extends ExtensiblePropertyArray {
       this._fmm = fmm;        // freed array slot memory manager.
    }
 
-   static _rehydrateInternal(self) {
+   static rehydrate(self) {
       const array = rehydrateObject(self._array);
       const fmm = self._fmm;
-      return [null, array, fmm];   // FixMe: no depot for now
+      return new TriangleArray(null, array, fmm);   // FixMe: no depot for now
    }
 
-   static _createInternal(depot, size) {
+   static create(depot, size) {
       const array = {
          material: Int32PixelArray.create(1, 1, size),
       };
@@ -1215,7 +1181,7 @@ class FaceArray extends ExtensiblePropertyArray {
          size: 0,
          head: 0,
       };
-      return [depot, array, fmm];
+      return new TriangleArray(depot, array, fmm);
    }
 
    getDehydrate(obj) {
@@ -1264,6 +1230,50 @@ class FaceArray extends ExtensiblePropertyArray {
          }
       }
    }
+   
+   // Iterator for the HalfEdge connecting to the triangle.
+   * halfEdgeLoop(_h, face) {
+      face *= 3;
+      yield face;
+      yield (face+1);
+      yield (face+2);
+   }
+   
+   /**
+    * similar to array.entries
+    * @param {handle} face 
+    */
+   * halfEdgeLoopEntries(_h, face) {
+      face *= 3;
+      yield [0, face];
+      yield [1, face+1];
+      yield [2, face+2];
+   }
+   
+   halfEdgeLoopArray(_h, tri) {   // static possible,
+      tri *= 3;
+      return [tri, tri+1, tri+2];
+   }
+   
+   /* DELETED
+    * _allocEx(count) {
+      //this.setHalfEdge(handle, -1);  // note: needs?
+      return this._faces.allocEx(count);
+   }*/
+   
+   free(handle) {
+      throw("not implemented");
+      this._depot.releaseRef(this.material(handle));
+      // this._faces.free(handle);
+   }
+   
+   halfEdgeCount(_hEdges, _tri) {   // triangle is 3 side
+      return 3;
+   }
+   
+   halfEdge(tri) {
+      return tri*3;
+   }   
    
    length() {
       return (this._array.material.length());
@@ -1355,77 +1365,9 @@ class FaceArray extends ExtensiblePropertyArray {
       return true;
    }
    
-/*   stat() {
-      return "Polygon Count: " + this.length() + ";\n";
-   } */
-}
-class TriangleArray extends FaceArray {
-   constructor(internal) {
-      super(...internal);
-   }
-   
-   static create(materialDepot, size) {
-      const internal = FaceArray._createInternal(materialDepot, size);
-      return new TriangleArray(internal);
-   }
-
-   static rehydrate(self) {
-      const params = FaceArray._rehydrateInternal(self);
-      return new TriangleArray(params);
-   }
-/*
-   getDehydrate(obj) {
-      return super.getDehydrate(obj);
-   } */
-   
-
-   // Iterator for the HalfEdge connecting to the triangle.
-   * halfEdgeLoop(_h, face) {
-      face *= 3;
-      yield face;
-      yield (face+1);
-      yield (face+2);
-   }
-   
-   /**
-    * similar to array.entries
-    * @param {handle} face 
-    */
-   * halfEdgeLoopEntries(_h, face) {
-      face *= 3;
-      yield [0, face];
-      yield [1, face+1];
-      yield [2, face+2];
-   }
-   
-   halfEdgeLoopArray(_h, tri) {   // static possible,
-      tri *= 3;
-      return [tri, tri+1, tri+2];
-   }
-   
-   /* DELETED
-    * _allocEx(count) {
-      //this.setHalfEdge(handle, -1);  // note: needs?
-      return this._faces.allocEx(count);
-   }*/
-   
-   free(handle) {
-      throw("not implemented");
-      this._depot.releaseRef(this.material(handle));
-      // this._faces.free(handle);
-   }
-   
-   halfEdgeCount(_hEdges, _tri) {   // triangle is 3 side
-      return 3;
-   }
-   
-   halfEdge(tri) {
-      return tri*3;
-   }
-   
    stat() {
       return "Triangle Count: " + this.length() + ";\n";
-   }   
+   }  
 }
 
 
@@ -2196,9 +2138,9 @@ class TriangleMesh {
 
 
 export {
-   VertexArray,
-   HalfEdgeArray,
-   FaceArray,
-   HoleArray,
+//   VertexArray,
+   TriangleEdgeArray,
+//   TriangleArray,
+//   HoleArray,
    TriangleMesh,
 }

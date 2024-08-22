@@ -10,7 +10,7 @@
  * 
  */
  
-import {SurfaceMesh} from './surfacemesh.js';
+//import {TriangleMesh} from './surfacemesh.js';
 import {vec3, vec3a} from './vec3.js'; 
  
 

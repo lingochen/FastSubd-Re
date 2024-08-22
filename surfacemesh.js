@@ -1646,7 +1646,7 @@ function isSame(as, bs) {
  * abstract class representing Mesh. base SurfaceMesh, managing material,
  * vertex, hEdge, face, and boundaryLoop.
  */
-class SurfaceMesh {
+class TriangleMesh {
    constructor(hEdges, vertices, faces, holes, bin, material) {
       this._bin = bin;
       this._material = material;
@@ -1655,6 +1655,17 @@ class SurfaceMesh {
       this._faces = faces;
       this._holes = holes;
    }
+
+   static create(materialDepot, size) {
+      const params = this._createInternal(materialDepot);
+
+      const dEdges = TriangleEdgeArray.create(size);
+      const vertices = VertexArray.create(size);
+      const faces = TriangleArray.create(params[1].proxy, size);
+      const holes = HoleArray.create(size);
+
+      return new TriangleMesh(dEdges, vertices, faces, holes, ...params);
+   }   
 
    static _createInternal(materialDepot) {
       const bin = {nameGroup:[], };
@@ -1695,15 +1706,29 @@ class SurfaceMesh {
       return [bin, material];
    }
    
-   static _rehydrateInternal(self) {
-      // nothing, we are only interested in geometry data.
-      return [null, null];
+   static rehydrate(self) {
+      if (self._hEdges && self._vertices && self._faces && self._holes) {
+         const params = [null, null];
+         const dEdges = TriangleEdgeArray.rehydrate(self._hEdges);
+         const vertices = VertexArray.rehydrate(self._vertices, dEdges);
+         const faces = TriangleArray.rehydrate(self._faces, dEdges);
+         const holes = HoleArray.rehydrate(self._holes, dEdges);
+
+         return new TriangleMesh(dEdges, vertices, faces, holes, ...params);
+      }
+      throw("TriangleMesh rehydrate(): bad input");
    }
 
    getDehydrate(obj) {
-      // get nothing because subdivide don't use it? material?
+      obj._hEdges = this._hEdges.getDehydrate({});
+      obj._vertices = this._vertices.getDehydrate({});
+      obj._faces = this._faces.getDehydrate({});
+      obj._holes = this._holes.getDehydrate({});
+
       return obj;
    }
+   
+
    
    /**
     *  reserve pixel array capacity for static mesh. for dynamic reserve individually.
@@ -1741,7 +1766,8 @@ class SurfaceMesh {
          this._faces.setBuffer(null, 0, nFaces);
          this._holes.setBuffer(null, 0, nHoles);
       }
-   }
+   } 
+   
    
    /**
     * simple wrapper for VertexArray.inHalfEdgeAround()
@@ -1872,6 +1898,11 @@ class SurfaceMesh {
       this._computeNormal();       // and normal?
       // commpaction
       this.compactBuffer();
+   }
+   
+   
+   _computeNormal() {
+      this.v.computeLoopNormal(this.h);
    }
       
    addNameGroup(name, start) {
@@ -2103,10 +2134,14 @@ class SurfaceMesh {
    }  
    
    _allocPolygon(material, side) {
-      const handle = this._faces.alloc(material, side);
-      this._hEdges.alloc(side, handle);
+      if (side !== 3) { //must be a triangle
+         console.log("Bad Triangle: not 3 edges");
+         throw("Triangle Only: " + side + " edges.");
+      }
+      const handle = this._faces.alloc(material);
+      this._hEdges._allocDirectedEdge(handle * 3, 3);     // alloc 3 directed edges.
       return handle;
-   }
+   }  
    
    _freePolygon(faceHndl) {
       //this._;
@@ -2132,59 +2167,7 @@ class SurfaceMesh {
    isEmpty() {
       return (this.v.length() === 0) && (this.f.length() === 0);
    }
-}
-class TriangleMesh extends SurfaceMesh {
-   constructor(dEdges, vertices, faces, holes, internal) {
-      super(dEdges, vertices, faces, holes, ...internal);
-   }
 
-   static create(materialDepot, size) {
-      const params = SurfaceMesh._createInternal(materialDepot);
-
-      const dEdges = TriangleEdgeArray.create(size);
-      const vertices = VertexArray.create(size);
-      const faces = TriangleArray.create(params[1].proxy, size);
-      const holes = HoleArray.create(size);
-
-      return new TriangleMesh(dEdges, vertices, faces, holes, params);
-   }
-
-   static rehydrate(self) {
-      if (self._hEdges && self._vertices && self._faces && self._holes) {
-         const params = SurfaceMesh._rehydrateInternal();
-         const dEdges = TriangleEdgeArray.rehydrate(self._hEdges);
-         const vertices = VertexArray.rehydrate(self._vertices, dEdges);
-         const faces = TriangleArray.rehydrate(self._faces, dEdges);
-         const holes = HoleArray.rehydrate(self._holes, dEdges);
-
-         return new TriangleMesh(dEdges, vertices, faces, holes, params);
-      }
-      throw("TriangleMesh rehydrate(): bad input");
-   }
-
-   getDehydrate(obj) {
-      super.getDehydrate(obj);
-      obj._hEdges = this._hEdges.getDehydrate({});
-      obj._vertices = this._vertices.getDehydrate({});
-      obj._faces = this._faces.getDehydrate({});
-      obj._holes = this._holes.getDehydrate({});
-
-      return obj;
-   }
-   
-   _computeNormal() {
-      this.v.computeLoopNormal(this.h);
-   }
-   
-   _allocPolygon(material, side) {
-      if (side !== 3) { //must be a triangle
-         console.log("Bad Triangle: not 3 edges");
-         throw("Triangle Only: " + side + " edges.");
-      }
-      const handle = this._faces.alloc(material);
-      this._hEdges._allocDirectedEdge(handle * 3, 3);     // alloc 3 directed edges.
-      return handle;
-   }
    // for debugging purpose.
 /*   _gatherEdge(vertex) {
       let outPut = [];
@@ -2212,13 +2195,10 @@ class TriangleMesh extends SurfaceMesh {
 
 
 
-
-
 export {
    VertexArray,
    HalfEdgeArray,
    FaceArray,
    HoleArray,
-   SurfaceMesh,
    TriangleMesh,
 }

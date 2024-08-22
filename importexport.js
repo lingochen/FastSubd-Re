@@ -5,9 +5,9 @@
 // 2) dropbox, yandex.
 // 3) google drive, microsoft onedrive, baidupan to come later.
 //
-import {HalfEdgeArray} from './surfacemesh.js';
-import {QuadMesh} from './quadmesh.js';
-import {TriangleMesh} from './trimesh.js';
+//import {HalfEdgeArray} from './surfacemesh.js';
+//import {QuadMesh} from './quadmesh.js';
+import {TriangleMesh, HalfEdgeArray} from './surfacemesh.js';
 import {blinnPhongToPBR} from './material.js';
 import * as Mat4 from './mat4.js';
 import {vec3a} from './vec3.js';

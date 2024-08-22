@@ -3,9 +3,9 @@
  * 
  */
  
-import {QuadMesh} from './quadmesh.js';
-import {TriangleMesh} from './trimesh.js';
-import {HalfEdgeArray} from './surfacemesh.js'; 
+//import {QuadMesh} from './quadmesh.js';
+import {TriangleMesh, HalfEdgeArray} from './surfacemesh.js';
+//import {HalfEdgeArray} from './surfacemesh.js'; 
 import * as Tri from './subdividetri.js';
 import * as Loop from './subdivideloop.js';
 // import * as MB from './subidivdemb.js';

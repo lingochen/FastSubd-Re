@@ -3,7 +3,7 @@
  * 
  * 
  */
-import {TriangleMesh} from '../trimesh.js';
+import {TriangleMesh} from '../surfacemesh.js';
 import * as Tri from '../subdividetri.js';
 import * as Loop from '../subdivideloop.js';
 //import {TaskGroup, WebWorker} from './workers/parallel'; 

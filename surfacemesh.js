@@ -348,15 +348,6 @@ class VertexArray extends ExtensiblePropertyArray {
          
       }
    }
-   
-   /**
-    * using stencil like value for computing bi-tangent. using bi-tangent to compute normal.
-    *  1 4  1       -1 0 1
-    *  0 0  0  and  -4 0 4
-    * -1 4 -1       -1 0 1
-    * take loop's ideas, using cos/sin to approximating bi-tanent.
-    * on connecting edges, cos(i)*4/k *p, sin(i)*4/k *p.  for secondary ring cos/sin(i+offset)/k * p.
-    */
 
    sanityCheck(hEdgeContainer) {
       let sanity = true;

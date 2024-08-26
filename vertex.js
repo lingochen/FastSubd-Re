@@ -126,7 +126,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    }
    
    * outHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._base.valence.get(vert, 0) >= 0) { // initialized yet?
+      if (this._base.valence.get(vert, 0) > 0) {   // has outEdge?
          const start = this._base.hfEdge.get(vert, 0);
          let current = start;
          do {
@@ -140,7 +140,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    
    // ccw ordering
    * inHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._base.valence.get(vert, 0) >= 0) { // initialized yet?
+      if (this._base.valence.get(vert, 0) > 0) {   // has outEdge?
          const start = this._base.hfEdge.get(vert, 0);
          let current = start;
          do {
@@ -167,7 +167,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
       this._base.hfEdge.set(vert, 0, hEdge);
       // when allocated, it should be initialized.
       let valence = this._base.valence.get(vert, 0);  // check for init
-      if (valence < 0) {
+      if (valence <= 0) {
          this._base.valence.set(vert, 0, 1);
       }
    }

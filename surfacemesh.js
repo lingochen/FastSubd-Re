@@ -1438,7 +1438,7 @@ class TriangleMesh {
       const v = this.v;
       // allocated from both pt and vertex
       const vertex = v.alloc();
-      v.setValence(vertex, -1);              // valence(-1) for unitialized yet.
+      //v.setValence(vertex, -1);              // valence(-1) for unitialized yet.
       v.copyPt(vertex, inPt, inOffset);
       return vertex;
    }

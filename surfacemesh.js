@@ -1443,6 +1443,27 @@ class TriangleMesh {
       return vertex;
    }
    
+   
+   /**
+    * return a bunch of triangle if it a polygon. assumed polygon is well behaved.
+    * break up polygon as triangle fan like.
+    */
+   _addPolygon(pts, material) {
+      const tri = [];
+      const triPts = [pts[0], 0, 0];
+      const length = pts.length;
+      for (let i = 2; i < length; ++i) {
+         triPts[1] = pts[i-1];
+         triPts[2] = pts[i];
+         tri.push( this.addFaceEx(0, 3, triPts, material);
+      }
+      
+      return tri;
+   }
+   
+   /**
+    * triangle only.
+    */
    addFace(pts, material) {
       return this.addFaceEx(0, pts.length, pts, material);
    }

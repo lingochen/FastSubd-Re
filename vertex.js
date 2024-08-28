@@ -1,6 +1,6 @@
 /**
- * VertexArray, 3d point-less structure, for 
- * VertexPointArray, the workhorse.
+ * VanillaVertexArray, 3d point-less structure, for EditableMesh
+ * VertexArray, the workhorse.
  * 
  */
 
@@ -104,7 +104,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    
 /*
    isFree(vertex) {
-   
+      return this._base.valence.get(vertex, 0) === 0;
    }
  */
    

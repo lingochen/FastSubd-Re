@@ -1455,7 +1455,7 @@ class TriangleMesh {
       for (let i = 2; i < length; ++i) {
          triPts[1] = pts[i-1];
          triPts[2] = pts[i];
-         tri.push( this.addFaceEx(0, 3, triPts, material);
+         tri.push( this.addFaceEx(0, 3, triPts, material) );
       }
       
       return tri;

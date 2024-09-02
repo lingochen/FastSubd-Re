@@ -9,24 +9,6 @@ import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
 
-
-function dehydrateObject(obj) {
-   const json = {};
-   for (let [key, prop] of Object.entries(obj)) {
-      json[key] = prop.getDehydrate({});
-   }
-   
-   return json;
-};
-
-function rehydrateObject(json) {
-   const retObj = {};
-   for (let [key, prop] of Object.entries(json)) {
-      retObj[key] = rehydrateBuffer(prop);
-   }
-   return retObj;
-}
-
 /**
 // hEdge: 
 // pt: 
@@ -53,16 +35,16 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
 
    static rehydrate(self) {
       if (self._base && self._prop) {
-         const array = rehydrateObject(self._base);
-         const prop = rehydrateObject(self._prop);
+         const array = this.rehydrateObject(self._base);
+         const prop = this.rehydrateObject(self._prop);
          return new VanillaVertexArray(array, prop, 0);
       }
       throw("VanillaVertexArray rehydrate: bad input");
    }
 
    getDehydrate(obj) {
-      obj._base = dehydrateObject(this._base);
-      obj._prop = dehydrateObject(this._prop);
+      obj._base = this.dehydrateObject(this._base);
+      obj._prop = this.dehydrateObject(this._prop);
    
       return obj;
    }
@@ -319,8 +301,8 @@ class VertexArray extends VanillaVertexArray {
 
    static rehydrate(self) {
       if (self._base && self._prop) {
-         const array = rehydrateObject(self._base);
-         const prop = rehydrateObject(self._prop);
+         const array = this.rehydrateObject(self._base);
+         const prop = this.rehydrateObject(self._prop);
          return new VertexArray(array, prop, self._valenceMax);
       }
       throw("VertexArray rehydrate: bad input");
@@ -391,6 +373,4 @@ export {
    VanillaVertexArray,
    PointK,
    VertexArray,
-   dehydrateObject,
-   rehydrateObject,
 }

@@ -825,6 +825,40 @@ class ExtensiblePropertyArray {
       this._prop = prop;
    }
    
+   dehydrateObject(obj) {
+      if (obj) {
+         const json = {};
+         for (let [key, prop] of Object.entries(obj)) {
+            json[key] = prop.getDehydrate({});
+         }
+   
+         return json;
+      }
+      throw("dehydrate object does not exist");
+   }
+   
+   static rehydrateObject(json) {
+      if (json) {
+         const retObj = {};
+         for (let [key, prop] of Object.entries(json)) {
+            retObj[key] = rehydrateBuffer(prop);
+         }
+         return retObj;
+      }
+      throw("rehydrate json does not exist");
+   }
+   
+
+   static _rehydrateInternal(self) {
+      return this.rehydrateObject(self._prop);
+   }
+
+   getDehydrate(obj) {
+      obj._prop = this.dehydrateObject(this._prop);
+      
+      return obj;
+   }
+   
    /**
     * 
     */

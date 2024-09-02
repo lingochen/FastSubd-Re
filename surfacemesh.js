@@ -31,7 +31,7 @@
 import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePropertyArray} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
-import {dehydrateObject, rehydrateObject, VertexArray} from "./vertex.js";
+import {VertexArray} from "./vertex.js";
 
 
 /**
@@ -103,26 +103,26 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    }
    
    static rehydrate(self) {
-      const dArray = rehydrateObject(self._dArray);
+      const dArray = this.rehydrateObject(self._dArray);
       
-      const hArray = rehydrateObject(self._hArray);
-      const wEdgeArray = rehydrateObject(self._wEdgeArray);
+      const hArray = this.rehydrateObject(self._hArray);
+      const wEdgeArray = this.rehydrateObject(self._wEdgeArray);
       const fmm = self._fmm;
  
-      const props = rehydrateObject(self._prop);
+      const props = this.rehydrateObject(self._prop);
       return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, props);
    }
    
    getDehydrate(obj) {
-      obj._dArray = dehydrateObject(this._dArray);
+      obj._dArray = this.dehydrateObject(this._dArray);
 
-      obj._hArray = dehydrateObject(this._hArray);
+      obj._hArray = this.dehydrateObject(this._hArray);
 
-      obj._wEdgeArray = dehydrateObject(this._wEdgeArray);
+      obj._wEdgeArray = this.dehydrateObject(this._wEdgeArray);
       
       obj._fmm = this._fmm;
       
-      obj._prop = dehydrateObject(this._prop);
+      obj._prop = this.dehydrateObject(this._prop);
       return obj;
    }
    
@@ -747,7 +747,7 @@ class TriangleArray extends ExtensiblePropertyArray {
    }
 
    static rehydrate(self) {
-      const array = rehydrateObject(self._array);
+      const array = this.rehydrateObject(self._array);
       const fmm = self._fmm;
       return new TriangleArray(null, array, fmm);   // FixMe: no depot for now
    }
@@ -764,7 +764,7 @@ class TriangleArray extends ExtensiblePropertyArray {
    }
 
    getDehydrate(obj) {
-      obj._array = dehydrateObject(this._array);
+      obj._array = this.dehydrateObject(this._array);
       obj._fmm = this._fmm;
       return obj;
    }

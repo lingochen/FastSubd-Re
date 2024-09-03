@@ -769,6 +769,47 @@ class TriangleArray extends ExtensiblePropertyArray {
       return obj;
    }
    
+    /**
+    * allocated directly from _array without checking freeList
+    */
+   _allocEx(size) {
+      if (this._array.material.capacity() < size) { // resize array if not enough free space.
+         this.setBuffer(null, 0, expandAllocLen( this._array.material.maxLength()+size ) );
+      }
+      
+      const start = this._array.material.length();
+      this._array.material.appendRangeNew(size);
+      return start;
+   }
+      
+   alloc(material) {
+      let handle;
+      if (this._fmm.size > 0) {
+         handle = this._fmm.head;
+         this._fmm.head = this._array.material.get(handle, 0);
+         --this._fmm.size;
+      } else {    // increment Face Count.
+         handle = this._allocEx(1);       // this._array.material.alloc(); this._array.color.alloc();
+      }
+      if (material == null) {
+         material = this._depot.getDefault();
+      }
+      this.setMaterial(handle, material);
+      this._depot.addRef(material, 1);
+      return handle;
+   }
+   
+   free(handle) {
+      throw("not implemented");
+      this._depot.releaseRef(this.material(handle));
+      // this._faces.free(handle);
+   }
+   
+   freeFace(fHandle) {
+      
+   }  
+   
+   
    * properties() {
       yield* Object.values(this._array);
       yield* super.properties();
@@ -834,18 +875,6 @@ class TriangleArray extends ExtensiblePropertyArray {
       return [tri, tri+1, tri+2];
    }
    
-   /* DELETED
-    * _allocEx(count) {
-      //this.setHalfEdge(handle, -1);  // note: needs?
-      return this._faces.allocEx(count);
-   }*/
-   
-   free(handle) {
-      throw("not implemented");
-      this._depot.releaseRef(this.material(handle));
-      // this._faces.free(handle);
-   }
-   
    halfEdgeCount(_hEdges, _tri) {   // triangle is 3 side
       return 3;
    }
@@ -856,40 +885,6 @@ class TriangleArray extends ExtensiblePropertyArray {
    
    length() {
       return (this._array.material.length());
-   }
-   
-   /**
-    * allocated directly from _array without checking freeList
-    */
-   _allocEx(size) {
-      if (this._array.material.capacity() < size) { // resize array if not enough free space.
-         this.setBuffer(null, 0, expandAllocLen( this._array.material.maxLength()+size ) );
-      }
-      
-      const start = this._array.material.length();
-      this._array.material.appendRangeNew(size);
-      return start;
-   }
-      
-   alloc(material) {
-      let handle;
-      if (this._fmm.size > 0) {
-         handle = this._fmm.head;
-         this._fmm.head = this._array.material.get(handle, 0);
-         --this._fmm.size;
-      } else {    // increment Face Count.
-         handle = this._allocEx(1);       // this._array.material.alloc(); this._array.color.alloc();
-      }
-      if (material == null) {
-         material = this._depot.getDefault();
-      }
-      this.setMaterial(handle, material);
-      this._depot.addRef(material, 1);
-      return handle;
-   }
-   
-   freeFace(fHandle) {
-      
    }
    
    setHalfEdge(handle, hEdge) {  // implicit halfEdge, no needs to set
@@ -921,17 +916,6 @@ class TriangleArray extends ExtensiblePropertyArray {
       }
    }
 
-/* DELETED: replaced by custom property  
-   color(polygon, color) {
-      this._array.color.getVec4(polygon, 0, color);
-      return color;
-   }
-
-   setColor(polygon, color) {
-      this._array.color.setVec4(polygon, 0, color);
-   } */
-   
-      
    sanityCheck(hEdgeContainer) {   // halfEdge and Triangle are align automatically, always true.
       for (let face of this) {
          for (let hEdge of this.halfEdgeLoop(hEdgeContainer, face)) {

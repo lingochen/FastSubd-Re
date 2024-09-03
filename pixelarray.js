@@ -848,7 +848,6 @@ class ExtensiblePropertyArray {
       throw("rehydrate json does not exist");
    }
    
-
    static _rehydrateInternal(self) {
       return this.rehydrateObject(self._prop);
    }

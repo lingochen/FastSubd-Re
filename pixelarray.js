@@ -848,8 +848,13 @@ class ExtensiblePropertyArray {
       throw("rehydrate json does not exist");
    }
    
+   // DELETED after refactoring
    static _rehydrateInternal(self) {
       return this.rehydrateObject(self._prop);
+   }
+   
+   _rehydrate(self) {
+      this._prop = this.rehydrateObject(self._prop);
    }
 
    getDehydrate(obj) {
@@ -884,6 +889,19 @@ class ExtensiblePropertyArray {
       return byteOffset;
    }
    
+   _appendRangeNew(size, pixArray) {
+      if (pixArray.capacity() < size) {
+         this.setBuffer(null, 0, expandAllocLen( pixArray.maxLength()+size ) );
+      }
+      
+      let index;
+      for (let prop of this.properties()) {
+         index = prop.appendRangeNew(size);
+      }
+      
+      return index;
+   }
+   
    addProperty(name, type) {
       //if (isValidVarName(name)) {
          if (this._prop[name] === undefined) { // don't already exist
@@ -916,8 +934,13 @@ class ExtensiblePropertyArray {
     * 
     */
    * properties() {
+//      yield* Object.values(this.baseObject());
       yield* Object.values(this._prop);
    }
+   
+//   _baseObject() {
+//      throw("to be overriden by subclass");
+//   }
 
    /**
     * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.

@@ -821,7 +821,8 @@ function freeBuffer(buffer) {
 
 
 class ExtensiblePropertyArray {
-   constructor(prop) {
+   constructor(base, prop) {
+      this._base = base;
       this._prop = prop;
    }
    
@@ -848,16 +849,17 @@ class ExtensiblePropertyArray {
       throw("rehydrate json does not exist");
    }
    
-   // DELETED after refactoring
-   static _rehydrateInternal(self) {
-      return this.rehydrateObject(self._prop);
-   }
-   
    _rehydrate(self) {
-      this._prop = this.rehydrateObject(self._prop);
+      if (self._base && self._prop) {
+         this._base = this.constructor.rehydrateObject(self._base);
+         this._prop = this.constructor.rehydrateObject(self._prop);
+      } else {
+         throw("no internal memeber, bad input.");
+      }
    }
 
    getDehydrate(obj) {
+      obj._base = this.dehydrateObject(this._base);
       obj._prop = this.dehydrateObject(this._prop);
       
       return obj;
@@ -934,13 +936,9 @@ class ExtensiblePropertyArray {
     * 
     */
    * properties() {
-//      yield* Object.values(this.baseObject());
+      yield* Object.values(this._base);
       yield* Object.values(this._prop);
    }
-   
-//   _baseObject() {
-//      throw("to be overriden by subclass");
-//   }
 
    /**
     * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.

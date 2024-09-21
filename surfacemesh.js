@@ -66,9 +66,9 @@ const wEdgeK = {
  */
 class TriangleEdgeArray extends ExtensiblePropertyArray {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
-      super(props);
+      super(dArray, props);
       // tri/quad directededge
-      this._dArray = dArray;
+      //this._dArray = dArray;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
       // wholeEdge specific value
@@ -76,6 +76,11 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
       this._bufferInfo = null;
+   }
+   
+   // tri directededge
+   get _dArray() {
+      return this._base;
    }
    
    static create(size) {
@@ -102,33 +107,29 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
       return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, {});
    }
    
-   static rehydrate(self) {
-      const dArray = this.rehydrateObject(self._dArray);
+   _rehydrate(self) {
+      super._rehydrate(self);
       
-      const hArray = this.rehydrateObject(self._hArray);
-      const wEdgeArray = this.rehydrateObject(self._wEdgeArray);
-      const fmm = self._fmm;
- 
-      const props = this.rehydrateObject(self._prop);
-      return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, props);
+      this._hArray = this.constructor.rehydrateObject(self._hArray);
+      this._wEdgeArray = this.constructor.rehydrateObject(self._wEdgeArray);
+      this._fmm = self._fmm;
+   }
+   
+   static rehydrate(self) {
+      const ret = new TriangleEdgeArray({},{},{},{},{});
+      ret._rehydrate(self);
+      return ret;
    }
    
    getDehydrate(obj) {
-      obj._dArray = this.dehydrateObject(this._dArray);
+      super.getDehydrate(obj);
 
       obj._hArray = this.dehydrateObject(this._hArray);
 
       obj._wEdgeArray = this.dehydrateObject(this._wEdgeArray);
       
       obj._fmm = this._fmm;
-      
-      obj._prop = this.dehydrateObject(this._prop);
       return obj;
-   }
-   
-   * properties() {
-      yield* Object.values(this._dArray);
-      yield* super.properties();
    }
    
    computeBufferSizeB(length) {
@@ -740,16 +741,24 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 
 class TriangleArray extends ExtensiblePropertyArray {
    constructor(materialDepot, array, fmm) {
-      super({});
+      super(array, {});
       this._depot = materialDepot;
-      this._array = array;
       this._fmm = fmm;        // freed array slot memory manager.
+   }
+   
+   get _array() {
+      return this._base;
+   }
+   
+   _rehydrate(self) {
+      super._rehydrate(self);
+      this._fmm = self._fmm;
    }
 
    static rehydrate(self) {
-      const array = this.rehydrateObject(self._array);
-      const fmm = self._fmm;
-      return new TriangleArray(null, array, fmm);   // FixMe: no depot for now
+      const ret = new TriangleArray(null, {}, {});
+      ret._rehydrate(self);
+      return ret;
    }
 
    static create(depot, size) {
@@ -764,7 +773,7 @@ class TriangleArray extends ExtensiblePropertyArray {
    }
 
    getDehydrate(obj) {
-      obj._array = this.dehydrateObject(this._array);
+      super.getDehydrate(obj);
       obj._fmm = this._fmm;
       return obj;
    }
@@ -808,12 +817,6 @@ class TriangleArray extends ExtensiblePropertyArray {
    freeFace(fHandle) {
       
    }  
-   
-   
-   * properties() {
-      yield* Object.values(this._array);
-      yield* super.properties();
-   }
 
    
    *[Symbol.iterator] () {

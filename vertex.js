@@ -19,9 +19,15 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 */
 class VanillaVertexArray extends ExtensiblePropertyArray {
    constructor(base, props, valenceMax) {
-      super(props);                 // custom properies
-      this._base = base;
+      super(base, props);                 // base, and custom property
       this._valenceMax = valenceMax;
+   }
+   
+   /**
+    * a more understandable name
+    */
+   get _vertex() {
+      return this._base;
    }
    
    static create(size) {
@@ -32,26 +38,26 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
 
       return new VanillaVertexArray(array, {}, 0);
    }
+   
+   _rehydrate(self) {
+      if (typeof self._valenceMax !== 'undefined') {
+         super._rehydrate(self);
+         this._valenceMax = self._valenceMax;
+      } else {
+         throw("bad input");
+      }
+   }
 
    static rehydrate(self) {
-      if (self._base && self._prop) {
-         const array = this.rehydrateObject(self._base);
-         const prop = this.rehydrateObject(self._prop);
-         return new VanillaVertexArray(array, prop, 0);
-      }
-      throw("VanillaVertexArray rehydrate: bad input");
+      const ret = new VanillaVertexArray({}, {}, 0);
+      ret._rehydrate(self);
+      return ret;
    }
-
+   
    getDehydrate(obj) {
-      obj._base = this.dehydrateObject(this._base);
-      obj._prop = this.dehydrateObject(this._prop);
-   
+      super.getDehydrate(obj);
+      obj._valenceMax = this._valenceMax;
       return obj;
-   }
-   
-   * properties() {
-      yield* Object.values(this._base);
-      yield* super.properties();
    }
    
    //
@@ -300,12 +306,9 @@ class VertexArray extends VanillaVertexArray {
    }
 
    static rehydrate(self) {
-      if (self._base && self._prop) {
-         const array = this.rehydrateObject(self._base);
-         const prop = this.rehydrateObject(self._prop);
-         return new VertexArray(array, prop, self._valenceMax);
-      }
-      throw("VertexArray rehydrate: bad input");
+      const ret = new VertexArray({}, {}, 0);
+      ret._rehydrate(self);
+      return ret;
    }
    
    createPositionTexture(gl) {

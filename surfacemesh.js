@@ -740,23 +740,21 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 
 
 class TriangleArray extends ExtensiblePropertyArray {
-   constructor(materialDepot, array, fmm) {
-      super(array, {});
+   constructor(materialDepot, array, prop, fmm) {
+      super(array, prop, fmm);
       this._depot = materialDepot;
-      this._fmm = fmm;        // freed array slot memory manager.
+   }
+   
+   get _freeSlot() {
+      return this._base.material;
    }
    
    get _array() {
       return this._base;
    }
-   
-   _rehydrate(self) {
-      super._rehydrate(self);
-      this._fmm = self._fmm;
-   }
 
    static rehydrate(self) {
-      const ret = new TriangleArray(null, {}, {});
+      const ret = new TriangleArray(null, {}, {}, {});
       ret._rehydrate(self);
       return ret;
    }
@@ -765,47 +763,15 @@ class TriangleArray extends ExtensiblePropertyArray {
       const array = {
          material: Int32PixelArray.create(1, 1, size),
       };
-      const fmm = {
-         size: 0,
-         head: 0,
-      };
-      return new TriangleArray(depot, array, fmm);
-   }
-
-   getDehydrate(obj) {
-      super.getDehydrate(obj);
-      obj._fmm = this._fmm;
-      return obj;
-   }
-   
-    /**
-    * allocated directly from _array without checking freeList
-    */
-   _allocEx(size) {
-      if (this._array.material.capacity() < size) { // resize array if not enough free space.
-         this.setBuffer(null, 0, expandAllocLen( this._array.material.maxLength()+size ) );
-      }
+      const fmm = {};
       
-      const start = this._array.material.length();
-      this._array.material.appendRangeNew(size);
-      return start;
+      return new TriangleArray(depot, array, {}, fmm);
    }
       
    alloc(material) {
-      let handle;
-      if (this._fmm.size > 0) {
-         handle = this._fmm.head;
-         this._fmm.head = this._array.material.get(handle, 0);
-         --this._fmm.size;
-      } else {    // increment Face Count.
-         handle = this._allocEx(1);       // this._array.material.alloc(); this._array.color.alloc();
-      }
-      if (material == null) {
-         material = this._depot.getDefault();
-      }
-      this.setMaterial(handle, material);
-      this._depot.addRef(material, 1);
-      return handle;
+      const face = this.allocArray(1)[0];
+      this._setMaterial(face, material);
+      return face;
    }
    
    free(handle) {

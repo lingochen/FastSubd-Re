@@ -9,8 +9,7 @@
  * 
 */
 
-
-import {computeDataTextureDim, computeDataTextureLen, makeDataTexture, makeDataTexture3D} from './glutil.js';
+import {computeDataTextureDim, computeDataTextureLen, expandAllocLen, makeDataTexture, makeDataTexture3D} from './glutil.js';
 
 /** webgl2 constant. copied only what we needs texturing data. */
 const PixelTypeK = {
@@ -821,9 +820,14 @@ function freeBuffer(buffer) {
 
 
 class ExtensiblePropertyArray {
-   constructor(base, prop) {
+   constructor(base, prop, freePool) {
       this._base = base;
       this._prop = prop;
+      // freed array slot memory manager.
+      this._freeMM = Object.assign( {     // provide default
+            stride: 1, pos: 0,
+            size: 0, head: 0} ,
+            freePool);
    }
    
    dehydrateObject(obj) {
@@ -853,6 +857,7 @@ class ExtensiblePropertyArray {
       if (self._base && self._prop) {
          this._base = this.constructor.rehydrateObject(self._base);
          this._prop = this.constructor.rehydrateObject(self._prop);
+         this._freeMM = self._freeMM;
       } else {
          throw("no internal memeber, bad input.");
       }
@@ -861,8 +866,65 @@ class ExtensiblePropertyArray {
    getDehydrate(obj) {
       obj._base = this.dehydrateObject(this._base);
       obj._prop = this.dehydrateObject(this._prop);
+      obj._freeMM = this._freeMM;
       
       return obj;
+   }
+   
+   alloc() {
+      return this.allocArray(1)[0];
+   }
+   
+   allocArray(count) {
+      let size = Math.min(this._freeMM.size, count);
+      
+      this._freeMM.size -= size;
+      const free = [];
+      for (; size > 0; --size) {
+         free.push( this._head );                  // last in, first out.
+         this._head = this._freeSlot.get(this._freeMM.head, this._freeMM.pos); 
+      }
+      
+      count -= free.length;
+      // check if we needs more allocation.
+      if (count > 0) {
+         if (this._freeSlot.capacity() < count) { // resize array if not enough free space.
+            this.setBuffer(null, 0, expandAllocLen( this._freeSlot.maxLength()+count ) );
+         }
+         
+         const index = this._allocArray(count);
+         
+         for (let i = 0; i < count; ++i) {
+            free.push( i+index );
+         }
+      }
+      
+      return free;
+   }
+   
+   _allocArray(count) {
+      const index = this._allocEx(count);
+      this._alloc(count);
+      return index;
+   }
+   
+   /**
+    * base and extended property allocation.
+    */
+   _alloc(count) {
+      for (let prop of this.properties() ) {
+         prop.appendRangeNew(count);
+      }
+   }
+   
+   /**
+    * extra allocation by subClass.
+    */
+   _allocEx(_count) {
+      // ovrride if needed to be.
+      
+      // return the start of new allocation.
+      return this._freeSlot.length();
    }
    
    /**

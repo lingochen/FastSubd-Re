@@ -18,9 +18,13 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 // crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
 */
 class VanillaVertexArray extends ExtensiblePropertyArray {
-   constructor(base, props, valenceMax) {
-      super(base, props);                 // base, and custom property
+   constructor(base, props, freePool, valenceMax) {
+      super(base, props, freePool);                 // base, and custom property
       this._valenceMax = valenceMax;
+   }
+   
+   get _freeSlot() {
+      return this._base.hfEdge;
    }
    
    /**
@@ -35,8 +39,9 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
          hfEdge: Int32PixelArray.create(1, 1, size),              // point back to the one of the hEdge ring that own the vertex. 
          valence: Int32PixelArray.create(1, 1, size),
       };
+      const freePool = {};                                        // use default stride=1, pos:0
 
-      return new VanillaVertexArray(array, {}, 0);
+      return new VanillaVertexArray(array, {}, freePool, 0);
    }
    
    _rehydrate(self) {
@@ -49,7 +54,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    }
 
    static rehydrate(self) {
-      const ret = new VanillaVertexArray({}, {}, 0);
+      const ret = new VanillaVertexArray({}, {}, {}, 0);
       ret._rehydrate(self);
       return ret;
    }
@@ -60,39 +65,10 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
       return obj;
    }
    
-   //
-   // memory routines.
-   //
-
-   /**
-    * should be allocated from free first.
-    * 
-    */
-   alloc() {
-      return this._allocEx(1);
-   }
-
-   /**
-    * used by subdivision, and alloc(),
-    */
-   _allocEx(size) {
-      if (this._base.hfEdge.capacity() < size) {   // realloc if no capacity.
-         this.setBuffer(null, 0, expandAllocLen(this._base.hfEdge.maxLength()+size));
-      }
-      
-      const start = this.length();
-      for (let key of Object.keys(this._base)) {
-         this._base[key].appendRangeNew(size);
-      }
-      for (let key of Object.keys(this._prop)) {
-         this._prop[key].appendRangeNew(size);
-      }
-      return start;
-   }
    
 /*
    isFree(vertex) {
-      return this._base.valence.get(vertex, 0) === 0;
+      return this._vertex.valence.get(vertex, 0) === 0;  // valence >= 3 for valid exit
    }
  */
    
@@ -139,9 +115,9 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
       }
    }
    
-   // faceAround(vert)
-   // vertexAround(vert)
-   // wEdgeAround(vert)
+   // faceAround(hEdges, vert)
+   // vertexAround(hEdges, vert)
+   // wEdgeAround(hEdges, vert)
    
    length() {
       return this._base.hfEdge.length();
@@ -286,8 +262,8 @@ Object.freeze(PointK);
 // color:
 */
 class VertexArray extends VanillaVertexArray {
-   constructor(array, props, valenceMax) {
-      super(array, props, valenceMax);
+   constructor(array, props, freePool, valenceMax) {
+      super(array, props, freePool, valenceMax);
    }
    
    static create(size) {
@@ -301,12 +277,13 @@ class VertexArray extends VanillaVertexArray {
          // cached value
          normal: Float16PixelArray.create(3, 3, size),
       };
+      const freePool = {};                                        // use default
 
-      return new VertexArray(array, prop, 0);
+      return new VertexArray(array, prop, freePool, 0);
    }
 
    static rehydrate(self) {
-      const ret = new VertexArray({}, {}, 0);
+      const ret = new VertexArray({}, {}, {}, 0);
       ret._rehydrate(self);
       return ret;
    }

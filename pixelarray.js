@@ -918,13 +918,24 @@ class ExtensiblePropertyArray {
    }
    
    /**
-    * extra allocation by subClass.
+    * extra allocation by subClass. override if needed to be
     */
    _allocEx(_count) {
       // ovrride if needed to be.
       
       // return the start of new allocation.
       return this._freeSlot.length();
+   }
+   
+   free(handle) {
+      this._freeSlot.set(handle, 0, this._freeMM.head);
+      this._freeMM.head= handle;
+      this._freeMM.size++;
+      
+   }
+   
+   _hasFree() {
+      return this._freeMM.size > 0;
    }
    
    /**

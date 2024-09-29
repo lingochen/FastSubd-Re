@@ -906,39 +906,45 @@ class TriangleArray extends ExtensiblePropertyArray {
 /**
  * BoundaryLoop aka HoleArray
  */
-class HoleArray {
+class HoleArray extends ExtensiblePropertyArray {
    constructor(holes) {
-      this._holes = holes;
-      this._fmm = {
-         size: 0,
-         head: 0,
-      };
+      super(holes, {}, {});
+   }
+   
+   get _freeSlot() {
+      return this._base.hole;
+   }
+   
+   get _holes() {
+      return this._base.hole;
    }
 
    static create(buffer, byteOffset, length) {
-      const holes = Int32PixelArray.create(1, 1);
-      holes.appendNew();    // zeroth hole is reserved for sentinel purpose.
-      return new HoleArray(holes);
+      const base = {
+         hole: Int32PixelArray.create(1, 1),
+         numberOfSide: Int32PixelArray.create(1, 1),
+      }
+      base.hole.appendNew();           // zeroth hole is reserved for sentinel purpose.
+      return new HoleArray(base);
    }
 
    static rehydrate(self) {
-      if (self._holes) {
-         return new HoleArray(rehydrateBuffer(self._holes));
-      }
-      throw("HoleArray _rehydrateInternal: bad input");
+      const holes = new HoleArray({});
+      holes._rehydrate(self);
+      return holes;
    }
 
-   getDehydrate(obj) {
+/*   getDehydrate(obj) {
       obj._holes = this._holes.getDehydrate({});
       obj._fmm = this._fmm;
       return obj;
-   }
+   }*/
    
    // 
    // given items length, compute the number of bytes needs
    // int32(4 bytes) * length.
    //
-   computeBufferSize(length) {
+/*   computeBufferSize(length) {
       if (length) {
          return this._holes.computeBufferSize(length+1);    // added sentinel
       }
@@ -956,7 +962,7 @@ class HoleArray {
       }
       
       return this._holes.setBuffer(bufferInfo, byteOffset, length);
-   }
+   } */
 
    /**
     * assumed this is pristine, reconstruct hole from another one, used by subdivide.
@@ -989,7 +995,7 @@ class HoleArray {
       } while (current !== start);
    }
 
-   _hasFree() {
+/*   _hasFree() {
       return (this._fmm.size > 0);
    }
    
@@ -1013,47 +1019,47 @@ class HoleArray {
          let handle = this._holes.appendNew();
          return handle;
       }
-   }
+   } 
 
    free(handle) {
       if (handle > 0) {
          this._addToFree(handle);
       }
-   }
+   } */
    
    /**
-    * halfEdge is negative Int, so freeList using positive Int
-    * @param {negative Int} hole 
+    * number of side === 0 must be free. actually anthing <= 2 must be invalid hole.
+    * @param {Int} hole handle
     * @returns {bool}
     */
    _isFree(hole) {
-      const hEdge = this._holes.get(hole, 0);
-      return (hEdge >= 0);
+      const sides = this._base.numberOfSide.get(hole, 0);
+      return (sides === 0);
    }
       
    /** 
     * freeList is using positive Int because HalfEdge is negative Int.
     * @return {negative Int} hole.
     */
-   _allocFromFree() {
+/*   _allocFromFree() {
       let head = this._holes.get(1, 0);
       const newHead = this._holes.get(head, 0);
       this._holes.set(1, 0, newHead);
       this._holes.set(0, 0, this._holes.get(0,0)-1);   // update freecount;
       return head;
-   }
+   } */
 
    /** 
     * freeList is using positive Int because HalfEdge is negative Int.
     * @param {negative Int} hole.
     */
-   _addToFree(hole) {
+/*   _addToFree(hole) {
       // return to free list
       const oldHead = this._get(1, 0);
       this._holes.set(-hole, 0, oldHead);
       this._holes.set(1, 0, -hole);
       this._holes.set(0, 0, this._holes.get(0,0)+1);   // update freecount;
-   }
+   } */
    
    length() {
       return this._holes.length()-1;
@@ -1074,6 +1080,14 @@ class HoleArray {
          throw("invalid hole: " + handle);
       }
    }
+   
+   setNumberOfSide(handle, sides) {
+      if (handle > 0) {
+         this._base.numberOfSide.set(handle, 0, sides);
+      } else {
+         throw("invalid hole: " + handle);
+      }
+   }
 
    sanityCheck(hEdgeContainer) {
       let sanity = true;
@@ -1089,7 +1103,7 @@ class HoleArray {
    }
 
    stat() {
-      return "Holes Count: " + (this._holes.length()-1-this._fmm.size) + ";\n";
+      return "Holes Count: " + (this._holes.length()-1-this._freeMM.size) + ";\n";
    }
 }
 
@@ -1350,13 +1364,16 @@ class TriangleMesh {
          if (hole === 0) {   // unassigned hEdge, get a new Hole and start assigning the whole group.
             hole = this._holes.alloc();
             this._holes.setHalfEdge(hole, boundary);
+            let sides = 0;
             // assigned holeFace to whole group
             let current = boundary;
             do {
                this._hEdges.setSharpness(current, -1);   // boundary is infinite crease.
                this._hEdges.setHole(current, hole);
                current = this._hEdges.next(current);
+               sides++;
             } while (current !== boundary);
+            this._holes.setNumberOfSide(hole, sides);
          }
       }
    }

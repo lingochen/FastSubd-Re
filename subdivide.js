@@ -62,14 +62,14 @@ function createNextLevelTriMesh(source) {
    subd.reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles);
    
    // preallocated enough points to next subdivision level,
-   subd.v._allocEx(nVertices);
+   subd.v._allocArray(nVertices);
    // preallocated next level of the wEdges/Faces.
    subd.h._allocEx(nHfEdges);                   
    subd.h._allocWEdge(nWEdges);
-   subd.f._allocEx(nFaces); 
+   subd.f._allocArray(nFaces); 
    // preallocated next level of boundaryLoop
    subd.h._allocHEdge(nBoundaries);
-   subd.o._allocEx(nHoles);
+   subd.o._allocArray(nHoles);
 
    return subd;
 }

@@ -818,6 +818,18 @@ function freeBuffer(buffer) {
    
 
 
+/**
+ * let browser decided if it validVarName, copy from stackoverflow
+ */
+function isValidVarName(name) {
+   try {
+      Function('var ' + name);
+   } catch(e) {
+      return false;
+   }
+   return true;
+}
+
 
 class ExtensiblePropertyArray {
    constructor(base, prop, freePool) {

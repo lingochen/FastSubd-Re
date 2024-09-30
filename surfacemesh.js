@@ -933,36 +933,21 @@ class HoleArray extends ExtensiblePropertyArray {
       holes._rehydrate(self);
       return holes;
    }
-
-/*   getDehydrate(obj) {
-      obj._holes = this._holes.getDehydrate({});
-      obj._fmm = this._fmm;
-      return obj;
-   }*/
    
-   // 
-   // given items length, compute the number of bytes needs
-   // int32(4 bytes) * length.
-   //
-/*   computeBufferSize(length) {
+   computeBufferSize(length) {
       if (length) {
-         return this._holes.computeBufferSize(length+1);    // added sentinel
+         return super.computeBufferSize(length+1);
       }
       return 0;
    }
    
    setBuffer(bufferInfo, byteOffset, length) {
       if (length) {
-         length++;                                          // remember to add sentinel
+         length++;                                             // sentinel
       }
       
-      if (!bufferInfo) {
-         bufferInfo = allocBuffer(this.computeBufferSize(length));
-         byteOffset = 0;
-      }
-      
-      return this._holes.setBuffer(bufferInfo, byteOffset, length);
-   } */
+      return super.setBuffer(bufferInfo, byteOffset, length);
+   }
 
    /**
     * assumed this is pristine, reconstruct hole from another one, used by subdivide.
@@ -994,38 +979,14 @@ class HoleArray extends ExtensiblePropertyArray {
          current = hEdgeContainer.next(current);
       } while (current !== start);
    }
-
-/*   _hasFree() {
-      return (this._fmm.size > 0);
-   }
    
-   //
-   // allocated directly from _array without checking free
-   _allocEx(size) {
-      const start = this._holes.length();
-      this._holes.appendRangeNew(size);
-      return start;
-   }
-
-   alloc() {
-      // check free list first,
-      if (this._hasFree()) {
-         return this._allocFromFree();
-      } else {
-         if (this._holes.capacity() < 1) {
-            this.setBuffer(null, 0, expandAllocLen(this._holes.maxLength()) );
-         }
-         
-         let handle = this._holes.appendNew();
-         return handle;
-      }
-   } 
-
    free(handle) {
+      // assume handle is valid
       if (handle > 0) {
-         this._addToFree(handle);
+         super.free(handle);
+         this._base.numberOfSide(handle, 0, 0);                // reset to free
       }
-   } */
+   }
    
    /**
     * number of side === 0 must be free. actually anthing <= 2 must be invalid hole.
@@ -1036,31 +997,7 @@ class HoleArray extends ExtensiblePropertyArray {
       const sides = this._base.numberOfSide.get(hole, 0);
       return (sides === 0);
    }
-      
-   /** 
-    * freeList is using positive Int because HalfEdge is negative Int.
-    * @return {negative Int} hole.
-    */
-/*   _allocFromFree() {
-      let head = this._holes.get(1, 0);
-      const newHead = this._holes.get(head, 0);
-      this._holes.set(1, 0, newHead);
-      this._holes.set(0, 0, this._holes.get(0,0)-1);   // update freecount;
-      return head;
-   } */
-
-   /** 
-    * freeList is using positive Int because HalfEdge is negative Int.
-    * @param {negative Int} hole.
-    */
-/*   _addToFree(hole) {
-      // return to free list
-      const oldHead = this._get(1, 0);
-      this._holes.set(-hole, 0, oldHead);
-      this._holes.set(1, 0, -hole);
-      this._holes.set(0, 0, this._holes.get(0,0)+1);   // update freecount;
-   } */
-   
+         
    length() {
       return this._holes.length()-1;
    }

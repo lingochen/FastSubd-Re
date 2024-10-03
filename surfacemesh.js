@@ -56,21 +56,24 @@ const wEdgeK = {
  */
 class TriangleEdgeArray extends ExtensiblePropertyArray {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
-      super(dArray, props);
-      // tri/quad directededge
-      //this._dArray = dArray;
+      super(props, {});
+      // tri directededge
+      this._dArray = dArray;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
       // wholeEdge specific value
       this._wEdgeArray = wEdgeArray;
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
-      this._bufferInfo = null;
    }
    
    // tri directededge
-   get _dArray() {
-      return this._base;
+   get _base() {
+      return this._dArray;
+   }
+   
+   set _base(base) {
+      this._dArray = base;
    }
    
    static create(size) {
@@ -731,7 +734,8 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 
 class TriangleArray extends ExtensiblePropertyArray {
    constructor(materialDepot, array, prop, fmm) {
-      super(array, prop, fmm);
+      super(prop, fmm);
+      this._array = array;
       this._depot = materialDepot;
    }
    
@@ -739,8 +743,12 @@ class TriangleArray extends ExtensiblePropertyArray {
       return this._base.material;
    }
    
-   get _array() {
-      return this._base;
+   get _base() {
+      return this._array;
+   }
+   
+   set _base(base) {
+      this._array = base;
    }
 
    static rehydrate(self) {
@@ -899,14 +907,19 @@ class TriangleArray extends ExtensiblePropertyArray {
 class HoleArray extends ExtensiblePropertyArray {
    constructor(holes) {
       super(holes, {}, {});
+      this._holes = holes;
    }
    
    get _freeSlot() {
       return this._base.hole;
    }
    
-   get _holes() {
-      return this._base.hole;
+   get _base() {
+      return this._holes;
+   }
+   
+   set _base(base) {
+      this._holes = base;
    }
 
    static create(buffer, byteOffset, length) {
@@ -945,15 +958,15 @@ class HoleArray extends ExtensiblePropertyArray {
     */
    _copy(src) {
       const srcLen = src._holes.length();
-      this._holes.appendRangeNew(srcLen - this._holes.length());
+      this._holes.hole.appendRangeNew(srcLen - this._holes.hole.length());
       // now copy everything.
       for (let i = 0; i < srcLen; ++i) {
-         this._holes.set(i, 0, src._holes.get(i, 0));
+         this._holes.hole.set(i, 0, src._holes.hole.get(i, 0));
       }
    }
    
    *[Symbol.iterator] () {
-      const len = this._holes.length();
+      const len = this._holes.hole.length();
       for (let i = 1; i < len; ++i) {  // skipped 0, it sentinel
          if (!this._isFree(i)) {
             yield i;
@@ -974,7 +987,7 @@ class HoleArray extends ExtensiblePropertyArray {
       // assume handle is valid
       if (handle > 0) {
          super.free(handle);
-         this._base.numberOfSide(handle, 0, 0);                // reset to free
+         this._holes.numberOfSide(handle, 0, 0);                // reset to free
       }
    }
    
@@ -984,17 +997,17 @@ class HoleArray extends ExtensiblePropertyArray {
     * @returns {bool}
     */
    _isFree(hole) {
-      const sides = this._base.numberOfSide.get(hole, 0);
+      const sides = this._holes.numberOfSide.get(hole, 0);
       return (sides === 0);
    }
          
    length() {
-      return this._holes.length()-1;
+      return this._holes.hole.length()-1;
    }
 
    halfEdge(handle) {
       if (handle > 0) {
-         return this._holes.get(handle, 0);
+         return this._holes.hole.get(handle, 0);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1002,7 +1015,7 @@ class HoleArray extends ExtensiblePropertyArray {
 
    setHalfEdge(handle, hEdge) {
       if (handle > 0) {
-         this._holes.set(handle, 0, hEdge);
+         this._holes.hole.set(handle, 0, hEdge);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1010,7 +1023,7 @@ class HoleArray extends ExtensiblePropertyArray {
    
    setNumberOfSide(handle, sides) {
       if (handle > 0) {
-         this._base.numberOfSide.set(handle, 0, sides);
+         this._holes.numberOfSide.set(handle, 0, sides);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1030,7 +1043,7 @@ class HoleArray extends ExtensiblePropertyArray {
    }
 
    stat() {
-      return "Holes Count: " + (this._holes.length()-1-this._freeMM.size) + ";\n";
+      return "Holes Count: " + (this._holes.hole.length()-1-this._freeMM.size) + ";\n";
    }
 }
 

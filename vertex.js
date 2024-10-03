@@ -19,19 +19,24 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 */
 class VanillaVertexArray extends ExtensiblePropertyArray {
    constructor(base, props, freePool, valenceMax) {
-      super(base, props, freePool);                 // base, and custom property
+      super(props, freePool);                 // base, and custom property
+      this._vertex = base
       this._valenceMax = valenceMax;
    }
    
    get _freeSlot() {
-      return this._base.hfEdge;
+      return this._vertex.hfEdge;
    }
    
    /**
-    * a more understandable name
+    * used by ArrayGroup
     */
-   get _vertex() {
-      return this._base;
+   get _base() {
+      return this._vertex;
+   }
+   
+   set _base(base) {
+      this._vertex = base;
    }
    
    static create(size) {

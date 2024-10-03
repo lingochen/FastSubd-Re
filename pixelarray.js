@@ -832,8 +832,7 @@ function isValidVarName(name) {
 
 
 class ExtensiblePropertyArray {
-   constructor(base, prop, freePool) {
-      this._base = base;
+   constructor(prop, freePool) {
       this._prop = prop;
       // freed array slot memory manager.
       this._freeMM = Object.assign( {     // provide default
@@ -841,6 +840,9 @@ class ExtensiblePropertyArray {
             size: 0, head: 0} ,
             freePool);
    }
+   
+   // get _base() {throw("must implemented by subclass");}
+   // set _base(base) {throw("must implemented by subclass");}
    
    dehydrateObject(obj) {
       if (obj) {

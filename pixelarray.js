@@ -868,8 +868,11 @@ class ExtensiblePropertyArray {
    }
    
    _rehydrate(self) {
-      if (self._base && self._prop) {
-         this._base = this.constructor.rehydrateObject(self._base);
+      if (self._prop) {
+         // this.constructor.rehydrateObject(self._base);
+         for (let [key, _value] of this._baseEntries()) {
+            this[key] = rehydrateBuffer(self[key]);
+         }
          this._prop = this.constructor.rehydrateObject(self._prop);
          this._freeMM = self._freeMM;
       } else {
@@ -878,7 +881,11 @@ class ExtensiblePropertyArray {
    }
 
    getDehydrate(obj) {
-      obj._base = this.dehydrateObject(this._base);
+      obj._base = {};
+      for (let [key, value] of this._baseEntries()) {
+         obj[key] = value.getDehydrate({});
+      }
+      //obj._base = this.dehydrateObject(this._base);
       obj._prop = this.dehydrateObject(this._prop);
       obj._freeMM = this._freeMM;
       
@@ -1016,14 +1023,21 @@ class ExtensiblePropertyArray {
          return true;
       }
       return false;
-   }   
+   }
    
    /**
-    * iterator. can be override 
+    * return [key, value] of subclass's PixelArrayS
+    */
+   * _baseEntries() {}
+   
+   /**
+    * iterator for all PixelArray
     * 
     */
    * properties() {
-      yield* Object.values(this._base);
+      for (let [key, value] of this._baseEntries()) {
+         yield value;
+      }
       yield* Object.values(this._prop);
    }
 

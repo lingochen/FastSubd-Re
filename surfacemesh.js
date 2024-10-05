@@ -58,7 +58,9 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
       super(props, {});
       // tri directededge
-      this._dArray = dArray;
+      //this._dArray = dArray;
+      this._vertex = dArray?.vertex;
+      this._wEdge = dArray?.wEdge;
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
       // wholeEdge specific value
@@ -67,13 +69,13 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
       this._fmm = fmm;
    }
    
-   // tri directededge
-   get _base() {
-      return this._dArray;
+   get _freeSlot() {
+      return this._wEdge;
    }
    
-   set _base(base) {
-      this._dArray = base;
+   * _baseEntries() {
+      yield ["_vertex", this._vertex];
+      yield ["_wEdge", this._wEdge];
    }
    
    static create(size) {
@@ -170,7 +172,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    }
 
    createVertexTexture(gl) {
-       return this._dArray.vertex.createDataTexture(gl);
+       return this._vertex.createDataTexture(gl);
    }
 
    createPropertyTexture(name, gl) {
@@ -183,11 +185,11 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    }
    
    vBuffer() {
-      return this._dArray.vertex.getBuffer();
+      return this._vertex.getBuffer();
    }
    
    wBuffer() {
-      return this._dArray.wEdge.getBuffer();
+      return this._wEdge.getBuffer();
    }
    
    wEdgeBuffer() {
@@ -199,12 +201,12 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
     * 
     */
    _allocEx(size) {
-      if (this._dArray.vertex.capacity() < size) {
-         this.setBuffer(null, 0, expandAllocLen(this._dArray.vertex.maxLength()+size));
+      if (this._vertex.capacity() < size) {
+         this.setBuffer(null, 0, expandAllocLen(this._vertex.maxLength()+size));
       }
       
-      const index = this._dArray.vertex.appendRangeNew(size);
-      this._dArray.wEdge.appendRangeNew(size);
+      const index = this._vertex.appendRangeNew(size);
+      this._wEdge.appendRangeNew(size);
       for (let [_key, prop] of Object.entries(this._prop)) {
          prop.appendRangeNew(size);
       }
@@ -226,7 +228,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
     */
    _allocWEdge(size) {
       if (this._wEdgeArray.edge.capacity() < size) {  // expand by 1.5
-         const maxLen = this._dArray.vertex.maxLength(); // directedEdge should used it by now.
+         const maxLen = this._vertex.maxLength(); // directedEdge should used it by now.
          this.setBufferW(null, 0, expandAllocLen(maxLen+size) );
       }
       
@@ -273,14 +275,14 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    }
    
    _allocDirectedEdge(hEdge, length) {
-      if (this._dArray.vertex.capacity() < length) {
-         let maxLen = this._dArray.vertex.maxLength();
+      if (this._vertex.capacity() < length) {
+         let maxLen = this._vertex.maxLength();
          maxLen = expandAllocLen(maxLen+length);
          this.setBuffer(null, 0, maxLen, computeDataTextureLen(Math.floor(maxLen/3*2)) );   // TODO: What the optimal wEdge expansion size? 
       }
             
       let handle = [];
-      if (hEdge >= this._dArray.vertex.length()) { // asking for new one, hEdge === length().
+      if (hEdge >= this._vertex.length()) { // asking for new one, hEdge === length().
          this._allocEx(length);
       } 
       for (let i = hEdge; i < (hEdge+length); ++i) {
@@ -429,8 +431,8 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
     * direct access to the main directedEdge
     */
    * halfEdgeIter() {
-      for (let i = 0; i < this._dArray.vertex.length(); ++i) {
-         if (this._dArray.vertex.get(i, 0) >= 0) {
+      for (let i = 0; i < this._vertex.length(); ++i) {
+         if (this._vertex.get(i, 0) >= 0) {
             if (!this.isFree(i)) {
                yield i;
             }
@@ -475,7 +477,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    //
    
    length() {
-      return this._dArray.wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
+      return this._wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
    }
    
    lengthW() {
@@ -556,7 +558,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
     */
    origin(hEdge) {
       if (hEdge >= 0) {
-         return this._dArray.vertex.get(hEdge, 0);
+         return this._vertex.get(hEdge, 0);
       } else {
          return this._hArray.vertex.get(-(hEdge+1), 0);  
       } 
@@ -564,7 +566,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    
    setOrigin(hEdge, vertex) {
       if (hEdge >= 0) {
-         this._dArray.vertex.set(hEdge, 0, vertex);         
+         this._vertex.set(hEdge, 0, vertex);         
       } else {
          this._hArray.vertex.set(-(hEdge+1), 0, vertex);
       }
@@ -572,30 +574,30 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 
    pair(hEdge) {
       if (hEdge >= 0) {
-         return this._wEdgeArray.edge._get( this._dArray.wEdge.get(hEdge, 0) ^ 1 );       // left to right, right to left
+         return this._wEdgeArray.edge._get( this._wEdge.get(hEdge, 0) ^ 1 );       // left to right, right to left
       } else {
          return this._wEdgeArray.edge._get( this._hArray.wEdge.get(-(hEdge+1), 0) ^ 1 );  // left to right, right to left
       }
    }
       
-   _wEdge(hEdge) {
+   _whEdge(hEdge) {
       if (hEdge >= 0) {
-         return this._dArray.wEdge.get(hEdge, 0);
+         return this._wEdge.get(hEdge, 0);
       } else {
          return this._hArray.wEdge.get(-(hEdge+1), 0);
       }
    }
    
    wEdge(hEdge) {
-      return this._wEdge(hEdge) >> 1;
+      return this._whEdge(hEdge) >> 1;
    }
    
    isWEdgeLeft(hEdge) {
-      return (this._wEdge(hEdge) & 1) === 0;
+      return (this._whEdge(hEdge) & 1) === 0;
    }
    
    isWEdgeRight(hEdge) {
-      return this._wEdge(hEdge) & 1;
+      return this._whEdge(hEdge) & 1;
    }
    
    wEdgePair(wEdge) {
@@ -616,7 +618,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
       if (hEdge < 0) {
          this._hArray.wEdge.set(-(hEdge+1), 0, wEdgePosition);
       } else {
-         this._dArray.wEdge.set(hEdge, 0, wEdgePosition);
+         this._wEdge.set(hEdge, 0, wEdgePosition);
       }
    }
    
@@ -735,20 +737,16 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 class TriangleArray extends ExtensiblePropertyArray {
    constructor(materialDepot, array, prop, fmm) {
       super(prop, fmm);
-      this._array = array;
+      this._material = array?.material;
       this._depot = materialDepot;
    }
    
    get _freeSlot() {
-      return this._base.material;
+      return this._material;
    }
    
-   get _base() {
-      return this._array;
-   }
-   
-   set _base(base) {
-      this._array = base;
+   * _baseEntries() {
+      yield ["_material", this._material];
    }
 
    static rehydrate(self) {
@@ -851,7 +849,7 @@ class TriangleArray extends ExtensiblePropertyArray {
    }   
    
    length() {
-      return (this._array.material.length());
+      return (this._material.length());
    }
    
    setHalfEdge(handle, hEdge) {  // implicit halfEdge, no needs to set
@@ -859,7 +857,7 @@ class TriangleArray extends ExtensiblePropertyArray {
    }
    
    createMaterialTexture(gl) {
-      return this._array.material.createDataTexture(gl);
+      return this._material.createDataTexture(gl);
    }
       
    _materialAddRef(material, count) {
@@ -867,11 +865,11 @@ class TriangleArray extends ExtensiblePropertyArray {
    }
    
    material(polygon) {
-      return this._array.material.get(polygon, 0);
+      return this._material.get(polygon, 0);
    }
    
    _setMaterial(polygon, material) {
-      this._array.material.set(polygon, 0, material);
+      this._material.set(polygon, 0, material);
    }
 
    setMaterial(polygon, material) {
@@ -906,20 +904,18 @@ class TriangleArray extends ExtensiblePropertyArray {
  */
 class HoleArray extends ExtensiblePropertyArray {
    constructor(holes) {
-      super(holes, {}, {});
-      this._holes = holes;
+      super({}, {});
+      this._hole = holes?.hole;
+      this._numberOfSide = holes?.numberOfSide;
    }
    
    get _freeSlot() {
-      return this._base.hole;
+      return this._hole;
    }
    
-   get _base() {
-      return this._holes;
-   }
-   
-   set _base(base) {
-      this._holes = base;
+   * _baseEntries() {
+      yield ["_hole", this._hole];
+      yield ["_numberOfSide", this._numberOfSide];
    }
 
    static create(buffer, byteOffset, length) {
@@ -958,15 +954,17 @@ class HoleArray extends ExtensiblePropertyArray {
     */
    _copy(src) {
       const srcLen = src._holes.length();
-      this._holes.hole.appendRangeNew(srcLen - this._holes.hole.length());
+      this._hole.appendRangeNew(srcLen - this._hole.length());
+      this._numberOfSide.appendRangeNew(srcLen - this._numberOfSide.length());
       // now copy everything.
       for (let i = 0; i < srcLen; ++i) {
-         this._holes.hole.set(i, 0, src._holes.hole.get(i, 0));
+         this._hole.set(i, 0, src._hole.get(i, 0));
+         this._numberOfSide.set(i, 0, src._numberOfSide.get(i, 0));
       }
    }
    
    *[Symbol.iterator] () {
-      const len = this._holes.hole.length();
+      const len = this._hole.length();
       for (let i = 1; i < len; ++i) {  // skipped 0, it sentinel
          if (!this._isFree(i)) {
             yield i;
@@ -987,7 +985,7 @@ class HoleArray extends ExtensiblePropertyArray {
       // assume handle is valid
       if (handle > 0) {
          super.free(handle);
-         this._holes.numberOfSide(handle, 0, 0);                // reset to free
+         this._numberOfSide(handle, 0, 0);                // reset to free
       }
    }
    
@@ -997,17 +995,17 @@ class HoleArray extends ExtensiblePropertyArray {
     * @returns {bool}
     */
    _isFree(hole) {
-      const sides = this._holes.numberOfSide.get(hole, 0);
+      const sides = this._numberOfSide.get(hole, 0);
       return (sides === 0);
    }
          
    length() {
-      return this._holes.hole.length()-1;
+      return this._hole.length()-1;
    }
 
    halfEdge(handle) {
       if (handle > 0) {
-         return this._holes.hole.get(handle, 0);
+         return this._hole.get(handle, 0);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1015,7 +1013,7 @@ class HoleArray extends ExtensiblePropertyArray {
 
    setHalfEdge(handle, hEdge) {
       if (handle > 0) {
-         this._holes.hole.set(handle, 0, hEdge);
+         this._hole.set(handle, 0, hEdge);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1023,7 +1021,7 @@ class HoleArray extends ExtensiblePropertyArray {
    
    setNumberOfSide(handle, sides) {
       if (handle > 0) {
-         this._holes.numberOfSide.set(handle, 0, sides);
+         this._numberOfSide.set(handle, 0, sides);
       } else {
          throw("invalid hole: " + handle);
       }
@@ -1043,7 +1041,7 @@ class HoleArray extends ExtensiblePropertyArray {
    }
 
    stat() {
-      return "Holes Count: " + (this._holes.hole.length()-1-this._freeMM.size) + ";\n";
+      return "Holes Count: " + (this._hole.length()-1-this._freeMM.size) + ";\n";
    }
 }
 

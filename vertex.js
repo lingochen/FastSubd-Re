@@ -20,24 +20,21 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 class VanillaVertexArray extends ExtensiblePropertyArray {
    constructor(base, props, freePool, valenceMax) {
       super(props, freePool);                 // base, and custom property
-      this._vertex = base
+      this._hfEdge = base.hfEdge ?? null;
+      this._valence = base.valence ?? null;
       this._valenceMax = valenceMax;
    }
    
+   //*** used by ArrayGroup ***
    get _freeSlot() {
-      return this._vertex.hfEdge;
+      return this._hfEdge;
    }
    
-   /**
-    * used by ArrayGroup
-    */
-   get _base() {
-      return this._vertex;
+   * _baseEntries() {
+      yield ["_hfEdge", this._hfEdge];
+      yield ["_valence", this._valence];
    }
-   
-   set _base(base) {
-      this._vertex = base;
-   }
+   //*** end of subclassing ArrayGroup ***
    
    static create(size) {
       const array = {
@@ -82,11 +79,11 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    //
    
    *[Symbol.iterator] () {
-      yield* this.rangeIter(0, this._base.hfEdge.length());
+      yield* this.rangeIter(0, this._hfEdge.length());
    }
 
    * rangeIter(start, stop) {
-      stop = Math.min(this._base.hfEdge.length(), stop);
+      stop = Math.min(this._hfEdge.length(), stop);
       for (let i = start; i < stop; i++) {
          // if (!isFree(i)) {
          yield i;
@@ -95,8 +92,8 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    }
    
    * outHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._base.valence.get(vert, 0) > 0) {   // has outEdge?
-         const start = this._base.hfEdge.get(vert, 0);
+      if (this._valence.get(vert, 0) > 0) {   // has outEdge?
+         const start = this._hfEdge.get(vert, 0);
          let current = start;
          do {
             const outEdge = current;
@@ -109,8 +106,8 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    
    // ccw ordering
    * inHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._base.valence.get(vert, 0) > 0) {   // has outEdge?
-         const start = this._base.hfEdge.get(vert, 0);
+      if (this._valence.get(vert, 0) > 0) {   // has outEdge?
+         const start = this._hfEdge.get(vert, 0);
          let current = start;
          do {
             const inEdge = hEdgeContainer.pair(current);
@@ -125,19 +122,19 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    // wEdgeAround(hEdges, vert)
    
    length() {
-      return this._base.hfEdge.length();
+      return this._hfEdge.length();
    }
    
    halfEdge(vert) {
-      return this._base.hfEdge.get(vert, 0);
+      return this._hfEdge.get(vert, 0);
    }
    
    setHalfEdge(vert, hEdge) {
-      this._base.hfEdge.set(vert, 0, hEdge);
+      this._hfEdge.set(vert, 0, hEdge);
       // when allocated, it should be initialized.
-      let valence = this._base.valence.get(vert, 0);  // check for init
+      let valence = this._valence.get(vert, 0);  // check for init
       if (valence <= 0) {
-         this._base.valence.set(vert, 0, 1);
+         this._valence.set(vert, 0, 1);
       }
    }
    
@@ -147,11 +144,11 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    }
    
    valence(vertex) {
-      return this._base.valence.get(vertex, 0);
+      return this._valence.get(vertex, 0);
    }
    
    setValence(vertex, valence) {
-      this._base.valence.set(vertex, 0, valence);
+      this._valence.set(vertex, 0, valence);
    }
 
    // dummy, to be override, not natural position.
@@ -160,7 +157,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    computeValence(hEdgeContainer) {
       let valenceMax = 0;
       for (let i of this) {
-         const start = this._base.hfEdge.get(i, 0);
+         const start = this._hfEdge.get(i, 0);
          if (start >= 0) {
             let count = 0;
             let current = start;
@@ -235,7 +232,7 @@ class VanillaVertexArray extends ExtensiblePropertyArray {
    };
    
    stat() {
-      return "Vertices Count: " + this._base.hfEdge.length() + ";\n";
+      return "Vertices Count: " + this._hfEdge.length() + ";\n";
    }
 
 }
@@ -269,6 +266,12 @@ Object.freeze(PointK);
 class VertexArray extends VanillaVertexArray {
    constructor(array, props, freePool, valenceMax) {
       super(array, props, freePool, valenceMax);
+      this._pt = array.pt ?? null;
+   }
+   
+   * _baseEntries() {
+      yield* super._baseEntries();
+      yield ["_pt", this._pt];
    }
    
    static create(size) {
@@ -294,7 +297,7 @@ class VertexArray extends VanillaVertexArray {
    }
    
    createPositionTexture(gl) {
-      return this._base.pt.createDataTexture(gl);
+      return this._pt.createDataTexture(gl);
    }
    
    createNormalTexture(gl) {
@@ -302,22 +305,22 @@ class VertexArray extends VanillaVertexArray {
    }
    
    positionBuffer() {
-      return this._base.pt.getBuffer();
+      return this._pt.getBuffer();
    }
    
    copyPt(vertex, inPt, inOffset) {
-      vec3.copy(this._base.pt.getBuffer(), vertex * PointK.sizeOf, inPt, inOffset);
+      vec3.copy(this._pt.getBuffer(), vertex * PointK.sizeOf, inPt, inOffset);
       //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
       //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
       //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
    }
 
    crease(vertex) {
-      return this._base.pt.get(vertex, PointK.c);
+      return this._pt.get(vertex, PointK.c);
    }
 
    setCrease(vertex, crease) {
-      this._base.pt.set(vertex, PointK.c, crease);
+      this._pt.set(vertex, PointK.c, crease);
    }
    
    /**
@@ -328,7 +331,7 @@ class VertexArray extends VanillaVertexArray {
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
-      const pt = this._base.pt.getBuffer();
+      const pt = this._pt.getBuffer();
       for (let v of this) {     
          const valence = this.valence(v);
          const radStep = 2*Math.PI / valence;

@@ -232,9 +232,9 @@ function triTask(mThis, face) {
    
    // new WEdge, pair, new Vertex position computation
    const faceW = computeNewFaceWEdgeIndex(mThis, face);
-   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+2, 0)),];
    const index = [[0,2], [1,0], [2,1]];
    for (let [i, prev] of index) {
       let vertex = computeNewVertex(mThis, mThis.srch.origin(srcHEdge+i) );
@@ -276,9 +276,9 @@ function triTaskW(mThis, face) {
    
    // new WEdge, pair, new Vertex position computation
    const faceW = computeNewFaceWEdgeIndex(mThis, face);
-   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+2, 0)),];
    const index = [[0,2], [1,0], [2,1]];
    for (let [i, prev] of index) {
       mThis.desthw[destHEdge++] = edgeW[i][0];
@@ -302,9 +302,9 @@ function triTaskV(mThis, face) {
    let destHEdge = srcHEdge * 4;    // dest expand by 4.
    
    // new WEdge, pair, new Vertex position computation
-   const edgeW = [computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+1, 0)),
-                  computeNewWEdge(mThis, mThis.srch._dArray.wEdge.get(srcHEdge+2, 0)),];
+   const edgeW = [computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+1, 0)),
+                  computeNewWEdge(mThis, mThis.srch._wEdge.get(srcHEdge+2, 0)),];
 
    const index = [[0,2], [1,0], [2,1]];
    for (let [i, prev] of index) {

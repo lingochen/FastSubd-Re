@@ -4,7 +4,7 @@
  * 
  */
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePropertyArray} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePixelArrayGroup} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
@@ -17,7 +17,7 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 // valence: 
 // crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
 */
-class VanillaVertexArray extends ExtensiblePropertyArray {
+class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    constructor(base, props, freePool, valenceMax) {
       super(props, freePool);                 // base, and custom property
       this._hfEdge = base.hfEdge ?? null;

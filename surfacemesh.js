@@ -28,13 +28,60 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, rehydrateBuffer, allocBuffer, freeBuffer, ExtensiblePropertyArray} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, allocBuffer, freeBuffer, PixelArrayGroup, ExtensiblePixelArrayGroup} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 import {VertexArray} from "./vertex.js";
 
 
 
+
+class BoundaryArray extends PixelArrayGroup {
+   constructor() {
+      
+   }
+   
+   get _freeSlot() {
+      
+   }
+   
+   * _baseEntries() {
+      
+   }
+   
+} 
+
+
+class WholeEdgeArray extends PixelArrayGroup {
+   constructor(fmm) {
+      super(fmm);
+      this._edge = edge;
+      this._sharpness = sharpness;
+   }
+   
+   get _freeSlot() {
+      
+   }
+   
+   * _baseEntries() {
+      
+   }
+   
+   static create(size) {
+      
+   }
+   
+   * _baseEntries() {
+      
+   }
+   
+   static create(size) {
+      
+   }
+   
+   
+   
+}
 
 
 
@@ -54,7 +101,7 @@ const wEdgeK = {
  * triangle use 3 directEdge(HalfEdge) as an unit
  * 
  */
-class TriangleEdgeArray extends ExtensiblePropertyArray {
+class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    constructor(dArray, hArray, wEdgeArray, fmm, props) {
       super(props, {});
       // tri directededge
@@ -128,11 +175,11 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
    }
    
    computeBufferSizeB(length) {
-      return ExtensiblePropertyArray.totalStructSize(this._hArray, length);
+      return this.constructor.totalStructSize(this._hArray, length);
    }
    
    computeBufferSizeW(length) {
-      return ExtensiblePropertyArray.totalStructSize(this._wEdgeArray, length);
+      return this.constructor.totalStructSize(this._wEdgeArray, length);
    }
    
    computeBufferSizeAll(length, bLength, wLength) {
@@ -147,7 +194,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
          byteOffset = 0;
       }
       
-      return ExtensiblePropertyArray.setBufferAll(this._hArray, bufferInfo, byteOffset, length);
+      return this.constructor.setBufferAll(this._hArray, bufferInfo, byteOffset, length);
    }
    
    setBufferW(bufferInfo, byteOffset, length) {
@@ -156,7 +203,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
          byteOffset = 0;
       }
       
-      return ExtensiblePropertyArray.setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
+      return this.constructor.setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
    }
    
    setBufferAll(bufferInfo, byteOffset, length, bLength, wLength) {
@@ -362,9 +409,9 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
       };
       // do allocation
-      const totalBytes = ExtensiblePropertyArray.totalStructSize(hArray, size);
+      const totalBytes = this.constructor.totalStructSize(hArray, size);
       const hArrayBuffer = allocBuffer(totalBytes);
-      ExtensiblePropertyArray.setBufferAll(hArray, hArrayBuffer, 0, size);
+      this.constructor.setBufferAll(hArray, hArrayBuffer, 0, size);
       for (let i in hArray) {
          hArray[i].appendRangeNew(size);
       }
@@ -734,7 +781,7 @@ class TriangleEdgeArray extends ExtensiblePropertyArray {
 
 
 
-class TriangleArray extends ExtensiblePropertyArray {
+class TriangleArray extends ExtensiblePixelArrayGroup {
    constructor(materialDepot, array, prop, fmm) {
       super(prop, fmm);
       this._material = array?.material;
@@ -902,9 +949,9 @@ class TriangleArray extends ExtensiblePropertyArray {
 /**
  * BoundaryLoop aka HoleArray
  */
-class HoleArray extends ExtensiblePropertyArray {
+class HoleArray extends PixelArrayGroup {
    constructor(holes) {
-      super({}, {});
+      super({});
       this._hole = holes?.hole;
       this._numberOfSide = holes?.numberOfSide;
    }

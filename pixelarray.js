@@ -831,9 +831,9 @@ function isValidVarName(name) {
 }
 
 
-class ExtensiblePropertyArray {
-   constructor(prop, freePool) {
-      this._prop = prop;
+
+class PixelArrayGroup {
+   constructor(freePool) {
       // freed array slot memory manager.
       this._freeMM = Object.assign( {     // provide default
             stride: 1, pos: 0,
@@ -841,8 +841,20 @@ class ExtensiblePropertyArray {
             freePool);
    }
    
-   // get _base() {throw("must implemented by subclass");}
-   // set _base(base) {throw("must implemented by subclass");}
+   /**
+    * return [key, value]. must implemented by subclass's PixelArrayS
+    */
+   * _baseEntries() {}
+   
+   /**
+    * iterator for all PixelArray
+    * 
+    */
+   * properties() {
+      for (let [key, value] of this._baseEntries()) {
+         yield value;
+      }
+   }
    
    dehydrateObject(obj) {
       if (obj) {
@@ -868,29 +880,22 @@ class ExtensiblePropertyArray {
    }
    
    _rehydrate(self) {
-      if (self._prop) {
-         // this.constructor.rehydrateObject(self._base);
-         for (let [key, _value] of this._baseEntries()) {
-            this[key] = rehydrateBuffer(self[key]);
-         }
-         this._prop = this.constructor.rehydrateObject(self._prop);
-         this._freeMM = self._freeMM;
-      } else {
-         throw("no internal memeber, bad input.");
+      this._freeMM = self._freeMM;
+      // this.constructor.rehydrateObject(self._base);
+      for (let [key, _value] of this._baseEntries()) {
+         this[key] = rehydrateBuffer(self[key]);
       }
    }
-
+   
    getDehydrate(obj) {
-      obj._base = {};
       for (let [key, value] of this._baseEntries()) {
          obj[key] = value.getDehydrate({});
       }
-      //obj._base = this.dehydrateObject(this._base);
-      obj._prop = this.dehydrateObject(this._prop);
       obj._freeMM = this._freeMM;
       
       return obj;
    }
+   
    
    alloc() {
       return this.allocArray(1)[0];
@@ -998,6 +1003,60 @@ class ExtensiblePropertyArray {
       return index;
    }
    
+   /**
+    * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.
+    */
+   static totalStructSize(objs, length) {
+      let totalByte = 0;
+      for (let buffer of Object.values(objs)) {
+         totalByte += alignCache(buffer.computeBufferSize(length));
+      }
+      return totalByte;
+   }
+
+   /**
+    * iterate over the array, setBuffer accordingly.
+    */
+   static setBufferAll(objs, bufferInfo, byteOffset, length) {
+      for (let buffer of Object.values(objs)) {
+         byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
+      }
+      return byteOffset;
+   }
+}
+
+
+class ExtensiblePixelArrayGroup extends PixelArrayGroup {
+   constructor(prop, freePool) {
+      super(freePool);
+      this._prop = prop;
+   }
+   
+   /**
+    * iterator for all PixelArray
+    * 
+    */
+   * properties() {
+      yield* super.properties();
+      yield* Object.values(this._prop);
+   }   
+   
+   _rehydrate(self) {
+      super._rehydrate(self);
+      if (self._prop) {
+         this._prop = this.constructor.rehydrateObject(self._prop);
+      } else {
+         throw("no internal memeber, bad input.");
+      }
+   }
+
+   getDehydrate(obj) {
+      super.getDehydrate(obj);
+      obj._prop = this.dehydrateObject(this._prop);
+      
+      return obj;
+   }
+   
    addProperty(name, type) {
       //if (isValidVarName(name)) {
          if (this._prop[name] === undefined) { // don't already exist
@@ -1024,43 +1083,6 @@ class ExtensiblePropertyArray {
       }
       return false;
    }
-   
-   /**
-    * return [key, value] of subclass's PixelArrayS
-    */
-   * _baseEntries() {}
-   
-   /**
-    * iterator for all PixelArray
-    * 
-    */
-   * properties() {
-      for (let [key, value] of this._baseEntries()) {
-         yield value;
-      }
-      yield* Object.values(this._prop);
-   }
-
-   /**
-    * add up objs pixelbuffers's structure size in bytes, with length and cache alignment.
-    */
-   static totalStructSize(objs, length) {
-      let totalByte = 0;
-      for (let buffer of Object.values(objs)) {
-         totalByte += alignCache(buffer.computeBufferSize(length));
-      }
-      return totalByte;
-   }
-
-   /**
-    * iterate over the array, setBuffer accordingly.
-    */
-   static setBufferAll(objs, bufferInfo, byteOffset, length) {
-      for (let buffer of Object.values(objs)) {
-         byteOffset = alignCache(buffer.setBuffer(bufferInfo, byteOffset, length));
-      }
-      return byteOffset;
-   }
 }
 
 
@@ -1074,5 +1096,6 @@ export {
    createDataTexture3D,
    allocBuffer,
    freeBuffer,
-   ExtensiblePropertyArray,
+   PixelArrayGroup,
+   ExtensiblePixelArrayGroup,
 }

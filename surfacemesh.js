@@ -33,9 +33,21 @@ import {vec3, vec3a} from "./vec3.js";
 import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 import {VertexArray} from "./vertex.js";
 
+// more than 2b, but less than 4b data support? 
+//const UINT_MAX = 4294967295;
+//let BOUNDARY_MAX = 16,777,215;                // 24bit max, around 16 million boundary edges. NOTE: Is it enough?
+//let HALFEDGE_MAX = UINT_MAX - BOUNDARY_MAX;   // number of halfEdge we can use.
 
 
+const wEdgeK = {
+   left: 0,                      // pair directedEdge/halfEdge
+   right: 1,
+   sizeOf: 2,   
+}
 
+/**
+ * BoundaryLoop, implemented using halfEdge
+ */
 class BoundaryArray extends PixelArrayGroup {
    constructor() {
       
@@ -53,50 +65,72 @@ class BoundaryArray extends PixelArrayGroup {
 
 
 class WholeEdgeArray extends PixelArrayGroup {
-   constructor(fmm) {
+   constructor(wEdge, fmm) {
       super(fmm);
-      this._edge = edge;
-      this._sharpness = sharpness;
+      this._edge = wEdge?.edge;
+      this._sharpness = wEdge?.sharpness;
    }
    
    get _freeSlot() {
-      
+      return this._edge;
    }
    
    * _baseEntries() {
-      
+      yield ["_edge", this._edge];
+      yield ["_sharpness", this._sharpness];
    }
    
    static create(size) {
+      const wEdgeArray = {
+         edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
+         sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+      };
       
+      return new WholeEdgeArray(wEdgeArray, {});
    }
    
-   * _baseEntries() {
-      
+   static rehydrate(self) {
+      const ret = new WholeEdgeArray({}, {});
+      ret._rehydrate(self);
+      return ret;
    }
    
-   static create(size) {
-      
+   wEdgeBuffer() {
+      return this._edge.getBuffer();
    }
    
+   length() {
+      return this._sharpness.length();
+   }
    
+   left(wEdge) {
+      return this._edge.get(wEdge, wEdgeK.right);
+   }
    
+   pair(wEdge, value=[0,0]) {
+      this._edge.getVec2(wEdge, 0, value);
+      return value;
+   }
+   
+   right(wEdge) {
+      return this._edge.get(wEdge, wEdgeK.left);
+   }
+   
+   setPair(wEdge, left, right) {
+      this._edge.setValue2(wEdge, 0, left, right);
+   }
+   
+   sharpness(wEdge) {
+      return this._sharpness.get(wEdge, 0);
+   }
+   
+   setSharpness(wEdge, sharpness) {
+      this._sharpness.set(wEdge, 0, sharpness);
+   }
 }
 
 
 
-
-// more than 2b, but less than 4b data support? 
-//const UINT_MAX = 4294967295;
-//let BOUNDARY_MAX = 16,777,215;                // 24bit max, around 16 million boundary edges. NOTE: Is it enough?
-//let HALFEDGE_MAX = UINT_MAX - BOUNDARY_MAX;   // number of halfEdge we can use.
-
-
-const wEdgeK = {
-   left: 0,                      // pair directedEdge/halfEdge
-   right: 1,
-   sizeOf: 2,   
-}
 /** 
  * triangle use 3 directEdge(HalfEdge) as an unit
  * 
@@ -220,15 +254,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 
    createVertexTexture(gl) {
        return this._vertex.createDataTexture(gl);
-   }
-
-   createPropertyTexture(name, gl) {
-      const prop = this._prop[name];
-      if (prop) {
-         return prop.createDataTexture(gl);
-      }
-      throw("unknown dynamic property: " + name);
-      return null;
    }
    
    vBuffer() {

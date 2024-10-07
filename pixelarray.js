@@ -1056,6 +1056,15 @@ class ExtensiblePixelArrayGroup extends PixelArrayGroup {
       
       return obj;
    }
+
+   createPropertyTexture(name, gl) {
+      const prop = this._prop[name];
+      if (prop) {
+         return prop.createDataTexture(gl);
+      }
+      throw("unknown dynamic property: " + name);
+      return null;
+   }
    
    addProperty(name, type) {
       //if (isValidVarName(name)) {

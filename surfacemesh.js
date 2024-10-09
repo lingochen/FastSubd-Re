@@ -106,29 +106,29 @@ class WholeEdgeArray extends PixelArrayGroup {
    left(wEdge) {
       return this._edge.get(wEdge, wEdgeK.right);
    }
-   
-   pair(wEdge, value=[0,0]) {
-      this._edge.getVec2(wEdge, 0, value);
-      return value;
-   }
 
-   oppositeHalfEdge(hEdge) {
+   pair(hEdge) {
       return this._edge._get( hEdge ^ 1 );   // left to right, right to left
    }
    
    right(wEdge) {
       return this._edge.get(wEdge, wEdgeK.left);
    }
+   
+   whole(wEdge, value=[0,0]) {
+      this._edge.getVec2(wEdge, 0, value);
+      return value;
+   }
 
-   setLeftOrRight(wEdge, leftOrRight, value) {
+   setHalf(wEdge, leftOrRight, value) {
       this._edge.set(wEdge, leftOrRight, value);
    }
    
-   setPair(wEdge, left, right) {
+   setWhole(wEdge, left, right) {
       this._edge.setValue2(wEdge, 0, left, right);
    }
    
-   setPair2(wEdge, leftRight) {
+   setWhole2(wEdge, leftRight) {
       this._edge.setVec2(wEdge, 0, leftRight);
    }
    
@@ -441,7 +441,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
             hArray.wEdge.set(i, 0, wEdge);
             // remember to update wEdge too
             const leftOrRight = wEdge % 2;
-            this._wEdgeArray.setLeftOrRight(Math.trunc(wEdge/2), leftOrRight, -(i+1));
+            this._wEdgeArray.setHalf(Math.trunc(wEdge/2), leftOrRight, -(i+1));
             i++;
          }
          // fix next, prev.
@@ -478,7 +478,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       for (let i = start; i < stop; i++) {
          const sharpness = this._wEdgeArray.sharpness(i);
          if (sharpness >= 0) {  // existed.
-            this._wEdgeArray.pair(i, leftRight);
+            this._wEdgeArray.whole(i, leftRight);
             yield [i, leftRight[0], leftRight[1]];
          }
       }
@@ -627,9 +627,9 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 
    pair(hEdge) {
       if (hEdge >= 0) {
-         return this._wEdgeArray.oppositeHalfEdge( this._wEdge.get(hEdge, 0) );       // left to right, right to left
+         return this._wEdgeArray.pair( this._wEdge.get(hEdge, 0) );       // left to right, right to left
       } else {
-         return this._wEdgeArray.oppositeHalfEdge( this._hArray.wEdge.get(-(hEdge+1), 0) );  // left to right, right to left
+         return this._wEdgeArray.pair( this._hArray.wEdge.get(-(hEdge+1), 0) );  // left to right, right to left
       }
    }
       
@@ -684,7 +684,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       // reset all
       this._setHEdgeWEdge(leftRight[0], wEdge * 2 + wEdgeK.left, leftRight[1]);
       this._setHEdgeWEdge(leftRight[1], wEdge * 2 + wEdgeK.right, leftRight[0]);
-      this._wEdgeArray.setPair2(wEdge, leftRight);
+      this._wEdgeArray.setWhole2(wEdge, leftRight);
    }
    
    /**
@@ -709,7 +709,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       const wEdgeArray = this.w;
       let length = wEdgeArray.length();
       for (let i = 0; i < length; ++i) {
-         const [left,right] = wEdgeArray.pair(i);
+         const [left,right] = wEdgeArray.whole(i);
          if (right >= 0 && left > right) {
             console.log("wEdge left is larger than right");
          }
@@ -1421,7 +1421,7 @@ class TriangleMesh {
       const c = this._hEdges.pair(a);     // get the real halfEdge
       //let d = this._hEdges.pair(b);
       // now safely reassigned
-      //this._hEdges.setPair(c, d);
+      //this._hEdges.setWhole(c, d);
       this._hEdges.freeBoundaryEdge(a);
       this._hEdges.freeBoundaryEdge(b); 
       return c;

@@ -352,7 +352,7 @@ function computeSubdivideDEdge(dEdge) {
    }
 }
 function computeSubdivideWEdge(mThis, wEdge) {
-   let [left, right] = mThis.srchwe.pair(wEdge);
+   let [left, right] = mThis.srchwe.whole(wEdge);
    let leftD = computeSubdivideDEdge(left);
    let rightD = computeSubdivideDEdge(right);
    return [leftD, rightD];
@@ -425,17 +425,17 @@ function wEdgeTaskRemainder(mThis) {
    let length = mThis.srcf.length();     // end of face
    for (let j = mThis.wMix.fLength; j < length; ++j) {
       const faceW = computeSubdivideFaceDEdge(j);
-      mThis.destwe.setPair(destW++, faceW[0][0], faceW[0][1]);
-      mThis.destwe.setPair(destW++, faceW[1][0], faceW[1][1]);
-      mThis.destwe.setPair(destW++, faceW[2][0], faceW[2][1]);     
+      mThis.destwe.setWhole(destW++, faceW[0][0], faceW[0][1]);
+      mThis.destwe.setWhole(destW++, faceW[1][0], faceW[1][1]);
+      mThis.destwe.setWhole(destW++, faceW[2][0], faceW[2][1]);     
    }
    
    // then consecutive wEdge until end
    length = mThis.srchwe.length();
    for (let j = mThis.wMix.wLength; j < length; ++j) {
       const loHi = computeSubdivideWEdge(mThis, j);
-      mThis.destwe.setPair(destW++, loHi[0][0], loHi[1][1]);
-      mThis.destwe.setPair(destW++, loHi[0][1], loHi[1][0]);
+      mThis.destwe.setWhole(destW++, loHi[0][0], loHi[1][1]);
+      mThis.destwe.setWhole(destW++, loHi[0][1], loHi[1][0]);
    }
 }
 

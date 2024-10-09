@@ -19,12 +19,14 @@ function setupSubdivide(dest, source, task, edgeVertex, refineVertex) {
    mDat.srcv = source.v;
    mDat.srcvp = source.v.positionBuffer();
    mDat.srch = source.h;
+   mDat.srchwe = source.h.w;
    mDat.srcf = source.f;
    mDat.srco = source.o;
    mDat.dest = dest;
    mDat.destv = dest.v;
    mDat.destvp = dest.v.positionBuffer();
    mDat.desth = dest.h;
+   mDat.destwe = dest.h.w;
    mDat.desthv = dest.h.vBuffer();
    mDat.desthw = dest.h.wBuffer();
    mDat.desthwe = dest.h.wEdgeBuffer();
@@ -42,7 +44,7 @@ function computeWorkTask(src) {
    const vMix={}, wMix={};
 
    let j = src.v.length();
-   let k = src.h.lengthW() / 3;
+   let k = src.h.w.length() / 3;
    
    if (j < k) {      // limit by vertex, more wEdge for mix, not likely though
       vMix.wLength = j * 3;
@@ -55,7 +57,7 @@ function computeWorkTask(src) {
    
    // wEdge face Mix to wEdge
    j = src.f.length() / 2;
-   k = src.h.lengthW() / 3;
+   k = src.h.w.length() / 3;
    if (j < k) {      // limit by face, more wEdge > face for mix, not likely though
       wMix.length = Math.trunc(j);
    } else {          // limit by wEdge;
@@ -79,7 +81,7 @@ function vertexTaskRemainder(mThis) {
    let destV = mThis.vMix.length * 4;
    
    // wEdge remainder
-   let length = mThis.srch.lengthW();
+   let length = mThis.srchwe.length();
    for (let i = mThis.vMix.wLength; i < length; ++i) {
       edgeNewVertex(mThis, destV++, i);
    }
@@ -115,7 +117,7 @@ function computeNewVertex(mThis, oldVertex) {
    if (diff < 0) {
       return oldVertex * 4;
    } else { // wEdge goes first
-      const lengthW = mThis.srch.lengthW();
+      const lengthW = mThis.srchwe.length();
       const offset = 4 * mThis.vMix.length + (lengthW - mThis.vMix.wLength);
       return offset+diff;
    }
@@ -350,7 +352,7 @@ function computeSubdivideDEdge(dEdge) {
    }
 }
 function computeSubdivideWEdge(mThis, wEdge) {
-   let [left, right] = mThis.srch.wEdgePair(wEdge);
+   let [left, right] = mThis.srchwe.pair(wEdge);
    let leftD = computeSubdivideDEdge(left);
    let rightD = computeSubdivideDEdge(right);
    return [leftD, rightD];
@@ -423,17 +425,17 @@ function wEdgeTaskRemainder(mThis) {
    let length = mThis.srcf.length();     // end of face
    for (let j = mThis.wMix.fLength; j < length; ++j) {
       const faceW = computeSubdivideFaceDEdge(j);
-      mThis.desth._setWEdge(destW++, faceW[0][0], faceW[0][1]);
-      mThis.desth._setWEdge(destW++, faceW[1][0], faceW[1][1]);
-      mThis.desth._setWEdge(destW++, faceW[2][0], faceW[2][1]);     
+      mThis.destwe.setPair(destW++, faceW[0][0], faceW[0][1]);
+      mThis.destwe.setPair(destW++, faceW[1][0], faceW[1][1]);
+      mThis.destwe.setPair(destW++, faceW[2][0], faceW[2][1]);     
    }
    
    // then consecutive wEdge until end
-   length = mThis.srch.lengthW();
+   length = mThis.srchwe.length();
    for (let j = mThis.wMix.wLength; j < length; ++j) {
       const loHi = computeSubdivideWEdge(mThis, j);
-      mThis.desth._setWEdge(destW++, loHi[0][0], loHi[1][1]);
-      mThis.desth._setWEdge(destW++, loHi[0][1], loHi[1][0]);
+      mThis.destwe.setPair(destW++, loHi[0][0], loHi[1][1]);
+      mThis.destwe.setPair(destW++, loHi[0][1], loHi[1][0]);
    }
 }
 

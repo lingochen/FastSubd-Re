@@ -20,12 +20,12 @@ import {vec3, vec3a} from './vec3.js';
 function edgeNewVertex(mThis, destVert, wEdge) {
    const midEdge = [0, 0, 0];
 
-   const [left, right] = mThis.srch.wEdgePair(wEdge);
+   const [left, right] = mThis.srchwe.pair(wEdge);
    const leftV = mThis.srch.origin(left);
    const rightV = mThis.srch.origin(right);
    let valence = 6;                    // no boundary, valence === 6
    // get sharpness
-   let sharpness = mThis.srch.wSharpness(wEdge);
+   let sharpness = mThis.srchwe.sharpness(wEdge);
    if ((sharpness < 0) || (sharpness >= 1)) {   // e1
       if (sharpness >= 1) {
          sharpness -= 1;

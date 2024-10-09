@@ -111,13 +111,25 @@ class WholeEdgeArray extends PixelArrayGroup {
       this._edge.getVec2(wEdge, 0, value);
       return value;
    }
+
+   oppositeHalfEdge(hEdge) {
+      return this._edge._get( hEdge ^ 1 );   // left to right, right to left
+   }
    
    right(wEdge) {
       return this._edge.get(wEdge, wEdgeK.left);
    }
+
+   setLeftOrRight(wEdge, leftOrRight, value) {
+      this._edge.set(wEdge, leftOrRight, value);
+   }
    
    setPair(wEdge, left, right) {
       this._edge.setValue2(wEdge, 0, left, right);
+   }
+   
+   setPair2(wEdge, leftRight) {
+      this._edge.setVec2(wEdge, 0, leftRight);
    }
    
    sharpness(wEdge) {
@@ -145,7 +157,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       // boundaryLoop edge/polygon edge
       this._hArray = hArray;
       // wholeEdge specific value
-      this._wEdgeArray = wEdgeArray;
+      this._wEdgeArray = new WholeEdgeArray(wEdgeArray, {});
       // freed array slot memory manager, should tried to keep array slots packed
       this._fmm = fmm;
    }
@@ -187,7 +199,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       super._rehydrate(self);
       
       this._hArray = this.constructor.rehydrateObject(self._hArray);
-      this._wEdgeArray = this.constructor.rehydrateObject(self._wEdgeArray);
+      this._wEdgeArray = WholeEdgeArray.rehydrate(self._wEdgeArray);
       this._fmm = self._fmm;
    }
    
@@ -202,24 +214,24 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 
       obj._hArray = this.dehydrateObject(this._hArray);
 
-      obj._wEdgeArray = this.dehydrateObject(this._wEdgeArray);
+      obj._wEdgeArray = this._wEdgeArray.getDehydrate({});
       
       obj._fmm = this._fmm;
       return obj;
+   }
+   
+   get w() {
+      return this._wEdgeArray;
    }
    
    computeBufferSizeB(length) {
       return this.constructor.totalStructSize(this._hArray, length);
    }
    
-   computeBufferSizeW(length) {
-      return this.constructor.totalStructSize(this._wEdgeArray, length);
-   }
-   
    computeBufferSizeAll(length, bLength, wLength) {
       return this.computeBufferSize(length)
             + this.computeBufferSizeB(bLength)
-            + this.computeBufferSizeW(wLength);
+            + this._wEdgeArray.computeBufferSize(wLength);
    }
    
    setBufferB(bufferInfo, byteOffset, length) {
@@ -231,15 +243,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       return this.constructor.setBufferAll(this._hArray, bufferInfo, byteOffset, length);
    }
    
-   setBufferW(bufferInfo, byteOffset, length) {
-      if (!bufferInfo) {
-         bufferInfo = allocBuffer(this.computeBufferSizeW(length));
-         byteOffset = 0;
-      }
-      
-      return this.constructor.setBufferAll(this._wEdgeArray, bufferInfo, byteOffset, length);
-   }
-   
    setBufferAll(bufferInfo, byteOffset, length, bLength, wLength) {
       if (!bufferInfo) {
          bufferInfo = allocBuffer(this.computeBufferSizeAll(length, bLength, wLength));
@@ -249,7 +252,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       byteOffset = this.setBuffer(bufferInfo, byteOffset, length);
       byteOffset = this.setBufferB(bufferInfo, byteOffset, bLength);
       
-      return this.setBufferW(bufferInfo, byteOffset, wLength);
+      return this._wEdgeArray.setBuffer(bufferInfo, byteOffset, wLength);
    }
 
    createVertexTexture(gl) {
@@ -265,7 +268,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    }
    
    wEdgeBuffer() {
-      return this._wEdgeArray.edge.getBuffer();
+      return this._wEdgeArray.wEdgeBuffer();
    }
    
    // allocation/free routines.
@@ -289,24 +292,14 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
     * 
     */
    allocWEdge(dEdge, pair) {
-      const handle = this._allocWEdge(1);
+      const handle = this._wEdgeArray.allocArray(1);
       //this._wEdgeArray.edge.set(handle, 0, dEdge);
       this.setWEdge(handle, dEdge, pair);
       return handle;
    }
    
-   /**
-    * used by subdivision
-    */
-   _allocWEdge(size) {
-      if (this._wEdgeArray.edge.capacity() < size) {  // expand by 1.5
-         const maxLen = this._vertex.maxLength(); // directedEdge should used it by now.
-         this.setBufferW(null, 0, expandAllocLen(maxLen+size) );
-      }
-      
-      const start = this._wEdgeArray.edge.appendRangeNew(size);
-      this._wEdgeArray.sharpness.appendRangeNew(size);
-      return start;
+   _freeWEdge(wEdge) {
+      throw("no implementation yet");
    }
 
    /**
@@ -327,14 +320,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       this._hArray.wEdge.appendRangeNew(size);
       return index;
    }
-   
-   _freeWEdge(wEdge) {
-      throw("no implementation yet");
-   }
-   
-   //allocBoundaryEdge(size) {
-   //   return this._allocHalfEdge(0, size, true);
-   //}
    
    allocBoundaryEdge(handle) {
       const length = handle.length;
@@ -456,7 +441,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
             hArray.wEdge.set(i, 0, wEdge);
             // remember to update wEdge too
             const leftOrRight = wEdge % 2;
-            this._wEdgeArray.edge.set(Math.trunc(wEdge/2), leftOrRight, -(i+1));
+            this._wEdgeArray.setLeftOrRight(Math.trunc(wEdge/2), leftOrRight, -(i+1));
             i++;
          }
          // fix next, prev.
@@ -481,19 +466,19 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    //
    
    *[Symbol.iterator] () {
-      yield* this.rangeIter(0, this._wEdgeArray.edge.length());
+      yield* this.rangeIter(0, this._wEdgeArray.length());
    }
    
    /**
     * walk over the wEdgeArray
     */
    * rangeIter(start, stop) {
-      stop = Math.min(this._wEdgeArray.edge.length(), stop);
+      stop = Math.min(this._wEdgeArray.length(), stop);
       let leftRight = [0, 0];
       for (let i = start; i < stop; i++) {
-         const sharpness = this._wEdgeArray.sharpness.get(i, 0);
+         const sharpness = this._wEdgeArray.sharpness(i);
          if (sharpness >= 0) {  // existed.
-            this._wEdgeArray.edge.getVec2(i, 0, leftRight);
+            this._wEdgeArray.pair(i, leftRight);
             yield [i, leftRight[0], leftRight[1]];
          }
       }
@@ -550,10 +535,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    
    length() {
       return this._wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
-   }
-   
-   lengthW() {
-      return this._wEdgeArray.edge.length() - this._fmm.wEdgeArray.size;
    }
    
    lengthH() {
@@ -646,9 +627,9 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 
    pair(hEdge) {
       if (hEdge >= 0) {
-         return this._wEdgeArray.edge._get( this._wEdge.get(hEdge, 0) ^ 1 );       // left to right, right to left
+         return this._wEdgeArray.oppositeHalfEdge( this._wEdge.get(hEdge, 0) );       // left to right, right to left
       } else {
-         return this._wEdgeArray.edge._get( this._hArray.wEdge.get(-(hEdge+1), 0) ^ 1 );  // left to right, right to left
+         return this._wEdgeArray.oppositeHalfEdge( this._hArray.wEdge.get(-(hEdge+1), 0) );  // left to right, right to left
       }
    }
       
@@ -670,20 +651,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    
    isWEdgeRight(hEdge) {
       return this._whEdge(hEdge) & 1;
-   }
-   
-   wEdgePair(wEdge) {
-      const values = [0, 0];
-      this._wEdgeArray.edge.getVec2(wEdge, 0, values);
-      return values;
-   }
-   
-   wEdgeLeft(wEdge) {
-      return this._wEdgeArray.edge.get(wEdge, wEdgeK.left);
-   }
-   
-   wEdgeRight(wEdge) {
-      return this._wEdgeArray.edge.get(wEdge, wEdgeK.right);
    }
    
    _setHEdgeWEdge(hEdge, wEdgePosition, pair) {
@@ -712,16 +679,12 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       return [hEdge, pair];
    }
    
-   _setWEdge(wEdge, left, right) {
-      this._wEdgeArray.edge.setValue2(wEdge, 0, left, right);  //this._computeLeftRight(left, right));
-   }
-   
    setWEdge(wEdge, left, right) {
       const leftRight = this._computeLeftRight(left, right);
       // reset all
       this._setHEdgeWEdge(leftRight[0], wEdge * 2 + wEdgeK.left, leftRight[1]);
       this._setHEdgeWEdge(leftRight[1], wEdge * 2 + wEdgeK.right, leftRight[0]);
-      this._wEdgeArray.edge.setVec2(wEdge, 0, leftRight);
+      this._wEdgeArray.setPair2(wEdge, leftRight);
    }
    
    /**
@@ -730,30 +693,23 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
     */
    sharpness(dEdge) {
       const wEdge = this.wEdge(dEdge);
-      return this.wSharpness(wEdge);
-   }
-
-   wSharpness(wEdge) {
-      return this._wEdgeArray.sharpness.get(wEdge, 0);
+      return this._wEdgeArray.sharpness(wEdge);
    }
 
    setSharpness(dEdge, sharpness) {
       const wEdge = this.wEdge(dEdge);
-      this.setwSharpness(wEdge, sharpness);
-   }
-
-   setwSharpness(wEdge, sharpness) {
-      this._wEdgeArray.sharpness.set(wEdge, 0, sharpness);
+      this._wEdgeArray.setSharpness(wEdge, sharpness);
    }
    
    stat() {
-      return "WholeEdge Count: " + this.lengthW() + ";\nDirectedEdge Count: " + this.length() + ";\n";
+      return "WholeEdge Count: " + this.w.length() + ";\nDirectedEdge Count: " + this.length() + ";\n";
    }
 
    sanityCheck() {
-      let length = this._wEdgeArray.edge.length();
+      const wEdgeArray = this.w;
+      let length = wEdgeArray.length();
       for (let i = 0; i < length; ++i) {
-         const [left,right] = this.wEdgePair(i);
+         const [left,right] = wEdgeArray.pair(i);
          if (right >= 0 && left > right) {
             console.log("wEdge left is larger than right");
          }

@@ -275,31 +275,10 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    /**
     * 
     */
-   _allocEx(size) {
-      if (this._vertex.capacity() < size) {
-         this.setBuffer(null, 0, expandAllocLen(this._vertex.maxLength()+size));
-      }
-      
-      const index = this._vertex.appendRangeNew(size);
-      this._wEdge.appendRangeNew(size);
-      for (let [_key, prop] of Object.entries(this._prop)) {
-         prop.appendRangeNew(size);
-      }
-      return index;
-   }
-   
-   /**
-    * 
-    */
-   allocWEdge(dEdge, pair) {
-      const handle = this._wEdgeArray.allocArray(1);
-      //this._wEdgeArray.edge.set(handle, 0, dEdge);
-      this.setWEdge(handle, dEdge, pair);
+   allocWhEdge(dEdge, pair) {
+      const handle = this._wEdgeArray.alloc();
+      this.setWhEdge(handle, dEdge, pair);
       return handle;
-   }
-   
-   _freeWEdge(wEdge) {
-      throw("no implementation yet");
    }
 
    /**
@@ -332,16 +311,16 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    }
    
    _allocDirectedEdge(hEdge, length) {
-      if (this._vertex.capacity() < length) {
+/*      if (this._vertex.capacity() < length) {
          let maxLen = this._vertex.maxLength();
          maxLen = expandAllocLen(maxLen+length);
          this.setBuffer(null, 0, maxLen, computeDataTextureLen(Math.floor(maxLen/3*2)) );   // TODO: What the optimal wEdge expansion size? 
-      }
+      } */
             
-      let handle = [];
+      const handle = [];
       if (hEdge >= this._vertex.length()) { // asking for new one, hEdge === length().
-         this._allocEx(length);
-      } 
+         this.allocArray(length);
+      }
       for (let i = hEdge; i < (hEdge+length); ++i) {
          handle.push( i );
       }
@@ -679,7 +658,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       return [hEdge, pair];
    }
    
-   setWEdge(wEdge, left, right) {
+   setWhEdge(wEdge, left, right) {
       const leftRight = this._computeLeftRight(left, right);
       // reset all
       this._setHEdgeWEdge(leftRight[0], wEdge * 2 + wEdgeK.left, leftRight[1]);
@@ -1508,10 +1487,10 @@ class TriangleMesh {
             // now safely remove the freed-pair, and connect the 2 tri
             c = this._collapseEdge(a, b);
             let wEdge = this._hEdges.wEdge(c);           // use pair's allocated wEdge.
-            this._hEdges.setWEdge(wEdge, polyLoop[i], c);
+            this._hEdges.setWhEdge(wEdge, polyLoop[i], c);
          } else {// remember to allocated a new wEdge.
             const pair = boundaryLoop[i];                //this._hEdges.pair( polyLoop[i] );
-            this._hEdges.allocWEdge(polyLoop[i], pair);
+            this._hEdges.allocWhEdge(polyLoop[i], pair);
             this._hEdges.setOrigin( pair, pts[start+(i+1)%length]); // remember to set pair's(freeEdge) vertex too
          }
       }      

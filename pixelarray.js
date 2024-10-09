@@ -929,28 +929,12 @@ class PixelArrayGroup {
    }
    
    _allocArray(count) {
-      const index = this._allocEx(count);
-      this._alloc(count);
-      return index;
-   }
-   
-   /**
-    * base and extended property allocation.
-    */
-   _alloc(count) {
+      const index = this._freeSlot.length();    // start of new index
+     // base and exteded property allocation
       for (let prop of this.properties() ) {
          prop.appendRangeNew(count);
       }
-   }
-   
-   /**
-    * extra allocation by subClass. override if needed to be
-    */
-   _allocEx(_count) {
-      // ovrride if needed to be.
-      
-      // return the start of new allocation.
-      return this._freeSlot.length();
+      return index;
    }
    
    free(handle) {

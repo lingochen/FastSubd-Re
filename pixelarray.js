@@ -907,8 +907,8 @@ class PixelArrayGroup {
       this._freeMM.size -= size;
       const free = [];
       for (; size > 0; --size) {
-         free.push( this._head );                  // last in, first out.
-         this._head = this._freeSlot.get(this._freeMM.head, this._freeMM.pos); 
+         free.push( this._freeMM.head );           // last in, first out.
+         this._freeMM.head = this._freeSlot.get(this._freeMM.head, this._freeMM.pos);
       }
       
       count -= free.length;

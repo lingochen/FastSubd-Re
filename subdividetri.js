@@ -184,30 +184,30 @@ function boundaryLoopTask(mThis) {
       hEdge = -(hEdge+1);                 // get real positive index
       mThis.desto.setHalfEdge(hole, -(hEdge*2+1));
       // now update boundaryLoop
-      let last = mThis.srch._hArray.prev.get(hEdge, 0);
+      let last = mThis.srch._bArray._prev.get(hEdge, 0);
       last = -(last+1);
       let prev = last*2 + 1;
       for (let j = hEdge; j <= last; j++) {
          let i = j*2;
-         mThis.desth._hArray.prev.set(i, 0, -(prev+1));
-         mThis.desth._hArray.next.set(i, 0, -(i+2));
-         mThis.desth._hArray.hole.set(i, 0, hole);
+         mThis.desth._bArray._prev.set(i, 0, -(prev+1));
+         mThis.desth._bArray._next.set(i, 0, -(i+2));
+         mThis.desth._bArray._hole.set(i, 0, hole);
          // compute, lo, hi, newVertex 
-         const edgeW = computeNewWEdge(mThis, mThis.srch._hArray.wEdge.get(j, 0));
-         mThis.desth._hArray.wEdge.set(i, 0, edgeW[0]);
-         let vertex = computeNewVertex(mThis, mThis.srch._hArray.vertex.get(j, 0));
-         mThis.desth._hArray.vertex.set(i, 0, vertex);
+         const edgeW = computeNewWEdge(mThis, mThis.srch._bArray._wEdge.get(j, 0));
+         mThis.desth._bArray._wEdge.set(i, 0, edgeW[0]);
+         let vertex = computeNewVertex(mThis, mThis.srch._bArray._vertex.get(j, 0));
+         mThis.desth._bArray._vertex.set(i, 0, vertex);
          //mThis.dest._hArray.uvs
          // the expand hi,
-         mThis.desth._hArray.prev.set(i+1, 0, -(i+1));
-         mThis.desth._hArray.next.set(i+1, 0, -(i+3));
-         mThis.desth._hArray.hole.set(i+1, 0, hole);        
-         mThis.desth._hArray.wEdge.set(i+1, 0, edgeW[1]);
-         mThis.desth._hArray.vertex.set(i+1, 0, edgeW[2]);
+         mThis.desth._bArray._prev.set(i+1, 0, -(i+1));
+         mThis.desth._bArray._next.set(i+1, 0, -(i+3));
+         mThis.desth._bArray._hole.set(i+1, 0, hole);        
+         mThis.desth._bArray._wEdge.set(i+1, 0, edgeW[1]);
+         mThis.desth._bArray._vertex.set(i+1, 0, edgeW[2]);
          prev = i+1;
       }
       // fixeup the last's next
-      mThis.desth._hArray.next.set(last*2+1, 0, -(hEdge*2+1));
+      mThis.desth._bArray._next.set(last*2+1, 0, -(hEdge*2+1));
    }
 }
 

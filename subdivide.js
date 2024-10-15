@@ -55,7 +55,7 @@ function createNextLevelTriMesh(source) {
    const nHfEdges = source.f.length() * 4 * 3;     // directedEdge mapped to face 3:1
    const nWEdges = source.h.w.length()*2 + source.f.length()*3;
    const nFaces = source.f.length() * 4;
-   const nBoundaries = source.h.lengthH() * 2;
+   const nBoundaries = source.h.b.length() * 2;
    const nHoles = source.o.length();
    
    // preallocated buffer
@@ -68,7 +68,7 @@ function createNextLevelTriMesh(source) {
    subd.h.w._allocArray(nWEdges);
    subd.f._allocArray(nFaces); 
    // preallocated next level of boundaryLoop
-   subd.h._allocHEdge(nBoundaries);
+   subd.h.b._allocArray(nBoundaries);
    subd.o._allocArray(nHoles);
 
    return subd;

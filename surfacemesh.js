@@ -49,16 +49,194 @@ const wEdgeK = {
  * BoundaryLoop, implemented using halfEdge
  */
 class BoundaryArray extends PixelArrayGroup {
-   constructor() {
-      
+   constructor(bLoop, fmm) {
+      super(fmm);
+      this._vertex = bLoop?.vertex;
+      this._wEdge = bLoop?.wEdge;
+      this._prev = bLoop?.prev;
+      this._next = bLoop?.next;
+      this._hole = bLoop?.hole;
    }
    
    get _freeSlot() {
-      
+      return this._wEdge;
    }
    
    * _baseEntries() {
+      yield ["_vertex", this._vertex];
+      yield ["_wEdge", this._wEdge];
+      yield ["_prev", this._prev];
+      yield ["_next", this._next];
+      yield ["_hole", this._hole];
+   }
+   
+   static create(size) {
+      const hArray = {
+         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex,
+         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
+         prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
+         next: Int32PixelArray.create(1, 1, size),             // negative value
+         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, >=0 isEmpty/free
+      };
       
+      return new BoundaryArray(hArray, {});
+   }
+   
+   static rehydrate(self) {
+      const ret = new BoundaryArray({}, {});
+      ret._rehydrate(self);
+      return ret;
+   }
+   
+   // alloc/free memory
+   allocArray(count) {
+      const array = super.allocArray(count);
+      
+      // convert to offset index;
+      for (let i = 0; i < array.length; ++i) {
+         this._hole.set(array[i], 0, -1);
+         array[i] = -(array[i]+1);
+      }
+      return array;
+   }
+   
+   free(handle) {
+      handle = -(handle+1);
+      super.free(handle);
+      this._hole.set(handle, 0, 0);
+      //this._next.set(handle, 0, handle);        // point to self
+   }
+   
+   length() {
+      return this._hole.length();
+   }
+   
+   // iterator routines
+   /**
+    * iterator for unassigned boundary edges.
+    */
+   * unassignedBoundary() {
+      const length = this.length();
+      for (let i = 0; i < length; ++i) {
+         if (this._hole.get(i, 0) < 0) {   // 1 is for used by unassigned boundaryEdge
+            yield -(i+1);
+         }
+      }
+   }
+
+   * boundaryLoop(current) {
+      const start = current;
+      do {
+         yield current;
+         current = this.next(current);
+      } while (current !== start);
+   }
+   
+   //
+   // remove hole, make the buffer contiguous. 
+   // boundaryLoop make it contiguous too.
+   //
+   compactBuffer(holeContainer, whEdgeContainer) {
+      if (holeContainer.length() === 0) {
+         return;
+      }
+      
+      const size = this._vertex.length();
+      // new buffer
+      const bArray = {
+         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
+         prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
+         next: Int32PixelArray.create(1, 1, size),             // negative value
+         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
+         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
+      };
+      // do allocation
+      const totalBytes = this.constructor.totalStructSize(bArray, size);
+      const bArrayBuffer = allocBuffer(totalBytes);
+      this.constructor.setBufferAll(bArray, bArrayBuffer, 0, size);
+      for (let i in bArray) {
+         bArray[i].appendRangeNew(size);
+      }
+      
+      // redo boundaryLoop, one by one
+      let i = 0;
+      for (let hole of holeContainer) {
+         let head = i;
+         for (let dEdge of holeContainer.halfEdgeLoop(this, hole)) { // walk over boundaryLoop
+            if (i === 49) {
+               console.log("-50");
+            }
+            const hEdge = -(dEdge+1);
+            bArray.hole.set(i, 0, hole);
+            bArray.next.set(i, 0, -(i+2));
+            bArray.prev.set(i, 0, -i);
+            bArray.vertex.set(i, 0, this._vertex.get(hEdge, 0));
+            const wEdge = this._wEdge.get(hEdge, 0);
+            bArray.wEdge.set(i, 0, wEdge);
+            // remember to update wEdge too
+            const leftOrRight = wEdge % 2;
+            whEdgeContainer.setHalf( wEdge >> 1, leftOrRight, -(i+1));
+            i++;
+         }
+         // fix next, prev.
+         bArray.next.set(i-1, 0, -(head+1));
+         bArray.prev.set(head, 0, -i);             // -i = -(i-1+1)
+         holeContainer.setHalfEdge(hole, -(head+1));
+      }
+      // dealloc extra.
+      const extra = size - i;
+      for (let i in bArray) {
+         bArray[i].shrink(extra);
+      }
+ 
+      this._freeMM.size = this._freeMM.head = 0;
+      // replace buffer
+      this._vertex = bArray.vertex;
+      this._prev = bArray.prev;
+      this._next = bArray.next;
+      this._hole = bArray.hole;
+      this._wEdge = bArray.wEdge;
+   }
+   
+   next(hEdge) {
+      return this._next.get(-(hEdge+1), 0);
+   }
+   
+   prev(hEdge) {
+      return this._prev.get(-(hEdge+1), 0);
+   }
+   
+   hole(hEdge) {
+      return this._hole.get(-(hEdge+1), 0);
+   }
+   
+   setHole(hfEdge, hole) {
+      this._hole.set(-(hfEdge+1), 0, hole);
+   }
+   
+   linkNext(hEdge, next) {
+      if (hEdge < 0 && next < 0) {
+         this._next.set(-(hEdge+1), 0, next);
+         this._prev.set(-(next+1), 0, hEdge);
+      } else {
+         throw("bad connection");
+      }
+   }
+   
+   origin(hEdge) {
+      return this._vertex.get(-(hEdge+1), 0);
+   }
+   
+   setOrigin(hEdge, vertex) {
+      this._vertex.set(-(hEdge+1), 0, vertex);
+   }
+   
+   whEdge(hfEdge) {
+      return this._wEdge.get(-(hfEdge+1), 0);
+   }
+   
+   setWhEdge(hfEdge, whEdge) {
+      this._wEdge.set(-(hfEdge+1), 0, whEdge);
    }
    
 } 
@@ -148,18 +326,16 @@ class WholeEdgeArray extends PixelArrayGroup {
  * 
  */
 class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
-   constructor(dArray, hArray, wEdgeArray, fmm, props) {
-      super(props, {});
+   constructor(dArray, bArray, wEdgeArray, props, fmm) {
+      super(props, fmm);
       // tri directededge
       //this._dArray = dArray;
       this._vertex = dArray?.vertex;
       this._wEdge = dArray?.wEdge;
       // boundaryLoop edge/polygon edge
-      this._hArray = hArray;
+      this._bArray = new BoundaryArray(bArray, {});
       // wholeEdge specific value
       this._wEdgeArray = new WholeEdgeArray(wEdgeArray, {});
-      // freed array slot memory manager, should tried to keep array slots packed
-      this._fmm = fmm;
    }
    
    get _freeSlot() {
@@ -176,7 +352,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
          vertex: Int32PixelArray.create(1, 1, size),
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge' left or right
       };
-      const hArray = {
+      const bArray = {
          vertex: Int32PixelArray.create(1, 1, size),           // point to vertex,
          wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
          prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
@@ -187,20 +363,14 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
          sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
       };
-      const fmm = {  // freed array slot memory manager. using linklist for freedlist
-         // dArray: {size: 0, head: 0},      // freed syncronized with faceArray
-         hArray: {size: 0, head: 0},
-         wEdgeArray: {size: 0, head: 0},
-      }
-      return new TriangleEdgeArray(dArray, hArray, wEdgeArray, fmm, {});
+      return new TriangleEdgeArray(dArray, bArray, wEdgeArray, {});
    }
    
    _rehydrate(self) {
       super._rehydrate(self);
       
-      this._hArray = this.constructor.rehydrateObject(self._hArray);
+      this._bArray = BoundaryArray.rehydrate(self._bArray);
       this._wEdgeArray = WholeEdgeArray.rehydrate(self._wEdgeArray);
-      this._fmm = self._fmm;
    }
    
    static rehydrate(self) {
@@ -212,35 +382,25 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    getDehydrate(obj) {
       super.getDehydrate(obj);
 
-      obj._hArray = this.dehydrateObject(this._hArray);
+      obj._bArray = this._bArray.getDehydrate({});
 
       obj._wEdgeArray = this._wEdgeArray.getDehydrate({});
       
-      obj._fmm = this._fmm;
       return obj;
+   }
+   
+   get b() {
+      return this._bArray;
    }
    
    get w() {
       return this._wEdgeArray;
    }
    
-   computeBufferSizeB(length) {
-      return this.constructor.totalStructSize(this._hArray, length);
-   }
-   
    computeBufferSizeAll(length, bLength, wLength) {
       return this.computeBufferSize(length)
-            + this.computeBufferSizeB(bLength)
+            + this._bArray.computeBufferSize(bLength)
             + this._wEdgeArray.computeBufferSize(wLength);
-   }
-   
-   setBufferB(bufferInfo, byteOffset, length) {
-      if (!bufferInfo) {
-         bufferInfo = allocBuffer(this.computeBufferSizeB(length));
-         byteOffset = 0;
-      }
-      
-      return this.constructor.setBufferAll(this._hArray, bufferInfo, byteOffset, length);
    }
    
    setBufferAll(bufferInfo, byteOffset, length, bLength, wLength) {
@@ -250,7 +410,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       }
       
       byteOffset = this.setBuffer(bufferInfo, byteOffset, length);
-      byteOffset = this.setBufferB(bufferInfo, byteOffset, bLength);
+      byteOffset = this._bArray.setBuffer(bufferInfo, byteOffset, bLength);
       
       return this._wEdgeArray.setBuffer(bufferInfo, byteOffset, wLength);
    }
@@ -280,34 +440,23 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       this.setWhEdge(handle, dEdge, pair);
       return handle;
    }
-
-   /**
-    * to be used by subdivision. next level block allocation.
-    * 
-    */
-   _allocHEdge(size) {
-      if (this._hArray.next.capacity() < size) {   // not enough blockLength
-         const maxLen = this._hArray.next.maxLength();
-         this.setBufferB(null, 0, expandAllocLen(maxLen+size) );
-      }
-      
-      const index = this._hArray.vertex.appendRangeNew(size);
-      this._hArray.next.appendRangeNew(size);
-      this._hArray.prev.appendRangeNew(size);
-      this._hArray.next.appendRangeNew(size);
-      this._hArray.hole.appendRangeNew(size);
-      this._hArray.wEdge.appendRangeNew(size);
-      return index;
-   }
    
    allocBoundaryEdge(handle) {
       const length = handle.length;
-      const free = this._allocHalfEdge(0, length, true);
+      const free = this._bArray.allocArray(length);
+      // now connect the boundary loop together. cw loop.
+      let j = free.length - 1;
+      for (let i = 0; i < free.length; i++) {
+         this._bArray.linkNext(free[i], free[j]);
+         //this._bArray.setHole(free[i], 1);
+         j = i;
+      }
+      
       return free;
    }
    
    freeBoundaryEdge(hEdge) {
-      this.freeHalfEdge(hEdge);
+      this._bArray.free(hEdge);
    }
    
    _allocDirectedEdge(hEdge, length) {
@@ -326,119 +475,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       }
       return handle;
    }
-   
-   /**
-    * return 
-    * used by nGon and boundaryHole already connected together. 
-    * boundaryEdge is cw, nGon is ccw.
-    */
-   _allocHalfEdge(faceHole, size, isCW) {
-      let nextArray = this._hArray.next;
-      let prevArray = this._hArray.prev;
-      if (isCW) { // reverse direction
-         nextArray = this._hArray.prev;
-         prevArray = this._hArray.next;
-      }
-      const head = [];
-      let prev, next;
-      while (--size >= 0) {
-         if (this._fmm.hArray.size) { // get from free boundaryEdge first
-            next = this._fmm.hArray.head;
-            const nextNext = this._hArray.next.get(-(next+1), 0);
-            this._fmm.hArray.head = nextNext;
-            this._fmm.hArray.size--;
-            // remember to init hole to faceHole
-            this._hArray.hole.set(-(next+1), 0, faceHole);
-         } else { // allocated a new one. return negative handle.
-            const index = this._allocHEdge(1);
-            this._hArray.hole.set(index, 0, faceHole);         // init faceHole value.
-            this._hArray.vertex.set(index, 0, -1);
-            next = -(index+1);
-         }
-         // setup prev/next connecting pointer.
-         if (prev) {
-            nextArray.set(-(prev+1), 0, next);
-            prevArray.set(-(next+1), 0, prev);
-         }
-         prev = next;
-         head.push( next );
-      }
-      // now connecting head and tail, 
-      nextArray.set(-(next+1), 0, head[0]);
-      prevArray.set(-(head[0]+1), 0, next);
-      
-      return head;
-   }
-   
-   freeHalfEdge(hEdge) {  // add to freeList.
-      this._fmm.hArray.size++;
-      const nextNext = this._fmm.hArray.head;
-      this._hArray.vertex.set(-(hEdge+1), 0, -1);
-      this._hArray.hole.set(-(hEdge+1), 0, 0);              // reset as free.
-      this._hArray.next.set(-(hEdge+1), 0, nextNext);
-      this._fmm.hArray.head = hEdge;                        // fEdge is now head of freeList
-   }
-   
-   //
-   // remove hole, make the buffer contiguous. 
-   // boundaryLoop make it contiguous too.
-   //
-   compactBuffer(holeContainer) {
-      if (holeContainer.length() === 0) {
-         return;
-      }
-      
-      const size = this._hArray.vertex.length();
-      // new buffer
-      const hArray = {
-         vertex: Int32PixelArray.create(1, 1, size),           // point to vertex.
-         prev: Int32PixelArray.create(1, 1, size),             // negative value to hEdge
-         next: Int32PixelArray.create(1, 1, size),             // negative value
-         hole: Int32PixelArray.create(1, 1, size),             // negative value to hole, positive to nGon(QuadEdgeArray). 0 for empty
-         wEdge: Int32PixelArray.create(1, 1, size),            // point back to wEdge if any
-      };
-      // do allocation
-      const totalBytes = this.constructor.totalStructSize(hArray, size);
-      const hArrayBuffer = allocBuffer(totalBytes);
-      this.constructor.setBufferAll(hArray, hArrayBuffer, 0, size);
-      for (let i in hArray) {
-         hArray[i].appendRangeNew(size);
-      }
-      
-      const boundaryArray = this._hArray;
-      // redo boundaryLoop, one by one
-      let i = 0;
-      for (let hole of holeContainer) {
-         let head = i;
-         for (let dEdge of holeContainer.halfEdgeLoop(this, hole)) { // walk over boundaryLoop
-            const hEdge = -(dEdge+1);
-            hArray.hole.set(i, 0, hole);
-            hArray.next.set(i, 0, -(i+2));
-            hArray.prev.set(i, 0, -i);
-            hArray.vertex.set(i, 0, boundaryArray.vertex.get(hEdge, 0));
-            const wEdge = boundaryArray.wEdge.get(hEdge, 0);
-            hArray.wEdge.set(i, 0, wEdge);
-            // remember to update wEdge too
-            const leftOrRight = wEdge % 2;
-            this._wEdgeArray.setHalf(Math.trunc(wEdge/2), leftOrRight, -(i+1));
-            i++;
-         }
-         // fix next, prev.
-         hArray.next.set(i-1, 0, -(head+1));
-         hArray.prev.set(head, 0, -i);             // -i = -(i-1+1)
-         holeContainer.setHalfEdge(hole, -(head+1));
-      }
-      // dealloc extra.
-      const extra = size - i;
-      for (let i in hArray) {
-         hArray[i].shrink(extra);
-      }
- 
-      this._fmm.hArray.size = this._fmm.hArray.head = 0;
-      // replace buffer
-      this._hArray = hArray;
-   }
-   
    
    //
    // iterator routines
@@ -466,7 +502,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    /**
     * direct access to the main directedEdge
     */
-   * halfEdgeIter() {
+/*   * halfEdgeIter() {
       for (let i = 0; i < this._vertex.length(); ++i) {
          if (this._vertex.get(i, 0) >= 0) {
             if (!this.isFree(i)) {
@@ -474,30 +510,16 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
             }
          }
       }
-   }
-
-   /**
-    * iterator for unassigned boundary edges.
-    */
-   * unassignedBoundary() {
-      const length = this._hArray.hole.length();
-      for (let i = 0; i < length; ++i) {
-         if (this._hArray.vertex.get(i, 0) >= 0) {    // in used
-            if (this._hArray.hole.get(i, 0) >= 0) {   // negative is real face not hole.
-               yield -(i+1);
-            }
-         }
-      }
-   }
+   } */
 
    /**
     * work through all the halfEdge, boundary, nGon, freed face.
     */
-   * _boundaryEdgeIter() {
+/*   * _boundaryEdgeIter() {
       for (let i = 0; i < this._hArray.hole.length(); ++i) {
          yield -(i+1);
       }
-   }
+   } */
 
    /**
     * iterate over face's inner edge staring from input hEdge
@@ -515,10 +537,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    length() {
       return this._wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
    }
-   
-   lengthH() {
-      return (this._hArray.wEdge.length() - this._fmm.hArray.size);
-   }  
 
    static kNextEdge = [1, 1, -2];
    static kPrevEdge = [-2, 1, 1];
@@ -528,7 +546,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
          const i = dEdge % 3;       // remainder
          return dEdge + TriangleEdgeArray.kNextEdge[i];
       } else {
-         return this._hArray.next.get(-(dEdge+1), 0);
+         return this._bArray.next(dEdge);
       }
    }
    
@@ -537,49 +555,24 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
          const i = dEdge % 3;
          return dEdge - TriangleEdgeArray.kPrevEdge[i];
       } else {
-         return this._hArray.prev.get(-(dEdge+1), 0);
+         return this._bArray.prev(dEdge);
       }
    }
    
    /**
-    * assumed dEdge >= 0.
+    * get face or hole.
     */
    face(dEdge) {
       if (dEdge >= 0) {
          return Math.trunc(dEdge/3);
       } else {
-         return this._hArray.hole.get(-(dEdge+1), 0);
+         return this._bArray.hole(dEdge);
       }
    }
 
    isBoundary(dEdge) {  // not true for Quad, needs to override
       return (dEdge < 0);
    }
-
-   hole(hEdge) {
-      if (hEdge < 0) {
-         return this._hArray.hole.get(-(hEdge+1), 0);
-      } else {
-         throw("not boundaryEdge");
-      }
-   }
-
-   setHole(hEdge, hole) {
-      if (hEdge < 0) {
-         this._hArray.hole.set(-(hEdge+1), 0, hole);
-      } else {
-         throw("not boundaryEdge");
-      }
-   }
-   
-   linkNext(hEdge, next) {
-      if ((hEdge < 0) && (next < 0)) {
-         this._hArray.next.set(-(hEdge+1), 0, next);
-         this._hArray.prev.set(-(next+1), 0, hEdge);
-      } else {
-         throw("linkNext connecting to non-boundary HalfEdge");
-      }
-   }   
    
    destination(hEdge) {
       return this.origin( this.next(hEdge) );   // next is better than pair because no pair lookup only computation in most cases.
@@ -592,23 +585,23 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       if (hEdge >= 0) {
          return this._vertex.get(hEdge, 0);
       } else {
-         return this._hArray.vertex.get(-(hEdge+1), 0);  
-      } 
+         return this._bArray.origin(hEdge);
+      }
    }
    
    setOrigin(hEdge, vertex) {
       if (hEdge >= 0) {
          this._vertex.set(hEdge, 0, vertex);         
       } else {
-         this._hArray.vertex.set(-(hEdge+1), 0, vertex);
+         this._bArray.setOrigin(hEdge, vertex);
       }
    }
 
    pair(hEdge) {
       if (hEdge >= 0) {
-         return this._wEdgeArray.pair( this._wEdge.get(hEdge, 0) );       // left to right, right to left
+         return this._wEdgeArray.pair( this._wEdge.get(hEdge, 0) );        // left to right, right to left
       } else {
-         return this._wEdgeArray.pair( this._hArray.wEdge.get(-(hEdge+1), 0) );  // left to right, right to left
+         return this._wEdgeArray.pair( this._bArray.whEdge(hEdge) );       // left to right, right to left
       }
    }
       
@@ -616,7 +609,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       if (hEdge >= 0) {
          return this._wEdge.get(hEdge, 0);
       } else {
-         return this._hArray.wEdge.get(-(hEdge+1), 0);
+         return this._bArray.whEdge(hEdge);
       }
    }
    
@@ -634,7 +627,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    
    _setHEdgeWEdge(hEdge, wEdgePosition, pair) {
       if (hEdge < 0) {
-         this._hArray.wEdge.set(-(hEdge+1), 0, wEdgePosition);
+         this._bArray.setWhEdge(hEdge, wEdgePosition);
       } else {
          this._wEdge.set(hEdge, 0, wEdgePosition);
       }
@@ -703,7 +696,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
             return false;
          }
       }
-      // check hArray.freed
+/*      // check hArray.freed
       let freeCount = 0;
       let current = this._fmm.hArray.head;
       while (current < 0) {
@@ -713,7 +706,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       if (freeCount !== this._fmm.hArray.size) {
          console.log("FreeCount disagree, expected: " + this._fmm.hArray.size + " got: " + freeCount);
          return false;
-      }
+      } */
       return true;
    }
    
@@ -1038,7 +1031,8 @@ class HoleArray extends PixelArrayGroup {
       let sanity = true;
       for (let hole of this) {
          for (let hEdge of this.halfEdgeLoop(hEdgeContainer, hole)) {
-            if (hEdgeContainer.hole(hEdge) !== hole) {
+            const holeCheck = hEdgeContainer.b.hole(hEdge);
+            if (holeCheck !== hole) {
                sanity = false;
                break;
             }
@@ -1295,7 +1289,7 @@ class TriangleMesh {
       const changed = {};
       //changed.v = this.v.compactBuffer();
       //changed.f = this.f.compactBuffer();
-      changed.h = this.h.compactBuffer(this.o);
+      changed.h = this.h.b.compactBuffer(this.o, this.h.w);
       
       return changed;
    }
@@ -1303,23 +1297,22 @@ class TriangleMesh {
    // post process
    // fill boundaryLoop with holes.
    fillBoundary() {
-      // walk through all unassigned boundaryEdge, assign hole to each boundary group. 
-      for (let boundary of this._hEdges.unassignedBoundary()) {
-         let hole = this._hEdges.hole(boundary);
-         if (hole === 0) {   // unassigned hEdge, get a new Hole and start assigning the whole group.
-            hole = this._holes.alloc();
+      // walk through all unassigned boundaryEdge, assign hole to each boundary group.
+      const boundaryArray = this._hEdges.b; 
+      for (let boundary of boundaryArray.unassignedBoundary()) {
+         //let hole = boundaryArray.hole(boundary);
+         //if (hole === 0) {      // hEdge unassigned, get a new Hole and start assigning the whole group.
+            let hole = this._holes.alloc();
             this._holes.setHalfEdge(hole, boundary);
             let sides = 0;
             // assigned holeFace to whole group
-            let current = boundary;
-            do {
+            for (let current of boundaryArray.boundaryLoop(boundary)) {
                this._hEdges.setSharpness(current, -1);   // boundary is infinite crease.
-               this._hEdges.setHole(current, hole);
-               current = this._hEdges.next(current);
+               boundaryArray.setHole(current, hole);
                sides++;
-            } while (current !== boundary);
+            }
             this._holes.setNumberOfSide(hole, sides);
-         }
+         //}
       }
    }
    
@@ -1472,16 +1465,16 @@ class TriangleMesh {
             let d = this._hEdges.prev(b);
             // check head for pairing and collapse
             if ( c !== b ) { // not already collapsed
-               this._hEdges.linkNext(a, b);
-               this._hEdges.linkNext(d, c);
+               this._hEdges.b.linkNext(a, b);
+               this._hEdges.b.linkNext(d, c);
             } 
             
             // check tail for pairing and collapse
             c = this._hEdges.prev(a);
             if (c !== b) { // not already collapsed
                d = this._hEdges.next(b);
-               this._hEdges.linkNext(b, a);
-               this._hEdges.linkNext(c, d);
+               this._hEdges.b.linkNext(b, a);
+               this._hEdges.b.linkNext(c, d);
             }
             
             // now safely remove the freed-pair, and connect the 2 tri
@@ -1506,8 +1499,8 @@ class TriangleMesh {
             let c = this._hEdges.prev(a);
             let d = this._hEdges.next(b);
                 
-            this._hEdges.linkNext(b, a);
-            this._hEdges.linkNext(c, d);
+            this._hEdges.b.linkNext(b, a);
+            this._hEdges.b.linkNext(c, d);
          }
       }
 
@@ -1576,16 +1569,16 @@ class TriangleMesh {
          console.log("BaseMesh.spliceAjacent: no free inEdge, bad adjacency");
          return false;
       } else if (g === d) {
-         hEdges.linkNext(inEdge, outEdge);
-         hEdges.linkNext(d, b);
+         hEdges.b.linkNext(inEdge, outEdge);
+         hEdges.b.linkNext(d, b);
       } else {
          const h = hEdges.next(g);
 
-         hEdges.linkNext(inEdge, outEdge);
+         hEdges.b.linkNext(inEdge, outEdge);
 
-         hEdges.linkNext(g, b);
+         hEdges.b.linkNext(g, b);
 
-         hEdges.linkNext(d, h);
+         hEdges.b.linkNext(d, h);
       }
       return true;
    }  

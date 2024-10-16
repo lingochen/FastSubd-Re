@@ -121,10 +121,6 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    // vertexAround(hEdges, vert)
    // wEdgeAround(hEdges, vert)
    
-   length() {
-      return this._hfEdge.length();
-   }
-   
    halfEdge(vert) {
       return this._hfEdge.get(vert, 0);
    }

@@ -856,6 +856,14 @@ class PixelArrayGroup {
       }
    }
    
+   length() {
+      return this._freeSlot.length();
+   }
+   
+   size() {
+      return this.length() - this._freeMM.size;
+   }
+   
    dehydrateObject(obj) {
       if (obj) {
          const json = {};

@@ -106,10 +106,10 @@ class BoundaryArray extends PixelArrayGroup {
       this._hole.set(handle, 0, 0);
       //this._next.set(handle, 0, handle);        // point to self
    }
-   
+/*   
    length() {
-      return this._hole.length();
-   }
+      return this._wEdge.length();
+   }*/
    
    // iterator routines
    /**
@@ -163,9 +163,6 @@ class BoundaryArray extends PixelArrayGroup {
       for (let hole of holeContainer) {
          let head = i;
          for (let dEdge of holeContainer.halfEdgeLoop(this, hole)) { // walk over boundaryLoop
-            if (i === 49) {
-               console.log("-50");
-            }
             const hEdge = -(dEdge+1);
             bArray.hole.set(i, 0, hole);
             bArray.next.set(i, 0, -(i+2));
@@ -275,10 +272,6 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    wEdgeBuffer() {
       return this._edge.getBuffer();
-   }
-   
-   length() {
-      return this._sharpness.length();
    }
    
    left(wEdge) {
@@ -533,10 +526,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    //
    // main api
    //
-   
-   length() {
-      return this._wEdge.length();      // NOTE: what about freed? will tried to compact() after every operation. 
-   }
 
    static kNextEdge = [1, 1, -2];
    static kPrevEdge = [-2, 1, 1];
@@ -779,7 +768,6 @@ class TriangleArray extends ExtensiblePixelArrayGroup {
    freeFace(fHandle) {
       
    }  
-
    
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this.length());
@@ -847,10 +835,6 @@ class TriangleArray extends ExtensiblePixelArrayGroup {
    halfEdge(tri) {
       return tri*3;
    }   
-   
-   length() {
-      return (this._material.length());
-   }
    
    setHalfEdge(handle, hEdge) {  // implicit halfEdge, no needs to set
       throw("cannot set Face's halfEdge");
@@ -923,7 +907,7 @@ class HoleArray extends PixelArrayGroup {
          hole: Int32PixelArray.create(1, 1),
          numberOfSide: Int32PixelArray.create(1, 1),
       }
-      base.hole.appendNew();           // zeroth hole is reserved for sentinel purpose.
+
       return new HoleArray(base);
    }
 
@@ -931,21 +915,6 @@ class HoleArray extends PixelArrayGroup {
       const holes = new HoleArray({});
       holes._rehydrate(self);
       return holes;
-   }
-   
-   computeBufferSize(length) {
-      if (length) {
-         return super.computeBufferSize(length+1);
-      }
-      return 0;
-   }
-   
-   setBuffer(bufferInfo, byteOffset, length) {
-      if (length) {
-         length++;                                             // sentinel
-      }
-      
-      return super.setBuffer(bufferInfo, byteOffset, length);
    }
 
    /**
@@ -965,7 +934,7 @@ class HoleArray extends PixelArrayGroup {
    
    *[Symbol.iterator] () {
       const len = this._hole.length();
-      for (let i = 1; i < len; ++i) {  // skipped 0, it sentinel
+      for (let i = 0; i < len; ++i) {
          if (!this._isFree(i)) {
             yield i;
          }
@@ -983,7 +952,7 @@ class HoleArray extends PixelArrayGroup {
    
    free(handle) {
       // assume handle is valid
-      if (handle > 0) {
+      if (handle >= 0) {
          super.free(handle);
          this._numberOfSide(handle, 0, 0);                // reset to free
       }
@@ -998,13 +967,9 @@ class HoleArray extends PixelArrayGroup {
       const sides = this._numberOfSide.get(hole, 0);
       return (sides === 0);
    }
-         
-   length() {
-      return this._hole.length()-1;
-   }
 
    halfEdge(handle) {
-      if (handle > 0) {
+      if (handle >= 0) {
          return this._hole.get(handle, 0);
       } else {
          throw("invalid hole: " + handle);
@@ -1012,7 +977,7 @@ class HoleArray extends PixelArrayGroup {
    }
 
    setHalfEdge(handle, hEdge) {
-      if (handle > 0) {
+      if (handle >= 0) {
          this._hole.set(handle, 0, hEdge);
       } else {
          throw("invalid hole: " + handle);
@@ -1020,7 +985,7 @@ class HoleArray extends PixelArrayGroup {
    }
    
    setNumberOfSide(handle, sides) {
-      if (handle > 0) {
+      if (handle >= 0) {
          this._numberOfSide.set(handle, 0, sides);
       } else {
          throw("invalid hole: " + handle);
@@ -1042,7 +1007,7 @@ class HoleArray extends PixelArrayGroup {
    }
 
    stat() {
-      return "Holes Count: " + (this._hole.length()-1-this._freeMM.size) + ";\n";
+      return "Holes Count: " + this.size() + ";\n";
    }
 }
 

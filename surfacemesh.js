@@ -17,8 +17,9 @@
  * triangle ratio vertex(4):edge(5):triangle(3)
  * quad ratio vertex(4):edge(4):quad(2)
  * 
- * Provided 5 classes.
- * VertexArray
+ * Provided 7 classes.
+ * BoundaryArray
+ * WholeEdgeArray
  * TriangleEdgeArray
  * TriangleArray
  * HoleArray
@@ -106,10 +107,6 @@ class BoundaryArray extends PixelArrayGroup {
       this._hole.set(handle, 0, 0);
       //this._next.set(handle, 0, handle);        // point to self
    }
-/*   
-   length() {
-      return this._wEdge.length();
-   }*/
    
    // iterator routines
    /**
@@ -453,11 +450,6 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
    }
    
    _allocDirectedEdge(hEdge, length) {
-/*      if (this._vertex.capacity() < length) {
-         let maxLen = this._vertex.maxLength();
-         maxLen = expandAllocLen(maxLen+length);
-         this.setBuffer(null, 0, maxLen, computeDataTextureLen(Math.floor(maxLen/3*2)) );   // TODO: What the optimal wEdge expansion size? 
-      } */
             
       const handle = [];
       if (hEdge >= this._vertex.length()) { // asking for new one, hEdge === length().
@@ -559,7 +551,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       }
    }
 
-   isBoundary(dEdge) {  // not true for Quad, needs to override
+   isBoundary(dEdge) {
       return (dEdge < 0);
    }
    
@@ -685,17 +677,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
             return false;
          }
       }
-/*      // check hArray.freed
-      let freeCount = 0;
-      let current = this._fmm.hArray.head;
-      while (current < 0) {
-         current = this._hArray.next.get(-(current+1), 0);
-         freeCount++;
-      }
-      if (freeCount !== this._fmm.hArray.size) {
-         console.log("FreeCount disagree, expected: " + this._fmm.hArray.size + " got: " + freeCount);
-         return false;
-      } */
+
       return true;
    }
    
@@ -787,7 +769,7 @@ class TriangleArray extends ExtensiblePixelArrayGroup {
    }
    
    /* * wEdgeLoop(face) {
-   }*/
+   } */
    
    * faceAround(hEdgeContainer, face) {
       for (let [hEdge, neighborFace] of this.faceAroundEntries(hEdgeContainer, face)) {

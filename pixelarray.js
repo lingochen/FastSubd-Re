@@ -946,10 +946,15 @@ class PixelArrayGroup {
    }
    
    free(handle) {
+      this._free(handle);
       this._freeSlot.set(handle, 0, this._freeMM.head);
       this._freeMM.head= handle;
       this._freeMM.size++;
       
+   }
+   
+   _free(handle) {
+      // to be override, reset value to free.
    }
    
    _hasFree() {
@@ -993,6 +998,21 @@ class PixelArrayGroup {
       }
       
       return index;
+   }
+   
+   sanityCheck() {
+ /*      // check hArray.freed
+      let freeCount = 0;
+      let current = this._fmm.hArray.head;
+      while (current < 0) {
+         current = this._hArray.next.get(-(current+1), 0);
+         freeCount++;
+      }
+      if (freeCount !== this._fmm.hArray.size) {
+         console.log("FreeCount disagree, expected: " + this._fmm.hArray.size + " got: " + freeCount);
+         return false;
+      } */  
+      return true;   
    }
    
    /**

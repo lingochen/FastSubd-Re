@@ -179,7 +179,7 @@ function computeNewFaceWEdgeIndex(mThis, oldFace) {
 function boundaryLoopTask(mThis) {
    // update dest hole's halfEdge
    let length = mThis.srco.length();
-   for (let hole = 0; hole <= length; ++hole) {
+   for (let hole = 0; hole < length; ++hole) {
       let hEdge = mThis.srco.halfEdge(hole);
       hEdge = -(hEdge+1);                 // get real positive index
       mThis.desto.setHalfEdge(hole, -(hEdge*2+1));

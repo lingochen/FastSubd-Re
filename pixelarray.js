@@ -961,6 +961,10 @@ class PixelArrayGroup {
       return this._freeMM.size > 0;
    }
    
+   textureAlignLen(length) {
+      return computeDataTextureLen(length);     // NOTE: wrong, needs to check every single one.
+   }
+   
    /**
     * 
     */

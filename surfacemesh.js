@@ -29,9 +29,9 @@
  */
  
 
-import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, allocBuffer, freeBuffer, PixelArrayGroup, ExtensiblePixelArrayGroup} from './pixelarray.js';
+import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, allocBuffer, PixelArrayGroup, ExtensiblePixelArrayGroup} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
-import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
+import {computeDataTextureLen} from "./glutil.js";
 import {VertexArray} from "./vertex.js";
 
 // more than 2b, but less than 4b data support? 
@@ -1111,12 +1111,12 @@ class TriangleMesh {
     */
    reserve(nVertices, nWEdges, nHfEdges, nBoundaries, nFaces, nHoles, isStatic=true) {
       // padded to rectData dimension.
-      nVertices = computeDataTextureLen(nVertices);
-      nWEdges = computeDataTextureLen(nWEdges);
-      nHfEdges = computeDataTextureLen(nHfEdges);
-      nBoundaries = computeDataTextureLen(nBoundaries);
-      nFaces = computeDataTextureLen(nFaces);
-      nHoles = computeDataTextureLen(nHoles);
+      nVertices = this._vertices.textureAlignLen(nVertices);
+      nWEdges = this._hEdges.w.textureAlignLen(nWEdges);
+      nHfEdges = this._hEdges.textureAlignLen(nHfEdges);
+      nBoundaries = this._hEdges.b.textureAlignLen(nBoundaries);
+      nFaces = this._faces.textureAlignLen(nFaces);
+      nHoles = this._holes.textureAlignLen(nHoles);
       
       if (isStatic) {
          const totalBytes = this._vertices.computeBufferSize(nVertices)

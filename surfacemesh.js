@@ -31,7 +31,6 @@
 
 import {Int32PixelArray, Float32PixelArray, Uint8PixelArray, Float16PixelArray, allocBuffer, PixelArrayGroup, ExtensiblePixelArrayGroup} from './pixelarray.js';
 import {vec3, vec3a} from "./vec3.js";
-import {computeDataTextureLen} from "./glutil.js";
 import {VertexArray} from "./vertex.js";
 
 // more than 2b, but less than 4b data support? 

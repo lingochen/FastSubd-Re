@@ -43,6 +43,10 @@ const PixelInternalFormatK = {
    RG32I: 0x823B,
    RGB32I: 0x8D83,
    RGBA32I: 0x8D82,
+   R32UI: 0x8236,
+   RG32UI: 0x823C,
+   RGB32UI: 0x8D71,
+   RGBA32UI: 0x8D70,
    RG16F: 0x822F,
    RGB16F: 0x881B,
    R32F: 0x822E,
@@ -546,8 +550,54 @@ class Int32PixelArray extends PixelArray {
 
    _getType() {
       return PixelTypeK.INT;
+   }   
+}
+
+
+
+
+class Uint32PixelArray extends PixelArray {
+   constructor(pixel, record, blob) {
+      super(pixel, record, blob);
+   }
+   
+   static dummy = PixelArray.derived.set(this.name, this);
+
+   static create(structSize, numberOfChannel) {
+      let format = PixelFormatK.RED_INTEGER;
+      let internalFormat = PixelInternalFormatK.R32UI;
+      switch (numberOfChannel) {
+         case 1:
+            break;
+         case 2:
+            format = PixelFormatK.RG_INTEGER;
+            internalFormat = PixelInternalFormatK.RG32UI;
+            break;
+        case 3:
+            format = PixelFormatK.RGB_INTEGER;
+            internalFormat = PixelInternalFormatK.RGB32UI;
+            break;
+        case 4:
+            format = PixelFormatK.RGBA_INTEGER;
+            internalFormat = PixelInternalFormatK.RGBA32UI;
+            break;
+        default:
+           console.log("Unsupport # of pixel channel: " + numberOfChannel);
+      }
+      // caller remember to setBuffer()
+      const [pixel, record] = PixelArray._createInternal(structSize, 4, numberOfChannel, internalFormat, format);
+      return new Uint32PixelArray(pixel, record, null);
+   }
+   
+   _createView(buffer, offset, length) {
+      return new Uint32Array(buffer, offset, length);
+   }
+
+   _getType() {
+      return PixelTypeK.UNSIGNED_INT;
    }
 }
+
 
 
 
@@ -1115,6 +1165,7 @@ class ExtensiblePixelArrayGroup extends PixelArrayGroup {
 export {
    Uint8PixelArray,
    Int32PixelArray,
+   Uint32PixelArray,
    Float32PixelArray,
    Float16PixelArray,
    rehydrateBuffer,

@@ -26,7 +26,7 @@ good name, [sane api](api.md)
 
 Limitation/PitFall
 
-directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.
+directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.(@bulb, 2025/02)
 
 so we needs flexibility to handle the editing operation, and the underlying data can be optimized and contiguous at will.(@done, 2023/12)
 

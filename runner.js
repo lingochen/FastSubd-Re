@@ -3,13 +3,13 @@
  * 
  */
 
-import {Importer} from './importexport.js';
-import {importObj} from './wavefront_obj.js';
-import {MaterialDepot} from './material.js';
-import * as m4 from './mat4.js';
-import {vec3a} from './vec3.js';
-import * as glUtil from './glutil.js';
-import {quadrangulate} from './quadrangulate.js';
+import {Importer} from './js/importexport.js';
+import {importObj} from './js/wavefront_obj.js';
+import {MaterialDepot} from './js/material.js';
+import * as m4 from './js/mat4.js';
+import {vec3a} from './js/vec3.js';
+import * as glUtil from './js/glutil.js';
+import {quadrangulate} from './js/quadrangulate.js';
 
 
 const pullTriVS = `#version 300 es

@@ -15,7 +15,7 @@ let gTasker;
 function getTasker() {
    if (!gTasker) {   // init gTasker
       const numberOfWorker = navigator.hardwareConcurrency;
-      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', numberOfWorker);
+      const pool = new Parallel.WebWorkerPool('./js/workers/subdivideworker.js', numberOfWorker);
       gTasker = new Parallel.TaskParallel(pool);
    }
    return gTasker;

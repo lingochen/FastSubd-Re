@@ -6,6 +6,8 @@
  * better cache coherence and more similar to traditional face/vertex representation.
  * easier to optimize for parallel subdivision.
  * Only triangle mesh here, general polygon is better handle by traditional HalfEdge. (2024/08/14)
+ * Now handle general polygon. Use triangles to fill the polygon. (2025/03/03)
+ * Use WholeEdge/HalfEdge as container instead of TriangleEdgeArray. The reverse of original design.
  * 
  * directed edges for triangles(can be used for quads) only meshes. halfEdges with implicit triangles.
  * S. Campagna, L. Kobbelt, H.-P. Seidel, Directed Edges - A Scalable Representation For Triangle Meshes , ACM Journal of Graphics Tools 3 (4), 1998.
@@ -19,11 +21,11 @@
  * 
  * Provided 7 classes.
  * BoundaryArray
- * WholeEdgeArray
  * TriangleEdgeArray
- * TriangleArray
+ * WholeEdgeArray
+ * TriangleArray => FaceArray
  * HoleArray
- * TriangleMesh
+ * TriangleMesh => SurfaceMesh
  * 
  * Note: Gino van den Bergen has an interesting implementation. http://www.dtecta.com/files/GDC17_VanDenBergen_Gino_Brep_Triangle_Meshes.pdf
  */
@@ -233,81 +235,6 @@ class BoundaryArray extends PixelArrayGroup {
    }
    
 } 
-
-
-class WholeEdgeArray extends PixelArrayGroup {
-   constructor(wEdge, fmm) {
-      super(fmm);
-      this._edge = wEdge?.edge;
-      this._sharpness = wEdge?.sharpness;
-   }
-   
-   get _freeSlot() {
-      return this._edge;
-   }
-   
-   * _baseEntries() {
-      yield ["_edge", this._edge];
-      yield ["_sharpness", this._sharpness];
-   }
-   
-   static create(size) {
-      const wEdgeArray = {
-         edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
-         sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
-      };
-      
-      return new WholeEdgeArray(wEdgeArray, {});
-   }
-   
-   static rehydrate(self) {
-      const ret = new WholeEdgeArray({}, {});
-      ret._rehydrate(self);
-      return ret;
-   }
-   
-   wEdgeBuffer() {
-      return this._edge.getBuffer();
-   }
-   
-   left(wEdge) {
-      return this._edge.get(wEdge, wEdgeK.right);
-   }
-
-   pair(hEdge) {
-      return this._edge._get( hEdge ^ 1 );   // left to right, right to left
-   }
-   
-   right(wEdge) {
-      return this._edge.get(wEdge, wEdgeK.left);
-   }
-   
-   whole(wEdge, value=[0,0]) {
-      this._edge.getVec2(wEdge, 0, value);
-      return value;
-   }
-
-   setHalf(wEdge, leftOrRight, value) {
-      this._edge.set(wEdge, leftOrRight, value);
-   }
-   
-   setWhole(wEdge, left, right) {
-      this._edge.setValue2(wEdge, 0, left, right);
-   }
-   
-   setWhole2(wEdge, leftRight) {
-      this._edge.setVec2(wEdge, 0, leftRight);
-   }
-   
-   sharpness(wEdge) {
-      return this._sharpness.get(wEdge, 0);
-   }
-   
-   setSharpness(wEdge, sharpness) {
-      this._sharpness.set(wEdge, 0, sharpness);
-   }
-}
-
 
 
 /** 
@@ -700,6 +627,79 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 }
 
 
+class WholeEdgeArray extends PixelArrayGroup {
+   constructor(wEdge, fmm) {
+      super(fmm);
+      this._edge = wEdge?.edge;
+      this._sharpness = wEdge?.sharpness;
+      this._id = wEdge?.id;
+   }
+   
+   get _freeSlot() {
+      return this._edge;
+   }
+   
+   * _baseEntries() {
+      yield ["_edge", this._edge];
+      yield ["_sharpness", this._sharpness];
+   }
+   
+   static create(size) {
+      const wEdgeArray = {
+         edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
+         sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+      };
+      
+      return new WholeEdgeArray(wEdgeArray, {});
+   }
+   
+   static rehydrate(self) {
+      const ret = new WholeEdgeArray({}, {});
+      ret._rehydrate(self);
+      return ret;
+   }
+   
+   wEdgeBuffer() {
+      return this._edge.getBuffer();
+   }
+   
+   left(wEdge) {
+      return this._edge.get(wEdge, wEdgeK.right);
+   }
+
+   pair(hEdge) {
+      return this._edge._get( hEdge ^ 1 );   // left to right, right to left
+   }
+   
+   right(wEdge) {
+      return this._edge.get(wEdge, wEdgeK.left);
+   }
+   
+   whole(wEdge, value=[0,0]) {
+      this._edge.getVec2(wEdge, 0, value);
+      return value;
+   }
+
+   setHalf(wEdge, leftOrRight, value) {
+      this._edge.set(wEdge, leftOrRight, value);
+   }
+   
+   setWhole(wEdge, left, right) {
+      this._edge.setValue2(wEdge, 0, left, right);
+   }
+   
+   setWhole2(wEdge, leftRight) {
+      this._edge.setVec2(wEdge, 0, leftRight);
+   }
+   
+   sharpness(wEdge) {
+      return this._sharpness.get(wEdge, 0);
+   }
+   
+   setSharpness(wEdge, sharpness) {
+      this._sharpness.set(wEdge, 0, sharpness);
+   }
+}
 
 
 

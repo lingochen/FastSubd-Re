@@ -26,11 +26,13 @@ good name, [sane api](api.md)
 
 Limitation/PitFall
 
-directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.(@bulb, 2025/02)
+directededge must be contiguous without hole or freed space. add another layer to solved it for editing purpose.(@solved, 2025/02)
 
 so we needs flexibility to handle the editing operation, and the underlying data can be optimized and contiguous at will.(@done, 2023/12)
 
-now design an halfEdge based PolygonMesh to handle editing, and internally we use triangle directEdge mesh to handle the subdivision, drawing, and collision.
+now design an halfEdge based PolygonMesh to handle editing, and internally we use triangle directEdge mesh to handle the subdivision, drawing, and collision.(2025/02)
+
+subdivision without updating halfEdge or directedEdge.
 
 nice to have?
 

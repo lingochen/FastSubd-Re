@@ -22,7 +22,9 @@
 
 - <s>Catmull-Clark scheme support</s> - drop
 
-- <s>More file formats support.</s> - drop
+- Use Loop Subdivision to fit [polygon](polygon.md)
+
+- More file formats support. - delay
 
 - Complete PBR material support and rendering.
 

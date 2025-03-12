@@ -278,6 +278,7 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
          sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+         id: Int32PixelArray.create(1, 1, size),               // realID, exist as side of polygon. no id then it internal edges.
       };
       return new TriangleEdgeArray(dArray, bArray, wEdgeArray, {});
    }
@@ -506,10 +507,14 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 
    pair(hEdge) {
       if (hEdge >= 0) {
-         return this._wEdgeArray.pair( this._wEdge.get(hEdge, 0) );        // left to right, right to left
+         return this._wEdgeArray._pair( this._wEdge.get(hEdge, 0) );        // left to right, right to left
       } else {
-         return this._wEdgeArray.pair( this._bArray.whEdge(hEdge) );       // left to right, right to left
+         return this._wEdgeArray._pair( this._bArray.whEdge(hEdge) );       // left to right, right to left
       }
+   }
+   
+   halfEdge(dEdge) {
+      return this._wEdge.get(dEdge, 0);
    }
       
    _whEdge(hEdge) {
@@ -642,12 +647,14 @@ class WholeEdgeArray extends PixelArrayGroup {
    * _baseEntries() {
       yield ["_edge", this._edge];
       yield ["_sharpness", this._sharpness];
+      yield ["_id", this._id];
    }
    
    static create(size) {
       const wEdgeArray = {
          edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size), // [left, right]
          sharpness: Float32PixelArray.create(1, 1, size),      // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+         id: Int32PixelArray.create(1, 1, size),               // realID, exist as side of polygon. no id then it internal edges.
       };
       
       return new WholeEdgeArray(wEdgeArray, {});
@@ -663,16 +670,125 @@ class WholeEdgeArray extends PixelArrayGroup {
       return this._edge.getBuffer();
    }
    
-   left(wEdge) {
-      return this._edge.get(wEdge, wEdgeK.right);
+   //
+   // iterator routines
+   // 
+
+   *[Symbol.iterator] () {
+      yield* this.rangeIter(0, this.length());
+   }
+   
+   /**
+    * walk over the wEdgeArray
+    */
+   * rangeIter(start, stop) {
+      stop = Math.min(this.length(), stop);
+      let leftRight = [0, 0];
+      for (let i = start; i < stop; i++) {
+         const sharpness = this.sharpness(i);
+         if (sharpness >= 0) {  // existed.
+            this._whole(i, leftRight);
+            yield [i, leftRight[0], leftRight[1]];
+         }
+      }
    }
 
-   pair(hEdge) {
+   /**
+    * direct access to the main directedEdge
+    */
+/*   * directEdgeIter() {
+      for (let i = 0; i < this._vertex.length(); ++i) {
+         if (this._vertex.get(i, 0) >= 0) {
+            if (!this.isFree(i)) {
+               yield i;
+            }
+         }
+      }
+   } */
+
+   /**
+    * walk through all the boundary.
+    */
+/*   * _boundaryEdgeIter() {
+      for (let i = 0; i < this._hArray.hole.length(); ++i) {
+         yield -(i+1);
+      }
+   } */
+
+   /**
+    * iterate over face's inner edge staring from input hEdge
+    */
+/*   * faceIter(hEdge) {
+      yield (hEdge);
+      yield (hEdge+1) % 3;
+      yield (hEdge+2) % 3;
+   } */
+   
+   
+   // 
+   // end of iterator
+   //
+   
+   /**
+    * next()/prev(). skip over the internal edge if any.
+    * consolidated as internal function.
+    * 
+    */
+   _oneStep(hEdge, stepTri, stepB) {
+      let dEdge = this._edge._get( hEdge );
+      if (dEdge >= 0) { // polygon
+         do {
+            dEdge = stepTri.call(this._triangle, dEdge);
+            hEdge = this._triangle.halfEdge(dEdge);
+            if (this._id.get(hEdge, 0) >= 0) {  // found, not internal edge
+               return hEdge;
+            }
+            // cross to next tri
+            dEdge = this._triangle.pair(dEdge);
+         } while (true);
+      } else { // boundary
+         dEdge = stepB.call(this._boundary, dEdge);
+         return this._boundary.whEdge(dEdge);
+      }
+   }
+   
+   /**
+    * next polygon edge. skip over the internal edge if any
+    * 
+    */
+   next(hEdge) {
+      return this._oneStep(hEdge, this._triangle.next, this._boundary.next);
+   }
+   
+   /**
+    * skip over the internal edge.
+    */
+   prev(hEdge) {
+      return this._oneStep(hEdge, this._triangle.prev, this._boundary.prev);
+   }
+   
+   _left(wEdge) {
+      return this._edge.get(wEdge, wEdgeK.right);
+   }
+   
+   left(wEdge) {
+      return wEdge >> 1;
+   }
+
+   _pair(hEdge) {
       return this._edge._get( hEdge ^ 1 );   // left to right, right to left
    }
    
-   right(wEdge) {
+   pair(hEdge) {
+      return hEdge ^ 1;
+   }
+   
+   _right(wEdge) {
       return this._edge.get(wEdge, wEdgeK.left);
+   }
+   
+   right(wEdge) {
+      return (wEdge >> 1) + 1;
    }
    
    whole(wEdge, value=[0,0]) {
@@ -708,6 +824,7 @@ class TriangleArray extends ExtensiblePixelArrayGroup {
    constructor(materialDepot, array, prop, fmm) {
       super(prop, fmm);
       this._material = array?.material;
+      this._hfEdge = array.hfEdge;
       this._depot = materialDepot;
    }
    
@@ -1043,6 +1160,7 @@ class TriangleMesh {
    static _createInternal(materialDepot) {
       const bin = {nameGroup:[], };
 
+      // we do per mesh accounting. But, does counting at end of release cycle make more sense?
       const material = {depot: materialDepot};
       const warehouse = new Map
       material.used = warehouse;

@@ -156,14 +156,13 @@ class BoundaryArray extends PixelArrayGroup {
       // redo boundaryLoop, one by one
       let i = 0;
       for (let hole of holeContainer) {
-         const bHalf = holeContainer.halfEdge(hole);
+         let bHalf = holeContainer.halfEdge(hole);
+         bHalf = -(whEdgeContainer.half(bHalf)+1);       // convert to local index
          const length = holeContainer.numberOfSide(hole);
          const start = i;
          let j = 0;
          let prev = length-1;
          for (let hEdge of this.halfEdgeAround(bHalf) ) { // walk over boundaryLoop
-            const dEdge = whEdgeContainer.getHalfEdge(hEdge);
-            hEdge = -(dEdge+1);              // convert back to normal/positive index
             const hfEdge = this._hfEdge.get(hEdge, 0);
             bArray.hfEdge.set(i, 0, hfEdge);
             bArray.next.set(i, 0, start + ((j+1) % length));
@@ -185,7 +184,7 @@ class BoundaryArray extends PixelArrayGroup {
       // replace buffer
       this._prev = bArray.prev;
       this._next = bArray.next;
-      this._hfEdges = bArray.hfEdges;
+      this._hfEdge = bArray.hfEdge;
    }
    
    next(hEdge) {
@@ -490,12 +489,12 @@ class WholeEdgeArray extends PixelArrayGroup {
       for (let [i, left, right] of this) {
          if (left < 0) {   // boundary
             if (this._face.get(i, 0) >= 0) {   // boundary's unassigned face
-               yield left;
+               yield i*2;
             }
          }
          if (right < 0) {
             if (this._face.get(i, 1) >= 0) {
-               yield right;
+               yield i*2+1;
             }
          }
       }
@@ -690,6 +689,14 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    right(wEdge) {
       return (wEdge * 2) + 1;
+   }
+   
+   face(hEdge) {
+      return this._face._get(hEdge);
+   }
+
+   setFace(hEdge, face) {
+      this._face._set(hEdge, face);
    }
    
    whole(wEdge, value=[0,0]) {
@@ -1020,7 +1027,7 @@ class HoleArray extends PixelArrayGroup {
       let current = start;
       do {
          yield current;
-         current = hEdgeContainer.next(current);
+         current = hEdgeContainer._next(current);
       } while (current !== start);
    }
    
@@ -1046,6 +1053,10 @@ class HoleArray extends PixelArrayGroup {
       return this._hfEdge.get(handle, 0);
    }
 
+   numberOfSide(handle) {
+      return this._numberOfSide.get(handle, 0);
+   }
+
    setHalfEdge(handle, hEdge) {
       if (handle >= 0) {
          this._hfEdge.set(handle, 0, hEdge);
@@ -1065,8 +1076,8 @@ class HoleArray extends PixelArrayGroup {
    sanityCheck(hEdgeContainer) {
       let sanity = true;
       for (let hole of this) {
-         for (let hEdge of this.halfEdgeLoop(hEdgeContainer, hole)) {
-            const holeCheck = hEdgeContainer.b.hole(hEdge);
+         for (let hEdge of this.halfEdgeAround(hEdgeContainer, hole)) {
+            const holeCheck = -(hEdgeContainer.face(hEdge)+1);
             if (holeCheck !== hole) {
                sanity = false;
                break;
@@ -1340,7 +1351,7 @@ class TriangleMesh {
       const changed = {};
       //changed.v = this.v.compactBuffer();
       //changed.f = this.f.compactBuffer();
-      changed.h = this.h.b.compactBuffer(this.o, this.h.w);
+      changed.h = this.h.b.compactBuffer(this.o, this.h);
       
       return changed;
    }
@@ -1349,17 +1360,14 @@ class TriangleMesh {
    // fill boundaryLoop with holes.
    fillBoundary() {
       // walk through all unassigned boundaryEdge, assign hole to each boundary group.
-      const boundaryArray = this._hEdges.b; 
       for (let boundary of this._hEdges.unassignedBoundary()) {
-         //let hole = boundaryArray.hole(boundary);
-         //if (hole === 0) {      // hEdge unassigned, get a new Hole and start assigning the whole group.
             let hole = this._holes.alloc();
             this._holes.setHalfEdge(hole, boundary);
             let sides = 0;
             // assigned holeFace to whole group
-            for (let current of boundaryArray.boundaryLoop(boundary)) {
+            for (let current of this._hEdges.circulator(boundary, boundary, this._hEdges._next)) {
                this._hEdges.setSharpness(current, -1);   // boundary is infinite crease.
-               boundaryArray.setHole(current, hole);
+               this._hEdges.setFace(current, -(hole+1));
                sides++;
             }
             this._holes.setNumberOfSide(hole, sides);

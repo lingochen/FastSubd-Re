@@ -1,0 +1,65 @@
+/**
+ * DirectedEdge, Catmull-Clark subdivision, Loop Sudivision, Modified Buttefly Subdivision.
+ * 
+ */
+ 
+//import {QuadMesh} from '../quadmesh.js';
+import {TriangleMesh} from '../surfacemesh.js';
+import * as Tri from '../subdividetri.js';
+import * as Loop from '../subdivideloop.js';
+// import * as MB from '../subidivdemb.js';
+import * as Parallel from './parallel.js';
+//import * as test from './subdivideworker.js';
+
+let gTasker;
+function getTasker() {
+   if (!gTasker) {   // init gTasker
+      const numberOfWorker = navigator.hardwareConcurrency;
+      const pool = new Parallel.WebWorkerPool('./workers/subdivideworker.js', numberOfWorker);
+      gTasker = new Parallel.TaskParallel(pool);
+   }
+   return gTasker;
+}
+
+
+function loopSubdivide(subd, source) {
+   const tasker = getTasker();
+   // Setup TaskGroup
+   const task = Tri.computeWorkTask(source);
+   const dest = subd.getDehydrate({});
+   const src = source.getDehydrate({});
+   tasker.setup({subd: dest, source: src, task}, 'loop');
+   
+   // compute blockSize, 
+
+   const blockSize = 64;
+   // copy/refine vertex and add middle edge points.
+   tasker.pFor(0, task.vMix.length, blockSize*4, 'vertexTask');
+   // copy/refine the remainder
+   tasker.exec(null, 'vertexTaskRemainder');
+   
+   // setup all face's hEdge
+   tasker.pFor(0, source.f.length(), blockSize, 'faceTask');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskV');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskW');
+   //tasker.pFor(0, source.f.length(), blockSize, 'faceTaskP');
+   
+   // setup wEdge's halfEdge
+   tasker.pFor(0, task.wMix.length, blockSize, 'wEdgeTask');
+   tasker.exec(null, 'wEdgeTaskRemainder');
+   //throw("error");
+   
+   // setup hole
+   tasker.exec(null, 'boundaryLoopTask');
+   
+   // return when everything done.
+   return tasker.whenDone(subd);       // return an promise
+}
+
+
+
+export {
+   
+   //mbSubdivide,
+   loopSubdivide,
+}

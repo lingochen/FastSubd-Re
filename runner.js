@@ -267,7 +267,7 @@ async function readFile(ccmUrl, options, camera) {
       }*/
       let source = scene.world[0];
       // readjust material to show triangles.
-      const [quad, tri] = quadrangulate(source);
+/*      const [quad, tri] = quadrangulate(source);
       for (let i = 0; i < quad.length; i+=2) {
          const idx = (i>>1) % 4;
          const face = quad[i];
@@ -288,7 +288,7 @@ async function readFile(ccmUrl, options, camera) {
       for (let i = 0; i< tri.length;i++) {
          const face = tri[i];
          source.f.setMaterial(face, info.depot.getBlack());
-      }
+      } */
       // end of readjust material
       modelRead.set(ccmUrl, source);               // save for later reuse
       source.sanityCheck();

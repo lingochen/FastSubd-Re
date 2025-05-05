@@ -1,5 +1,4 @@
 /**
- * VanillaVertexArray, 3d point-less structure, for EditableMesh
  * VertexArray, the workhorse.
  * 
  */
@@ -10,6 +9,24 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 
 
 /**
+ * A Point,
+ * @typedef {Struct} Point
+ * @property {number} x - 
+ * @property {number} y 
+ * @property {number} z
+ * @property {number} c - crease, and may pack other attributes.
+ */
+const PointK = {
+   x: 0,
+   y: 1,
+   z: 2,
+   c: 3,             // to be used by crease and other attributes if...
+   sizeOf: 4,
+};
+Object.freeze(PointK);
+
+
+/**
 // hEdge: 
 // pt: 
 // normal: 
@@ -17,9 +34,10 @@ import {expandAllocLen, computeDataTextureLen} from "./glutil.js";
 // valence: 
 // crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
 */
-class VanillaVertexArray extends ExtensiblePixelArrayGroup {
+class VertexArray extends ExtensiblePixelArrayGroup {
    constructor(base, props, freePool, valenceMax) {
       super(props, freePool);                 // base, and custom property
+      this._pt = base.pt ?? null;
       this._hfEdge = base.hfEdge ?? null;
       this._valence = base.valence ?? null;
       this._valenceMax = valenceMax;
@@ -31,6 +49,7 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    }
    
    * _baseEntries() {
+      yield ["_pt", this._pt];
       yield ["_hfEdge", this._hfEdge];
       yield ["_valence", this._valence];
    }
@@ -38,12 +57,19 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    
    static create(size) {
       const array = {
+         pt: Float32PixelArray.create(PointK.sizeOf, 4, size),    // pts = {x, y, z}, 3 layers of float32 each? or          
          hfEdge: Int32PixelArray.create(1, 1, size),              // point back to the one of the hEdge ring that own the vertex. 
          valence: Int32PixelArray.create(1, 1, size),
       };
+      // should be optional by passing in values
+      const prop = {
+         color: Uint8PixelArray.create(4, 4, size),               // should we packed to pts as 4 channels(rgba)/layers of textures? including color?
+         // cached value
+         normal: Float16PixelArray.create(3, 3, size),
+      };
       const freePool = {};                                        // use default stride=1, pos:0
 
-      return new VanillaVertexArray(array, {}, freePool, 0);
+      return new VertexArray(array, prop, freePool, 0);
    }
    
    _rehydrate(self) {
@@ -56,7 +82,7 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    }
 
    static rehydrate(self) {
-      const ret = new VanillaVertexArray({}, {}, {}, 0);
+      const ret = new VertexArray({}, {}, {}, 0);
       ret._rehydrate(self);
       return ret;
    }
@@ -67,6 +93,24 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
       return obj;
    }
    
+   createPositionTexture(gl) {
+      return this._pt.createDataTexture(gl);
+   }
+   
+   createNormalTexture(gl) {
+      return this._prop.normal.createDataTexture(gl);
+   }
+   
+   positionBuffer() {
+      return this._pt.getBuffer();
+   }
+   
+   copyPt(vertex, inPt, inOffset) {
+      vec3.copy(this._pt.getBuffer(), vertex * PointK.sizeOf, inPt, inOffset);
+      //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
+      //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
+      //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
+   }   
    
 /*
    isFree(vertex) {
@@ -94,13 +138,7 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
    * outHalfEdgeAround(hEdgeContainer, vert) {
       if (this._valence.get(vert, 0) > 0) {   // has outEdge?
          const start = this._hfEdge.get(vert, 0);
-         let current = start;
-         do {
-            const outEdge = current;
-            const pair = hEdgeContainer.pair(current);
-            current = hEdgeContainer.next( pair );
-            yield outEdge;
-         } while (current !== start);
+         return hEdgeContainer.circulator(start, start, hEdgeContainer._stepAround);
       }
    }
    
@@ -125,6 +163,10 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
       return this._hfEdge.get(vert, 0);
    }
    
+   hasHalfEdge(vert) {
+      return this._valence.get(vert, 0) > 0;
+   }
+   
    setHalfEdge(vert, hEdge) {
       this._hfEdge.set(vert, 0, hEdge);
       // when allocated, it should be initialized.
@@ -147,8 +189,44 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
       this._valence.set(vertex, 0, valence);
    }
 
-   // dummy, to be override, not natural position.
-   setCrease(_vertex, _crease) {}
+   crease(vertex) {
+      return this._pt.get(vertex, PointK.c);
+   }
+
+   setCrease(vertex, crease) {
+      this._pt.set(vertex, PointK.c, crease);
+   }
+   
+   /**
+    * Loop bitangent scheme
+    */
+   computeLoopNormal(hEdgeContainer) {
+      const tangentL = [0, 0, 0];
+      const tangentR = [0, 0, 0];
+      const temp = [0, 0, 0];
+      const handle = {face: 0};
+      const pt = this._pt.getBuffer();
+      for (let v of this) {     
+         const valence = this.valence(v);
+         const radStep = 2*Math.PI / valence;
+                  
+         let i = 0;
+         tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
+         for (let hEdge of this.outHalfEdgeAround(hEdgeContainer, v)) {
+            let p = hEdgeContainer.destination(hEdge);
+            let coseff = Math.cos(i*radStep);
+            let sineff = Math.sin(i*radStep);
+            vec3a.scaleAndAdd(tangentL, 0, pt, p * PointK.sizeOf, coseff);
+            vec3a.scaleAndAdd(tangentR, 0, pt, p * PointK.sizeOf, sineff);
+            i++;  // next face
+         }
+         // now we have bi-tangent, compute the normal
+         vec3.cross(temp, 0, tangentL, 0, tangentR, 0);
+         vec3a.normalize(temp, 0);
+         this._prop.normal.setVec3(v, 0, temp);      
+         
+      }
+   }
 
    computeValence(hEdgeContainer) {
       let valenceMax = 0;
@@ -174,7 +252,7 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
                   }
                }
                const pair = hEdgeContainer.pair(current);
-               current = hEdgeContainer.next( pair );
+               current = hEdgeContainer._next( pair );
                count++;
             } while (current !== start);
             if (count > valenceMax) {
@@ -235,126 +313,7 @@ class VanillaVertexArray extends ExtensiblePixelArrayGroup {
 
 
 
-/**
- * A Point,
- * @typedef {Struct} Point
- * @property {number} x - 
- * @property {number} y 
- * @property {number} z
- * @property {number} c - crease, and may pack other attributes.
- */
-const PointK = {
-   x: 0,
-   y: 1,
-   z: 2,
-   c: 3,             // to be used by crease and other attributes if...
-   sizeOf: 4,
-};
-Object.freeze(PointK);
-
-/**
-// hEdge: 
-// pt: 
-// crease:      // (-1=corner, 3 edge with sharpness), (0=smooth, (0,1) edge with sharpness), (>1 == crease, 2 edge with sharpness))
-// normal:
-// color:
-*/
-class VertexArray extends VanillaVertexArray {
-   constructor(array, props, freePool, valenceMax) {
-      super(array, props, freePool, valenceMax);
-      this._pt = array.pt ?? null;
-   }
-   
-   * _baseEntries() {
-      yield* super._baseEntries();
-      yield ["_pt", this._pt];
-   }
-   
-   static create(size) {
-      const array = {
-         hfEdge: Int32PixelArray.create(1, 1, size),              // point back to the one of the hEdge ring that own the vertex. 
-         valence: Int32PixelArray.create(1, 1, size),         
-         pt: Float32PixelArray.create(PointK.sizeOf, 4, size),    // pts = {x, y, z}, 3 layers of float32 each? or 
-      };
-      const prop = {
-         color: Uint8PixelArray.create(4, 4, size),               // should we packed to pts as 4 channels(rgba)/layers of textures? including color?
-         // cached value
-         normal: Float16PixelArray.create(3, 3, size),
-      };
-      const freePool = {};                                        // use default
-
-      return new VertexArray(array, prop, freePool, 0);
-   }
-
-   static rehydrate(self) {
-      const ret = new VertexArray({}, {}, {}, 0);
-      ret._rehydrate(self);
-      return ret;
-   }
-   
-   createPositionTexture(gl) {
-      return this._pt.createDataTexture(gl);
-   }
-   
-   createNormalTexture(gl) {
-      return this._prop.normal.createDataTexture(gl);
-   }
-   
-   positionBuffer() {
-      return this._pt.getBuffer();
-   }
-   
-   copyPt(vertex, inPt, inOffset) {
-      vec3.copy(this._pt.getBuffer(), vertex * PointK.sizeOf, inPt, inOffset);
-      //this._base.pt.set(vertex, 0, 0, inPt[inOffset]);
-      //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
-      //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
-   }
-
-   crease(vertex) {
-      return this._pt.get(vertex, PointK.c);
-   }
-
-   setCrease(vertex, crease) {
-      this._pt.set(vertex, PointK.c, crease);
-   }
-   
-   /**
-    * Loop bitangent scheme
-    */
-   computeLoopNormal(hEdgeContainer) {
-      const tangentL = [0, 0, 0];
-      const tangentR = [0, 0, 0];
-      const temp = [0, 0, 0];
-      const handle = {face: 0};
-      const pt = this._pt.getBuffer();
-      for (let v of this) {     
-         const valence = this.valence(v);
-         const radStep = 2*Math.PI / valence;
-                  
-         let i = 0;
-         tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outHalfEdgeAround(hEdgeContainer, v)) {
-            let p = hEdgeContainer.destination(hEdge);
-            let coseff = Math.cos(i*radStep);
-            let sineff = Math.sin(i*radStep);
-            vec3a.scaleAndAdd(tangentL, 0, pt, p * PointK.sizeOf, coseff);
-            vec3a.scaleAndAdd(tangentR, 0, pt, p * PointK.sizeOf, sineff);
-            i++;  // next face
-         }
-         // now we have bi-tangent, compute the normal
-         vec3.cross(temp, 0, tangentL, 0, tangentR, 0);
-         vec3a.normalize(temp, 0);
-         this._prop.normal.setVec3(v, 0, temp);      
-         
-      }
-   }
-
-}
-
-
 export {
-   VanillaVertexArray,
    PointK,
    VertexArray,
 }

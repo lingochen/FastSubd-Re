@@ -426,6 +426,13 @@ class WholeEdgeArray extends PixelArrayGroup {
       ret._rehydrate(self);
       return ret;
    }
+
+   compactBuffer(hole) {
+      const b = this.b.compactBuffer(hole, this);
+      // TODO: comppact all other buffer
+
+      return {b};
+   }
    
    whEdgeBuffer() {
       return this._edge.getBuffer();
@@ -1351,7 +1358,7 @@ class TriangleMesh {
       const changed = {};
       //changed.v = this.v.compactBuffer();
       //changed.f = this.f.compactBuffer();
-      changed.h = this.h.b.compactBuffer(this.o, this.h);
+      changed.h = this.h.compactBuffer(this.o);
       
       return changed;
    }

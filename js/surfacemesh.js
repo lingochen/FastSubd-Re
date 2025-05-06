@@ -966,7 +966,7 @@ class FaceArray extends ExtensiblePixelArrayGroup {
    }
    
    stat() {
-      return "Triangle Count: " + this.length() + ";\n";
+      return "Polygon Count: " + this.length() + ";\n";
    }  
 }
 
@@ -1110,7 +1110,7 @@ class NameGroup {
       this._faces = {start: start, end: start+1};    // restriction to continus faces, should be an array of faces to be more flexible.
    }
 
-   finalize(end) {
+   finalizeEdit(end) {
       //this._faces.start = start;
       this._faces.end = end;
    }
@@ -1293,14 +1293,6 @@ class TriangleMesh {
    faceAroundFace(face) {
       return this._faces.faceAround(this._hEdges, face);
    }
-   
-   /**
-    * free unused memory from all the pixel's array.
-    * TODO: 
-    */
-   shrink() {
-      
-   }
   
    get f() {
       return this._faces;
@@ -1347,6 +1339,15 @@ class TriangleMesh {
               material: {type: "sampler2D", value: materialTexture},
              };
    }
+ 
+   
+   /**
+    * free unused memory from all the pixel's array.
+    * TODO: 
+    */
+   shrink() {
+      
+   }
    
    //
    // post process,
@@ -1386,7 +1387,7 @@ class TriangleMesh {
     * finalized meshes, filled holes, compute crease, valence
     * editDone() - post process
     */
-   doneEdit() {
+   finalizeEdit() {
       this.fillBoundary();
       // now compute valence, crease 
       this.v.computeValence(this.h);

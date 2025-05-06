@@ -68,7 +68,7 @@ class Importer {
 
    flushGroup() {
       if (this._currentNameGroup) {
-         this._currentNameGroup.finalize(this._polygonProcessed+1);
+         this._currentNameGroup.finalizeEdit(this._polygonProcessed+1);
       }
       this._currentNameGroup = null;
    }
@@ -130,7 +130,7 @@ class Importer {
    getScene() {
       this.flushGroup();
       for (let obj of this._objs) { // update all 
-         obj.doneEdit();
+         obj.finalizeEdit();
       }
       return {world: this._objs,};// materialCatalog: Array.from(this.materialCatalog.values())};
    }

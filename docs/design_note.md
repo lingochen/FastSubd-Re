@@ -30,13 +30,15 @@ directededge must be contiguous without hole or freed space. add another layer t
 
 so we needs flexibility to handle the editing operation, and the underlying data can be optimized and contiguous at will.(@done, 2023/12)
 
-now design an halfEdge based PolygonMesh to handle editing, and internally we use triangle directEdge mesh to handle the subdivision, drawing, and collision.(2025/02)
+now design an halfEdge based PolygonMesh to handle editing, and internally we use triangle directEdge mesh to handle the subdivision, drawing, and collision.(2025/02, @done, 2025/05)
 
 subdivision without updating halfEdge or directedEdge.
 
 nice to have?
 
 hierarchical subdivision surface?
+
+adaptive subdivision?
 
 
 [UV TexCoord Attribute](uv_texcoord.md)

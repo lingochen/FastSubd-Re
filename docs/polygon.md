@@ -9,10 +9,10 @@ Polygon editing, such as bevel, eeee, is more naturally done in Polygon than tri
 
 How? Migration.
 
-directed edges/boundary loop become internal implementation. hide it
+directed edges/boundary loop become internal implementation. hide it. (@done, 2025/05)
 
-exposed WholeEdge, use WholeEdge api to manipulated polyogn. 
+exposed WholeEdge/HalfEdge, use WholeEdge/HalfEdge api to manipulated polyogn. 
 
-WholeEdge mark as polygon edge or internal edge.
+WholeEdge mark as polygon edge or internal edge. 
 
-fit triangles to polygon. (support general triangulation at later date.)
+fit triangles to polygon. (support general triangulation at later date?)

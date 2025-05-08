@@ -813,12 +813,11 @@ class WholeEdgeArray extends PixelArrayGroup {
 
 
 class FaceArray extends ExtensiblePixelArrayGroup {
-   constructor(materialDepot, array, prop, fmm) {
+   constructor(array, prop, fmm) {
       super(prop, fmm);
       this._material = array?.material;
       this._hfEdge = array.hfEdge;
       this._numberOfSide = array.numberOfSide;
-      this._depot = materialDepot;
    }
    
    get _freeSlot() {
@@ -837,7 +836,7 @@ class FaceArray extends ExtensiblePixelArrayGroup {
       return ret;
    }
 
-   static create(depot, size) {
+   static create(size) {
       const array = {
          material: Int32PixelArray.create(1, 1, size),
          hfEdge: Int32PixelArray.create(1, 1, size),
@@ -845,18 +844,17 @@ class FaceArray extends ExtensiblePixelArrayGroup {
       };
       const fmm = {};
       
-      return new FaceArray(depot, array, {}, fmm);
+      return new FaceArray(array, {}, fmm);
    }
       
    alloc(material) {
       const face = this.allocArray(1)[0];
-      this._setMaterial(face, material);
+      this.setMaterial(face, material);
       return face;
    }
    
    free(handle) {
       throw("not implemented");
-      this._depot.releaseRef(this.material(handle));
       // this._faces.free(handle);
    }
    
@@ -931,26 +929,13 @@ class FaceArray extends ExtensiblePixelArrayGroup {
    createMaterialTexture(gl) {
       return this._material.createDataTexture(gl);
    }
-      
-   _materialAddRef(material, count) {
-      this._depot.addRef(material, count);
-   }
    
    material(polygon) {
       return this._material.get(polygon, 0);
    }
    
-   _setMaterial(polygon, material) {
-      this._material.set(polygon, 0, material);
-   }
-
    setMaterial(polygon, material) {
-      let oldMaterial = this.material(polygon);
-      if (oldMaterial !== material) {
-         this._setMaterial(polygon, material);
-         this._depot.addRef(material, 1);
-         this._depot.releaseRef(oldMaterial, 1);
-      }
+      this._material.set(polygon, 0, material);
    }
 
    sanityCheck(hEdgeContainer) {   // halfEdge and Triangle are align automatically, always true.
@@ -997,7 +982,7 @@ class HoleArray extends PixelArrayGroup {
       }
 
       return new HoleArray(base);
-   }
+   }33
 
    static rehydrate(self) {
       const holes = new HoleArray({});
@@ -1127,64 +1112,22 @@ function isSame(as, bs) {
  * vertex, hEdge, face, and boundaryLoop.
  */
 class TriangleMesh {
-   constructor(hEdges, vertices, faces, holes, bin, material) {
+   constructor(hEdges, vertices, faces, holes, bin) {
       this._bin = bin;
-      this._material = material;
       this._hEdges = hEdges;
       this._vertices = vertices;
       this._faces = faces;
       this._holes = holes;
    }
 
-   static create(materialDepot, size) {
-      const params = this._createInternal(materialDepot);
-
+   static create(size) {
       const dEdges = WholeEdgeArray.create(size);
       const vertices = VertexArray.create(size);
-      const faces = FaceArray.create(params[1].proxy, size);
+      const faces = FaceArray.create(size);
       const holes = HoleArray.create(size);
+      const bin = {nameGroup:[],};
 
-      return new TriangleMesh(dEdges, vertices, faces, holes, ...params);
-   }   
-
-   static _createInternal(materialDepot) {
-      const bin = {nameGroup:[], };
-
-      // we do per mesh accounting. But, does counting at end of release cycle make more sense?
-      const material = {depot: materialDepot};
-      const warehouse = new Map
-      material.used = warehouse;
-      material.proxy = {                    // TODO: use real proxy?
-         *[Symbol.iterator] () {
-            yield* warehouse;
-         },
-
-         addRef: (material, count)=> {
-            materialDepot.addRef(material, count);
-            let oldCount = warehouse.get(material);
-            if (oldCount === undefined) {
-               oldCount = 0;
-            }
-            warehouse.set(material, oldCount + count);
-         },
-
-         releaseRef: (material, count)=> {
-            materialDepot.releaseRef(material, count);
-            let oldCount = warehouse.get(material);
-            count = oldCount - count;
-            if (count) {
-               warehouse.set(material, count);
-            } else {
-               warehouse.delete(material);
-            }
-         },
-
-         getDefault: ()=> {
-            return materialDepot.getDefault();
-         },
-      };
-
-      return [bin, material];
+      return new TriangleMesh(dEdges, vertices, faces, holes, bin);
    }
    
    static rehydrate(self) {
@@ -1321,8 +1264,6 @@ class TriangleMesh {
       const positionTexture = this.v.createPositionTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
       const uvsTexture = this.h.d.createPropertyTexture('uv0', gl);
-      
-      const pbrTexture = this._material.depot.createTexture(gl);
       const materialTexture = this.f.createMaterialTexture(gl);
       
 /*      const materials = [];
@@ -1335,7 +1276,6 @@ class TriangleMesh {
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},
               uvs: {type: "sampler2DArray", value: uvsTexture},
-              pbr: {type: "sampler2D", value: pbrTexture},
               material: {type: "sampler2D", value: materialTexture},
              };
    }
@@ -1670,7 +1610,6 @@ class TriangleMesh {
 
 
 export {
-//   VertexArray,
    TriangleEdgeArray,
    WholeEdgeArray,
 //   FaceArray,

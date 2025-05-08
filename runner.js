@@ -161,7 +161,7 @@ function setRenderData(source) {
    info.pullLength = data.pullLength;
 
    // data
-   renderData.pbr = data.pbr;
+   renderData.pbr = {type: "sampler2D", value: info.depot.createTexture(info.gl)};    //data.pbr;
    renderData.material = data.material;
    renderData.position = data.position;
    renderData.attribute = data.attribute;

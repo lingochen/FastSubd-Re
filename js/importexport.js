@@ -47,11 +47,7 @@ class Importer {
    addObject(name="") {
       this.flushGroup();
       if (!this._currentMesh || !this._currentMesh.isEmpty()) {
-         if (this._triangleOnly) {
-            this._currentMesh = TriangleMesh.create(this._depot);
-         } else {
-            this._currentMesh = QuadMesh.create(this._depot);
-         }
+         this._currentMesh = TriangleMesh.create();
          // remember to add uvs dynamic property.
          this._currentUvs = WholeEdgeArray.addUV(this._currentMesh.h, 0);
 

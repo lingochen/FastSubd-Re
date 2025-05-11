@@ -1615,7 +1615,7 @@ class TriangleMesh {
 
 
 export {
-   TriangleEdgeArray,
+   //TriangleEdgeArray,
    WholeEdgeArray,
 //   FaceArray,
 //   HoleArray,

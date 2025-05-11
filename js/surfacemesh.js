@@ -518,6 +518,53 @@ class WholeEdgeArray extends PixelArrayGroup {
       } while (current !== end);
       //}
    }
+   
+   
+   /**
+    * used for circling over vertex
+    */
+   _stepHopAround(hEdge) {
+      hEdge = hEdge ^ 1;      // get pair
+      return this._stepSkip(hEdge, this._dEdge.next, this._boundary.next);
+   }
+   
+   /**
+    * used for circling over vertex
+    */
+   _stepAround(hEdge) {
+      hEdge = hEdge ^ 1;      // get pair
+      return this._step(hEdge, this._dEdge.next, this._boundary.next);
+   }
+   
+   /**
+    * looping over face.
+    * next()/prev(). skip over the internal edge if any.
+    * consolidated as internal function.
+    * 
+    */
+   _stepHop(hEdge, stepTri, stepB) {
+      const start = hEdge;
+      do {
+         hEdge = this._step(hEdge, stepTri, stepB);
+         if (!this.isInterior(hEdge)) {
+            return hEdge;
+         }
+         // skip interior edge
+         hEdge = hEdge ^ 1;            // halfEdge twin.
+      } while (start !== hEdge);
+   }
+   
+   _step(hEdge, stepTri, stepB) {
+      let privyHfEdge = this._edge._get( hEdge );
+      
+      if (privyHfEdge >= 0) {
+         privyHfEdge = stepTri.call(this._dEdge, privyHfEdge);
+         return this._dEdge.halfEdge(privyHfEdge);
+      } else {
+         privyHfEdge = stepB.call(this._boundary, -(privyHfEdge+1));
+         return this._boundary.halfEdge(privyHfEdge);
+      }
+   }
 
    /**
     * iterate over faces's inner halfEdge starting from input hEdge
@@ -605,52 +652,6 @@ class WholeEdgeArray extends PixelArrayGroup {
       this._boundary.linkNext(a, b);
    }
    
-   /**
-    * used for circling over vertex
-    */
-   _stepOverAround(hEdge) {
-      hEdge = hEdge ^ 1;      // get pair
-      return this._stepOver(hEdge, this._dEdge.next, this._boundary.next);
-   }
-   
-   /**
-    * used for circling over vertex
-    */
-   _stepAround(hEdge) {
-      hEdge = hEdge ^ 1;      // get pair
-      return this._step(hEdge, this._dEdge.next, this._boundary.next);
-   }
-   
-   /**
-    * circling over face.
-    * next()/prev(). skip over the internal edge if any.
-    * consolidated as internal function.
-    * 
-    */
-   _stepOver(hEdge, stepTri, stepB) {
-      const start = hEdge;
-      do {
-         hEdge = this._step(hEdge, stepTri, stepB);
-         if (!this.isInterior(hEdge)) {
-            return hEdge;
-         }
-         // stepOver interior edge
-         hEdge = hEdge ^ 1;            // halfEdge twin.
-      } while (start !== hEdge);
-   }
-   
-   _step(hEdge, stepTri, stepB) {
-      let privyHfEdge = this._edge._get( hEdge );
-      
-      if (privyHfEdge >= 0) {
-         privyHfEdge = stepTri.call(this._dEdge, privyHfEdge);
-         return this._dEdge.halfEdge(privyHfEdge);
-      } else {
-         privyHfEdge = stepB.call(this._boundary, -(privyHfEdge+1));
-         return this._boundary.halfEdge(privyHfEdge);
-      }
-   }
-   
    _next(hEdge) {
       return this._step(hEdge, this._dEdge.next, this._boundary.next);
    }
@@ -660,7 +661,7 @@ class WholeEdgeArray extends PixelArrayGroup {
     * 
     */
    next(hEdge) {
-      return this._stepOver(hEdge, this._dEdge.next, this._boundary.next);
+      return this._stepSkip(hEdge, this._dEdge.next, this._boundary.next);
    }
    
    _prev(hEdge) {
@@ -1198,12 +1199,15 @@ class TriangleMesh {
       }
    } 
    
+   stepAround() {
+      return this._hEdges._stepAround;
+   }
    
    /**
     * circle around vertex, return inEdge(point toward vertex).
     * 
     */
-   * inHalfEdgeAroundVertex(vert, stepAround=this._hEdges._stepAroundOver) {
+   * inHalfEdgeAroundVertex(vert, stepAround=this._hEdges._stepHopAround) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vertices);
          for (let out of this._hEdges.circulator(outEdge, outEdge, stepAround)) {
@@ -1215,7 +1219,7 @@ class TriangleMesh {
    /**
     * circle around vertex, return outEdge.
     */
-   * outHalfEdgeAroundVertex(vert, stepAround= this._hEdges._stepAroundOver) {
+   * outHalfEdgeAroundVertex(vert, stepAround=this._hEdges._stepAroundOver) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
          yield* this._hEdges.circulator(outEdge, outEdge, stepAround);
@@ -1226,6 +1230,7 @@ class TriangleMesh {
     * simple wrapper around FaceArray.halfEdgeLoop 
     */ 
    halfEdgeAroundFace(face) {
+      //const hfEdge = 
       return this._faces.halfEdgeLoop(this._hEdges, face);
    }
    

@@ -111,13 +111,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
       //this._base.pt.set(vertex, 0, 1, inPt[inOffset+1]);
       //this._base.pt.set(vertex, 0, 2, inPt[inOffset+2]);
    }   
-   
-/*
-   isFree(vertex) {
-      return this._vertex.valence.get(vertex, 0) === 0;  // valence >= 3 for valid exit
-   }
- */
-   
+
    //
    // iterator start
    //
@@ -129,9 +123,9 @@ class VertexArray extends ExtensiblePixelArrayGroup {
    * rangeIter(start, stop) {
       stop = Math.min(this._hfEdge.length(), stop);
       for (let i = start; i < stop; i++) {
-         // if (!isFree(i)) {
-         yield i;
-         //}
+         if (this.hasHalfEdge(i)) {
+            yield i;
+         }
       }
    }
    
@@ -164,7 +158,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
    }
    
    hasHalfEdge(vert) {
-      return this._valence.get(vert, 0) > 0;
+      return this._valence.get(vert, 0) > 0;       // >= 3> valid config
    }
    
    setHalfEdge(vert, hEdge) {

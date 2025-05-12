@@ -1,10 +1,9 @@
 /**
- * DirectedEdge, Catmull-Clark subdivision, Loop Sudivision, Modified Buttefly Subdivision.
+ * DirectedEdge, Loop Sudivision, Modified Buttefly Subdivision.
  * 
  */
  
-//import {QuadMesh} from './quadmesh.js';
-import {TriangleMesh, WholeEdgeArray} from './surfacemesh.js';
+import {TriangleMesh} from './surfacemesh.js';
 import * as Tri from './subdividetri.js';
 import * as Loop from './subdivideloop.js';
 // import * as MB from './subidivdemb.js';
@@ -48,7 +47,7 @@ function createNextLevelTriMesh(source) {
    const subd = TriangleMesh.create(source._material.depot);
    subd.v._valenceMax = source.v.valenceMax();
    // remember to add "uvs" dynamic property
-   WholeEdgeArray.addUV(subd.h, 0);
+   TriangleMesh.addUV(subd, 0);
    
    // compute size
    const nVertices = source.v.length() + source.h.w.length();

@@ -6,7 +6,7 @@
 // 3) google drive, microsoft onedrive, baidupan to come later.
 //
 //
-import {TriangleMesh, WholeEdgeArray} from './surfacemesh.js';
+import {TriangleMesh} from './surfacemesh.js';
 import {blinnPhongToPBR} from './material.js';
 import * as Mat4 from './mat4.js';
 import {vec3a} from './vec3.js';
@@ -49,7 +49,7 @@ class Importer {
       if (!this._currentMesh || !this._currentMesh.isEmpty()) {
          this._currentMesh = TriangleMesh.create();
          // remember to add uvs dynamic property.
-         this._currentUvs = WholeEdgeArray.addUV(this._currentMesh.h, 0);
+         this._currentUvs = TriangleMesh.addUV(this._currentMesh, 0);
 
          this._objs.push( this._currentMesh );
       }

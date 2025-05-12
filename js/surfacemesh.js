@@ -791,6 +791,10 @@ class TriangleMesh {
    isEmpty() {
       return (this.v.length() === 0) && (this.f.length() === 0);
    }
+   
+   static addUV(mesh, index=0) {
+      return WholeEdgeArray.addUV(mesh.h, index);
+   }
 
    // for debugging purpose.
 /*   _gatherEdge(vertex) {
@@ -820,8 +824,6 @@ class TriangleMesh {
 
 
 export {
-   //TriangleEdgeArray,
-   WholeEdgeArray,
 //   FaceArray,
 //   HoleArray,
    TriangleMesh,

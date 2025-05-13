@@ -511,11 +511,11 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    
    /**
-    * used for circling over vertex
+    * used for circling over vertex, skipped over internal edge  if any
     */
    _stepHopAround(hEdge) {
       hEdge = hEdge ^ 1;      // get pair
-      return this._stepSkip(hEdge, this._dEdge.next, this._boundary.next);
+      return this._stepHop(hEdge, this._dEdge.next, this._boundary.next);
    }
    
    /**
@@ -604,7 +604,7 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    destination(hEdge) {
       if (hEdge & 1) {
-         hEdge = this._edge._get(hEdge^1);
+         hEdge = this._edge._get(hEdge ^ 1);
          return this._dEdge.origin(hEdge);
       } else {
          hEdge = this._edge._get(hEdge);
@@ -616,7 +616,7 @@ class WholeEdgeArray extends PixelArrayGroup {
    // return incident vertex position
    origin(hEdge) {
       if (hEdge & 1) {
-         hEdge = this._edge.get(hEdge^1);
+         hEdge = this._edge._get(hEdge ^ 1);
          hEdge = this._dEdge.next(hEdge);
          return this._dEdge.origin(hEdge);
       } else {

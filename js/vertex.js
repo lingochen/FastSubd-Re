@@ -129,30 +129,6 @@ class VertexArray extends ExtensiblePixelArrayGroup {
       }
    }
    
-   * outHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._valence.get(vert, 0) > 0) {   // has outEdge?
-         const start = this._hfEdge.get(vert, 0);
-         return hEdgeContainer.circulator(start, start, hEdgeContainer._stepAround);
-      }
-   }
-   
-   // ccw ordering
-   * inHalfEdgeAround(hEdgeContainer, vert) {
-      if (this._valence.get(vert, 0) > 0) {   // has outEdge?
-         const start = this._hfEdge.get(vert, 0);
-         let current = start;
-         do {
-            const inEdge = hEdgeContainer.pair(current);
-            current = hEdgeContainer.next( inEdge );
-            yield inEdge;
-         } while (current !== start);
-      }
-   }
-   
-   // faceAround(hEdges, vert)
-   // vertexAround(hEdges, vert)
-   // wEdgeAround(hEdges, vert)
-   
    halfEdge(vert) {
       return this._hfEdge.get(vert, 0);
    }
@@ -194,11 +170,12 @@ class VertexArray extends ExtensiblePixelArrayGroup {
    /**
     * Loop bitangent scheme
     */
-   computeLoopNormal(hEdgeContainer) {
+   computeLoopNormal(mesh) {
       const tangentL = [0, 0, 0];
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
+      const hEdgeContainer = mesh.h;
       const pt = this._pt.getBuffer();
       for (let v of this) {     
          const valence = this.valence(v);
@@ -206,7 +183,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
                   
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
-         for (let hEdge of this.outHalfEdgeAround(hEdgeContainer, v)) {
+         for (let hEdge of mesh.outHalfEdgeAroundVertex(v)) {
             let p = hEdgeContainer.destination(hEdge);
             let coseff = Math.cos(i*radStep);
             let sineff = Math.sin(i*radStep);
@@ -266,21 +243,21 @@ class VertexArray extends ExtensiblePixelArrayGroup {
       this._valenceMax = valenceMax;
    }
 
-   sanityCheck(hEdgeContainer) {
+   sanityCheck(mesh) {
       let sanity = true;
       for (let vertex of this) {
          let outEdge = this.halfEdge(vertex);
          if (outEdge < 0) {   // not initialized yet
             break;
          }
-         let expect = hEdgeContainer.origin(outEdge);
+         let expect = mesh.h.origin(outEdge);
          if (expect !== vertex) {
             console.log("vertex " + vertex + "'s outEdge " + outEdge + " is wrong, expected: " + expect);
             sanity = false;
          } else { // check prev,next are the same. 
             let iterationCount = 0;    // make sure, no infinite loop
-            for (let outEdge of this.outHalfEdgeAround(hEdgeContainer, vertex)) {
-               const orig = hEdgeContainer.origin(outEdge);
+            for (let outEdge of mesh.outHalfEdgeAroundVertex(vertex)) {
+               const orig = mesh.h.origin(outEdge);
                if (orig !== vertex) {
                   console.log("vertex: " + vertex + "'s circulator is broken");
                   sanity = false;

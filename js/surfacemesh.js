@@ -412,9 +412,13 @@ class TriangleMesh {
     * circle around vertex, return inEdge(point toward vertex).
     * 
     */
-   * inHalfEdgeAroundVertex(vert, stepAround=this._hEdges._stepHopAround) {
+   * inHalfEdgeAroundVertex(vert, noHop=true) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vertices);
+         let stepAround = this._hEdges._stepHopAround;
+         if (noHop) {
+            stepAround = this._hEdges._stepAround;
+         }
          for (let out of this._hEdges.circulator(outEdge, outEdge, stepAround)) {
             yield this._hEdges.pair(out);
          }
@@ -424,9 +428,13 @@ class TriangleMesh {
    /**
     * circle around vertex, return outEdge.
     */
-   * outHalfEdgeAroundVertex(vert, stepAround=this._hEdges._stepAroundOver) {
+   * outHalfEdgeAroundVertex(vert, noHop=true) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
+         let stepAround = this._hEdges._stepHopAround;
+         if (noHop) {
+            stepAround = this._hEdges._stepAround;
+         }
          yield* this._hEdges.circulator(outEdge, outEdge, stepAround);
       }
    }
@@ -547,7 +555,7 @@ class TriangleMesh {
    }
    
    findHalfEdge(v0, v1) {
-      for (let outEdge of this._vertices.outHalfEdgeAround(this._hEdges, v0)) {
+      for (let outEdge of this.outHalfEdgeAroundVertex(v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             return outEdge;
          }
@@ -556,7 +564,7 @@ class TriangleMesh {
    }
    
    _computeNormal() {
-      this.v.computeLoopNormal(this.h);
+      this.v.computeLoopNormal(this);
    }
       
    addNameGroup(name, start) {
@@ -696,7 +704,7 @@ class TriangleMesh {
    */
    findFreeEdge(v0, v1) {
       let freeEdge = -1;
-      for (let outEdge of this.outHalfEdgeAroundVertex(v0, this._hEdges._stepAround)) {
+      for (let outEdge of this.outHalfEdgeAroundVertex(v0)) {
          if (this._hEdges.destination(outEdge) === v1) {
             if (!this._hEdges.isBoundary(outEdge)) {  // non-free, non-manifold
                return {found: 0, outEdge};
@@ -774,7 +782,7 @@ class TriangleMesh {
     
    sanityCheck() { 
       const hOk = this.h.sanityCheck();
-      const vOk = this.v.sanityCheck(this.h);
+      const vOk = this.v.sanityCheck(this);
       const fOk = this.f.sanityCheck(this.h);
       const oOk = this.o.sanityCheck(this.h);
       return (vOk && hOk && fOk && oOk);

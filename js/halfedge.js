@@ -651,7 +651,7 @@ class WholeEdgeArray extends PixelArrayGroup {
     * 
     */
    next(hEdge) {
-      return this._stepSkip(hEdge, this._dEdge.next, this._boundary.next);
+      return this._stepHop(hEdge, this._dEdge.next, this._boundary.next);
    }
    
    _prev(hEdge) {

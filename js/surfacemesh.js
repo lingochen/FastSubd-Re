@@ -64,6 +64,10 @@ class FaceArray extends ExtensiblePixelArrayGroup {
       // this._faces.free(handle);
    }
    
+   createMaterialTexture(gl) {
+      return this._material.createDataTexture(gl);
+   }   
+   
    *[Symbol.iterator] () {
       yield* this.rangeIter(0, this.length());
    }
@@ -72,51 +76,6 @@ class FaceArray extends ExtensiblePixelArrayGroup {
       stop = Math.min(this.length(), stop);
       for (let i = start; i < stop; i++) {
          yield i;
-      }
-   }
-   
-   * vertexAround(hEdgeContainer, face) {
-      for (const hEdge of this.halfEdgeAround(hEdgeContainer, face)) {
-         yield hEdgeContainer.origin(hEdge);
-      }
-   }
-   
-   /* * wEdgeLoop(face) {
-   } */
-   
-   * faceAround(hEdgeContainer, face) {
-      for (let [hEdge, neighborFace] of this.faceAroundEntries(hEdgeContainer, face)) {
-         yield neighborFace;
-      }
-   }
-   
-   * faceAroundEntries(hEdgeContainer, face) {
-      for (const hEdge of this.halfEdgeLoop(face)) {
-         const pair = hEdgeContainer.pair(hEdge);
-         if (pair >= 0) { // we want face not hole
-            yield [hEdge, hEdgeContainer.face(pair)];
-         }
-      }
-   }
-   
-   /**
-    * iterator for the halfEdge loop that form the polygon.
-    * 
-    */
-   * halfEdgeAround(hfEdgeContainer, face) {
-      const start = this.halfEdge(face);
-      yield* hfEdgeContainer.halfEdgeAroundFace(start);
-   }
-   
-   /**
-    * similar to array.entries. return [index, element]
-    * @param {handle} face 
-    */
-   * halfEdgeAroundEntries(hfEdgeContainer, face) {
-      const start = this.halfEdge(face);
-      let i = 0;
-      for (let hfEdge of hfEdgeContainer.halfEdgeAroundFace(start)) {
-         yield [i++, hfEdge];
       }
    }
    
@@ -131,11 +90,7 @@ class FaceArray extends ExtensiblePixelArrayGroup {
    setHalfEdge(handle, hEdge) {
       this._hfEdge.set(handle, 0, hEdge);
    }
-   
-   createMaterialTexture(gl) {
-      return this._material.createDataTexture(gl);
-   }
-   
+
    material(polygon) {
       return this._material.get(polygon, 0);
    }
@@ -144,7 +99,7 @@ class FaceArray extends ExtensiblePixelArrayGroup {
       this._material.set(polygon, 0, material);
    }
 
-   sanityCheck(hEdgeContainer) {   // halfEdge and Triangle are align automatically, always true.
+   sanityCheck(hEdgeContainer) {   //
       for (let face of this) {
          //for (let hEdge of this.halfEdgeAround(hEdgeContainer, face)) {
          //   const pair = hEdgeContainer.pair(hEdge);
@@ -188,7 +143,7 @@ class HoleArray extends PixelArrayGroup {
       }
 
       return new HoleArray(base);
-   }33
+   }
 
    static rehydrate(self) {
       const holes = new HoleArray({});
@@ -220,15 +175,6 @@ class HoleArray extends PixelArrayGroup {
       }
    }
 
-   * halfEdgeAround(hEdgeContainer, hole) {
-      const start = this.halfEdge(hole);
-      let current = start;
-      do {
-         yield current;
-         current = hEdgeContainer._next(current);
-      } while (current !== start);
-   }
-   
    free(handle) {
       // assume handle is valid
       if (handle >= 0) {
@@ -274,7 +220,8 @@ class HoleArray extends PixelArrayGroup {
    sanityCheck(hEdgeContainer) {
       let sanity = true;
       for (let hole of this) {
-         for (let hEdge of this.halfEdgeAround(hEdgeContainer, hole)) {
+         const hfEdge = this.halfEdge(hole);
+         for (let hEdge of hEdgeContainer.circulator(hfEdge, hfEdge, hEdgeContainer._next)) {
             const holeCheck = -(hEdgeContainer.face(hEdge)+1);
             if (holeCheck !== hole) {
                sanity = false;
@@ -404,10 +351,6 @@ class TriangleMesh {
       }
    } 
    
-   stepAround() {
-      return this._hEdges._stepAround;
-   }
-   
    /**
     * circle around vertex, return inEdge(point toward vertex).
     * 
@@ -439,20 +382,34 @@ class TriangleMesh {
       }
    }
    
+   * vertexAroundFace(face) {
+      const start = this._faces.halfEdge(face);
+      for (let hfEdge of this._hEdges.circulator(start, start, this._hEdges.next)) {
+         yield this._hEdges.origin(hfEdge);
+      }
+   }
+   
    /**
     * simple wrapper around FaceArray.halfEdgeLoop 
     */ 
    halfEdgeAroundFace(face) {
-      //const hfEdge = 
-      return this._faces.halfEdgeLoop(this._hEdges, face);
+      const hfEdge = this._faces.halfEdge(face);
+      return this._hEdges.circulator(hfEdge, hfEdge, this._hEdges.next);
    }
    
+   /**
+    * similar to array.entries. return [index, element]
+    * @param {handle} face 
+    */
    //halfEdgeEntriesAroundFace(face) {
    //   return this._faces.halfEdgeEntriesLoop(this._hEdges, faces);
    //}
    
-   faceAroundFace(face) {
-      return this._faces.faceAround(this._hEdges, face);
+   * faceAroundFace(face) {
+      const start = this._faces.halfEdge(face);
+      for (let hfEdge of this._hEdges.circulator(start, start, this._hEdges.next)) {
+         yield this._hEdges.face( hfEdge ^ 1 );
+      }
    }
   
    get f() {

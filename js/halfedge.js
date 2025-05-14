@@ -509,6 +509,58 @@ class WholeEdgeArray extends PixelArrayGroup {
       //}
    }
    
+   /**
+    * iterate over faces's inner halfEdge starting from input hEdge to end hEdge
+    * @param {number} current - start of face hfEdge loop.
+    * @param {number) end - end of face hfEdge loop.
+    */
+   * aroundF(current, end) {
+      //if (start !== HalfEdgeK.end) {
+         do {
+            yield current;
+            current = this._next(current);
+         } while (current !== end);
+      //}
+   }
+   
+   * hopAroundF(current, end) {
+      do {
+         yield current;
+         current = this.next(current);
+      } while (current !== end);
+   }
+      
+   * inAroundV(currentIn, end) {
+      //if (currentIn !== HalfEdgeK.end) {
+         do {
+            yield currentIn;
+            currentIn = this.pair( this._next( currentIn ) );
+         } while (currentIn !== end);
+      //}
+   }
+   
+   * inHopAroundV(currentIn, end) {
+      do {
+         yield currentIn;
+         currentIn = this.pair( this.next( currentIn ) );
+      } while (currentIn !== end);
+   }
+
+   * outAroundV(currentOut, end) {
+      //if (currentOut !== HalfEdgeK.end) {
+         do {
+            yield currentOut;
+            currentOut = this._next( this.pair(currentOut) );         
+         } while (currentOut !== end);
+      //}
+   }   
+   
+   * outHopAroundV(currentOut, end) {
+      do {
+         yield currentOut;
+         currentOut = this.next( this.pair(currentOut) );
+      } while (currentOut !== end);
+   }
    
    /**
     * used for circling over vertex, skipped over internal edge  if any
@@ -556,38 +608,7 @@ class WholeEdgeArray extends PixelArrayGroup {
       }
    }
 
-   /**
-    * iterate over faces's inner halfEdge starting from input hEdge
-    * 
-    * @param {number} start - start and end of face hfEdge loop.
-    */
-   * halfEdgeAroundFace(start) {//, end = start) {
-      //if (start !== HalfEdgeK.end) {
-         let current = start;
-         do {
-            yield current;
-            current = this.next(current);
-         } while (current !== start);
-      //
-   }
-   
-   * outHalfEdgeAroundVertex(currentOut, end) {
-      //if (currentOut !== HalfEdgeK.end) {
-         do {
-            yield currentOut;
-            currentOut = this.next( this.pair(currentOut) );         
-         } while (currentOut !== end);
-      //}
-   }
-      
-   * inHalfEdgeAroundVertex(currentIn, end) {
-      //if (currentIn !== HalfEdgeK.end) {
-         do {
-            yield currentIn;
-            currentIn = this.pair( this.next( currentIn ) );
-         } while (currentIn !== end);
-      //}
-   }
+
    // 
    // end of iterator
    //

@@ -159,12 +159,6 @@ class FaceArray extends HoleArray {
       
       return new FaceArray(array, {}, fmm);
    }
-      
-   alloc(material) {
-      const face = this.allocArray(1)[0];
-      this.setMaterial(face, material);
-      return face;
-   }
    
    createMaterialTexture(gl) {
       return this._material.createDataTexture(gl);
@@ -506,7 +500,8 @@ class TriangleMesh {
     * break up polygon as triangle fan like.
     */
    addFace(pts, material) {
-      const newPoly = this._faces.alloc(material);
+      const newPoly = this._faces.alloc();
+      this._faces.setMaterial(newPoly, material);
       
       const tri = [];
       const triIdx = [0, 1, 2];

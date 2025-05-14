@@ -18,109 +18,10 @@ import {WholeEdgeArray} from "./halfedge.js";
 
 
 
-class FaceArray extends ExtensiblePixelArrayGroup {
-   constructor(array, prop, fmm) {
-      super(prop, fmm);
-      this._material = array?.material;
-      this._hfEdge = array.hfEdge;
-      this._numberOfSide = array.numberOfSide;
-   }
-   
-   get _freeSlot() {
-      return this._material;
-   }
-   
-   * _baseEntries() {
-      yield ["_material", this._material];
-      yield ["_hfEdge", this._hfEdge];
-      yield ["_numberOfSide", this._numberOfSide];
-   }
-
-   static rehydrate(self) {
-      const ret = new FaceArray(null, {}, {}, {});  
-      ret._rehydrate(self);
-      return ret;
-   }
-
-   static create(size) {
-      const array = {
-         material: Int32PixelArray.create(1, 1, size),
-         hfEdge: Int32PixelArray.create(1, 1, size),
-         numberOfSide: Int32PixelArray.create(1, 1, size),
-      };
-      const fmm = {};
-      
-      return new FaceArray(array, {}, fmm);
-   }
-      
-   alloc(material) {
-      const face = this.allocArray(1)[0];
-      this.setMaterial(face, material);
-      return face;
-   }
-   
-   free(handle) {
-      throw("not implemented");
-      // this._faces.free(handle);
-   }
-   
-   createMaterialTexture(gl) {
-      return this._material.createDataTexture(gl);
-   }   
-   
-   *[Symbol.iterator] () {
-      yield* this.rangeIter(0, this.length());
-   }
-
-   * rangeIter(start, stop) {
-      stop = Math.min(this.length(), stop);
-      for (let i = start; i < stop; i++) {
-         yield i;
-      }
-   }
-   
-   halfEdgeCount(_hEdges, polygon) {
-      return this._numberOfSide.get(polygon, 0);
-   }
-   
-   halfEdge(face) {
-      return this._hfEdge.get(face, 0);
-   }   
-   
-   setHalfEdge(handle, hEdge) {
-      this._hfEdge.set(handle, 0, hEdge);
-   }
-
-   material(polygon) {
-      return this._material.get(polygon, 0);
-   }
-   
-   setMaterial(polygon, material) {
-      this._material.set(polygon, 0, material);
-   }
-
-   sanityCheck(hEdgeContainer) {   //
-      for (let face of this) {
-         //for (let hEdge of this.halfEdgeAround(hEdgeContainer, face)) {
-         //   const pair = hEdgeContainer.pair(hEdge);
-            //if (hEdgeContainer.isBoundary(pair)) {
-            //   console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
-            //}
-         //}
-      }
-      return true;
-   }
-   
-   stat() {
-      return "Polygon Count: " + this.length() + ";\n";
-   }  
-}
-
-
 /**
  * BoundaryLoop aka HoleArray
  */
-class HoleArray extends PixelArrayGroup {
+class HoleArray extends ExtensiblePixelArrayGroup {
    constructor(holes) {
       super({});
       this._hfEdge = holes?.hfEdge;
@@ -202,19 +103,11 @@ class HoleArray extends PixelArrayGroup {
    }
 
    setHalfEdge(handle, hEdge) {
-      if (handle >= 0) {
-         this._hfEdge.set(handle, 0, hEdge);
-      } else {
-         throw("invalid hole: " + handle);
-      }
+      this._hfEdge.set(handle, 0, hEdge);
    }
    
    setNumberOfSide(handle, sides) {
-      if (handle >= 0) {
-         this._numberOfSide.set(handle, 0, sides);
-      } else {
-         throw("invalid hole: " + handle);
-      }
+      this._numberOfSide.set(handle, 0, sides);
    }
 
    sanityCheck(hEdgeContainer) {
@@ -236,6 +129,73 @@ class HoleArray extends PixelArrayGroup {
       return "Holes Count: " + this.size() + ";\n";
    }
 }
+
+
+
+class FaceArray extends HoleArray {
+   constructor(array, prop, fmm) {
+      super(array, prop, fmm);
+      this._material = array?.material;
+   }
+   
+   * _baseEntries() {
+      yield* super._baseEntries();
+      yield ["_material", this._material];
+   }
+
+   static rehydrate(self) {
+      const ret = new FaceArray(null, {}, {}, {});  
+      ret._rehydrate(self);
+      return ret;
+   }
+
+   static create(size) {
+      const array = {
+         material: Int32PixelArray.create(1, 1, size),
+         hfEdge: Int32PixelArray.create(1, 1, size),
+         numberOfSide: Int32PixelArray.create(1, 1, size),
+      };
+      const fmm = {};
+      
+      return new FaceArray(array, {}, fmm);
+   }
+      
+   alloc(material) {
+      const face = this.allocArray(1)[0];
+      this.setMaterial(face, material);
+      return face;
+   }
+   
+   createMaterialTexture(gl) {
+      return this._material.createDataTexture(gl);
+   }   
+
+   material(polygon) {
+      return this._material.get(polygon, 0);
+   }
+   
+   setMaterial(polygon, material) {
+      this._material.set(polygon, 0, material);
+   }
+
+   sanityCheck(hEdgeContainer) {   //
+      for (let face of this) {
+         //for (let hEdge of this.halfEdgeAround(hEdgeContainer, face)) {
+         //   const pair = hEdgeContainer.pair(hEdge);
+            //if (hEdgeContainer.isBoundary(pair)) {
+            //   console.log("polygon: " + face + " has boundary: " + pair + " on hEdge: " + hEdge);
+            //}
+         //}
+      }
+      return true;
+   }
+   
+   stat() {
+      return "Polygon Count: " + this.length() + ";\n";
+   }  
+}
+
+
 
 
 
@@ -789,7 +749,7 @@ class TriangleMesh {
 
 
 export {
-//   FaceArray,
 //   HoleArray,
+//   FaceArray,
    TriangleMesh,
 }

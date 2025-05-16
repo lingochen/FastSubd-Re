@@ -184,7 +184,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
          let i = 0;
          tangentL[0] = tangentL[1] = tangentL[2] = tangentR[0] = tangentR[1] = tangentR[2] = 0.0;
          for (let hEdge of mesh.outHalfEdgeAroundVertex(v)) {
-            let p = hEdgeContainer.destination(hEdge);
+            let p = hEdgeContainer.half.destination(hEdge);
             let coseff = Math.cos(i*radStep);
             let sineff = Math.sin(i*radStep);
             vec3a.scaleAndAdd(tangentL, 0, pt, p * PointK.sizeOf, coseff);
@@ -210,7 +210,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
             let creaseCount = 0;
             do {
                if (creaseCount < 3) {
-                  let value = hEdgeContainer.sharpness(current);
+                  let value = hEdgeContainer.sharpness(current/2);      // whEdge
                   if (value > 0) {
                      if (sharpness !== 0) {  // get minimum excluding zero
                         sharpness = Math.min(sharpness, value);
@@ -222,8 +222,8 @@ class VertexArray extends ExtensiblePixelArrayGroup {
                      creaseCount = 3;
                   }
                }
-               const pair = hEdgeContainer.pair(current);
-               current = hEdgeContainer._next( pair );
+               const pair = hEdgeContainer.half.pair(current);
+               current = hEdgeContainer.half._next( pair );
                count++;
             } while (current !== start);
             if (count > valenceMax) {
@@ -250,14 +250,14 @@ class VertexArray extends ExtensiblePixelArrayGroup {
          if (outEdge < 0) {   // not initialized yet
             break;
          }
-         let expect = mesh.h.origin(outEdge);
+         let expect = mesh.h.half.origin(outEdge);
          if (expect !== vertex) {
             console.log("vertex " + vertex + "'s outEdge " + outEdge + " is wrong, expected: " + expect);
             sanity = false;
          } else { // check prev,next are the same. 
             let iterationCount = 0;    // make sure, no infinite loop
             for (let outEdge of mesh.outHalfEdgeAroundVertex(vertex)) {
-               const orig = mesh.h.origin(outEdge);
+               const orig = mesh.h.half.origin(outEdge);
                if (orig !== vertex) {
                   console.log("vertex: " + vertex + "'s circulator is broken");
                   sanity = false;

@@ -328,18 +328,20 @@ class TriangleMesh {
    * outHalfEdgeAroundVertex(vert, noHop=true) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
-         let stepAround = this._hEdges._stepHopAround;
+         const half = this._hEdges.half;
+         let stepAround = half._stepHopAround;
          if (noHop) {
-            stepAround = this._hEdges._stepAround;
+            stepAround = half._stepAround;
          }
-         yield* this._hEdges.circulator(outEdge, outEdge, stepAround);
+         yield* half.circulator(outEdge, outEdge, stepAround);
       }
    }
    
    * vertexAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      for (let hfEdge of this._hEdges.circulator(start, start, this._hEdges.next)) {
-         yield this._hEdges.origin(hfEdge);
+      const half = this._hEdges.half;
+      for (let hfEdge of half.circulator(start, start, half.next)) {
+         yield half.origin(hfEdge);
       }
    }
    
@@ -348,7 +350,8 @@ class TriangleMesh {
     */ 
    halfEdgeAroundFace(face) {
       const hfEdge = this._faces.halfEdge(face);
-      return this._hEdges.circulator(hfEdge, hfEdge, this._hEdges.next);
+      const half = this._hEdges.half;
+      return half.circulator(hfEdge, hfEdge, half.next);
    }
    
    /**
@@ -361,8 +364,9 @@ class TriangleMesh {
    
    * faceAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      for (let hfEdge of this._hEdges.circulator(start, start, this._hEdges.next)) {
-         yield this._hEdges.face( hfEdge ^ 1 );
+      const half = this._hEdges.half;
+      for (let hfEdge of half.circulator(start, start, half.next)) {
+         yield half.face( hfEdge ^ 1 );
       }
    }
   
@@ -389,10 +393,10 @@ class TriangleMesh {
    makePullBuffer(gl) {
       //this.v.computeNormal(this.h);
    
-      const vertexTexture = this.h.createVertexTexture(gl);
+      const vertexTexture = this.h.half.createVertexTexture(gl);
       const positionTexture = this.v.createPositionTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
-      const uvsTexture = this.h.d.createPropertyTexture('uv0', gl);
+      const uvsTexture = this.h.half.d.createPropertyTexture('uv0', gl);
       const materialTexture = this.f.createMaterialTexture(gl);
       
 /*      const materials = [];
@@ -400,7 +404,7 @@ class TriangleMesh {
          materials.push( this._material.depot.getUniforms(handle) );
       }*/
       
-      return {pullLength: this.h.d.length()*3,
+      return {pullLength: this.h.half.d.length()*3,
               vertex: {type:"isampler2D", value: vertexTexture},
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},
@@ -436,15 +440,16 @@ class TriangleMesh {
    // post process
    // fill boundaryLoop with holes.
    fillBoundary() {
+      const half = this._hEdges.half;
       // walk through all unassigned boundaryEdge, assign hole to each boundary group.
-      for (let boundary of this._hEdges.unassignedBoundary()) {
+      for (let boundary of half.unassignedBoundary()) {
             let hole = this._holes.alloc();
             this._holes.setHalfEdge(hole, boundary);
             let sides = 0;
             // assigned holeFace to whole group
-            for (let current of this._hEdges.circulator(boundary, boundary, this._hEdges._next)) {
-               this._hEdges.setSharpness(current, -1);   // boundary is infinite crease.
-               this._hEdges.setFace(current, -(hole+1));
+            for (let current of half.circulator(boundary, boundary, half._next)) {
+               this._hEdges.setSharpness(current/2, -1);    // boundary is infinite crease.
+               half.setFace(current, -(hole+1));
                sides++;
             }
             this._holes.setNumberOfSide(hole, sides);
@@ -467,7 +472,7 @@ class TriangleMesh {
    
    findHalfEdge(v0, v1) {
       for (let outEdge of this.outHalfEdgeAroundVertex(v0)) {
-         if (this._hEdges.destination(outEdge) === v1) {
+         if (this._hEdges.half.destination(outEdge) === v1) {
             return outEdge;
          }
       }
@@ -528,7 +533,7 @@ class TriangleMesh {
    _addTriangle(idx, pts, material) {
       // create 3 directedEdges, and 3 boundaryLoops
       const vert = [pts[idx[0]], pts[idx[1]], pts[idx[2]]];
-      const [dEdges, bEdges] = this._hEdges.allocTriangle(vert);  // alloc 3 directedEdges, and 3 boundaryLoops[
+      const [dEdges, bEdges] = this._hEdges.half.allocTriangle(vert);  // alloc 3 directedEdges, and 3 boundaryLoops[
       
       // find splice freeEdge point.
       const halfEdges = [];
@@ -557,17 +562,19 @@ class TriangleMesh {
       }
       
       const hLoop = []; // TEMP FIXED:
-      const boundary = this._hEdges.b;
+      const half = this._hEdges.half;
+      const boundary = this._hEdges.half.b;
+      const direct = this._hEdges.half.d;
       // insert/splice or merge to boundary.
       for (let i = 0; i < 3; ++i) {
          if (halfEdges[i].found <= 0) {      // create new WholeEdge
             const wHandle = this._hEdges.alloc();
             this._hEdges.setWhole(wHandle, dEdges[i], -(bEdges[i]+1));
-            this._hEdges.d.setHalfEdge(dEdges[i], wHandle*2);
-            this._hEdges.b.setHalfEdge(bEdges[i], wHandle*2+1);
+            direct.setHalfEdge(dEdges[i], wHandle*2);
+            boundary.setHalfEdge(bEdges[i], wHandle*2+1);
             if (halfEdges[i].found < 0) {       // insert/splice
                if (halfEdges[i].outEdge >= 0) { // splice to gap
-                  const a = -(this._hEdges.half(halfEdges[i].outEdge) + 1);
+                  const a = -(half.half(halfEdges[i].outEdge) + 1);
                   const b = bEdges[i];
                   const c = boundary.prev(a);
                   if (b !== c) {                   // is already corrected?
@@ -583,7 +590,7 @@ class TriangleMesh {
             halfEdges[i].outEdge = wHandle*2;
          } else { // replace/merge boundary
             // fixup boundary link 
-            const a = -(this._hEdges.half(halfEdges[i].outEdge) + 1);
+            const a = -(half.half(halfEdges[i].outEdge) + 1);
             const b = bEdges[i];
             let c = boundary.prev(a);
             let d;
@@ -600,8 +607,8 @@ class TriangleMesh {
             boundary.free(a);
             boundary.free(b);
             // now replace boundary with directedEdge
-            this._hEdges.setHalf(halfEdges[i].outEdge, dEdges[i]);
-            this._hEdges.d.setHalfEdge(dEdges[i], halfEdges[i].outEdge);
+            half.setHalf(halfEdges[i].outEdge, dEdges[i]);
+            direct.setHalfEdge(dEdges[i], halfEdges[i].outEdge);
          }
          hLoop.push( halfEdges[i].outEdge );
       }
@@ -616,13 +623,14 @@ class TriangleMesh {
    */
    findFreeEdge(v0, v1) {
       let freeEdge = -1;
+      const half = this._hEdges.half;
       for (let outEdge of this.outHalfEdgeAroundVertex(v0)) {
-         if (this._hEdges.destination(outEdge) === v1) {
-            if (!this._hEdges.isBoundary(outEdge)) {  // non-free, non-manifold
+         if (half.destination(outEdge) === v1) {
+            if (!half.isBoundary(outEdge)) {  // non-free, non-manifold
                return {found: 0, outEdge};
             }
             return {found: 1, outEdge};
-         } else if (this._hEdges.isBoundary(outEdge)) {
+         } else if (half.isBoundary(outEdge)) {
             freeEdge = outEdge;
          }
       }
@@ -639,16 +647,16 @@ class TriangleMesh {
     * @returns {integer} - the gap index, or -1 if not founded.
     */
    findFreeInEdge(inner_next, inner_prev) {
-      const hEdges = this.h;
-      const startingFrom = hEdges.pair(inner_next);
+      const half = this.h.half;
+      const startingFrom = half.pair(inner_next);
       const andBefore = inner_prev;
       if (andBefore !== startingFrom) {
          let current = startingFrom;
          do {
-            if (hEdges.isBoundary(current)) {
+            if (half.isBoundary(current)) {
                return current;
             }
-            current = hEdges.pair( hEdges._next(current) );
+            current = half.pair( half._next(current) );
          } while (current !== andBefore);
       }
 
@@ -657,27 +665,27 @@ class TriangleMesh {
    }
    
    makeAdjacent(inEdge, outEdge) {
-      const hEdges = this.h;
-      let b = hEdges._next(inEdge);
+      const half = this.h.half;
+      let b = half._next(inEdge);
       if (b === outEdge) {   // adjacency is already correct.
          return true;
       }
 
-      let d = hEdges._prev(outEdge);
+      let d = half._prev(outEdge);
       // Find a free incident half edge
       // after 'out' and before 'in'.
       let g = this.findFreeInEdge(outEdge, inEdge);
 
       if (g >= 0) {
-         hEdges._linkNext(inEdge, outEdge);
+         half._linkNext(inEdge, outEdge);
          if (g === d) {
-            hEdges._linkNext(d, b);
+            half._linkNext(d, b);
          } else {
-            let h = hEdges._next(g);
+            let h = half._next(g);
          
-            hEdges._linkNext(g, b);
+            half._linkNext(g, b);
 
-            hEdges._linkNext(d, h);
+            half._linkNext(d, h);
          }
          
          return true;

@@ -360,13 +360,11 @@ class TriangleEdgeArray extends ExtensiblePixelArrayGroup {
 }
 
 
-class WholeEdgeArray extends PixelArrayGroup {
+class HalfEdgeArray extends PixelArrayGroup {
    constructor(wEdge, fmm) {
       super(fmm);
       this._edge = wEdge?.edge;                 // [left, right] array
       this._face = wEdge?.face;                 // [face/hole, face/hole] pointer.
-      this._sharpness = wEdge?.sharpness;
-      this._id = wEdge?.id;
       // class Object array
       this._dEdge = wEdge?.dEdge;               // TriangleEdgeArray
       this._boundary = wEdge?.boundary;
@@ -381,27 +379,23 @@ class WholeEdgeArray extends PixelArrayGroup {
    }
    
    get _freeSlot() {
-      return this._id;
+      return this._edge;
    }
    
    * _baseEntries() {
       yield ["_edge", this._edge];
       yield ['_face', this._face];
-      yield ["_sharpness", this._sharpness];
-      yield ["_id", this._id];
    }
    
    static create(size) {
-      const wEdgeArray = {
-         edge: Int32PixelArray.create(wEdgeK.sizeOf, 2, size),    // [left, right]
-         face: Int32PixelArray.create(wEdgeK.sizeOf, 2, size),    // point back to face/hole
-         sharpness: Float32PixelArray.create(1, 1, size),         // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
-         id: Int32PixelArray.create(1, 1, size),                  // realID, exist as side of polygon. no id then it internal edges.
+      const hfEdgeArray = {
+         edge: Int32PixelArray.create(1, 1, size),    // [left, right]
+         face: Int32PixelArray.create(1, 1, size),    // point back to face/hole
          dEdge: TriangleEdgeArray.create(size),
          boundary: BoundaryArray.create(size),
       };
       
-      return new WholeEdgeArray(wEdgeArray, {});
+      return new HalfEdgeArray(hfEdgeArray, {});
    }
    
    _rehydrate(self) {
@@ -412,18 +406,11 @@ class WholeEdgeArray extends PixelArrayGroup {
    }
    
    static rehydrate(self) {
-      const ret = new WholeEdgeArray({}, {});
+      const ret = new HalfEdgeArray({}, {});
       ret._rehydrate(self);
       return ret;
    }
 
-   compactBuffer(hole) {
-      const b = this.b.compactBuffer(hole, this);
-      // TODO: comppact all other buffer
-
-      return {b};
-   }
-   
    whEdgeBuffer() {
       return this._edge.getBuffer();
    }
@@ -470,11 +457,10 @@ class WholeEdgeArray extends PixelArrayGroup {
    * rangeIter(start, stop) {
       stop = Math.min(this.length(), stop);
       let leftRight = [0, 0];
-      for (let i = start; i < stop; i++) {
-         const sharpness = this.sharpness(i);
-         if (sharpness >= 0) {  // existed.
-            this._edge.getVec2(i, 0, leftRight);
-            yield [i, leftRight[0], leftRight[1]];
+      for (let i = start; i < stop; i+=2) {
+         if (this._face.get(i, 0) !== this._face.get(i+1, 0)) {
+            yield [i, this._edge.get(i, 0)];
+            yield [i+1, this._edge.get(i+1, 0)];
          }
       }
    }
@@ -683,7 +669,137 @@ class WholeEdgeArray extends PixelArrayGroup {
     * skip over the internal edge.
     */
    prev(hEdge) {
-      return this._stepOver(hEdge, this._dEdge.prev, this._boundary.prev);
+      return this._stepHop(hEdge, this._dEdge.prev, this._boundary.prev);
+   }
+
+   pair(hEdge) {
+      return hEdge ^ 1;
+   }
+   
+   face(hEdge) {
+      return this._face.get(hEdge, 0);
+   }
+
+   setFace(hEdge, face) {
+      this._face.set(hEdge, 0, face);
+   }
+   
+   half(hfEdge) {
+      return this._edge.get(hfEdge, 0);
+   }
+   
+   setHalf(hfEdge, value) {
+      this._edge.set(hfEdge, 0, value);
+   }
+}
+
+
+
+
+class WholeEdgeArray extends PixelArrayGroup {
+   constructor(wEdge, fmm) {
+      super(fmm);
+      this._sharpness = wEdge?.sharpness;
+      this._id = wEdge?.id;
+      this.half = wEdge.half;
+   }
+   
+   get _freeSlot() {
+      return this._id;
+   }
+   
+   * _baseEntries() {
+      yield ["_sharpness", this._sharpness];
+      yield ["_id", this._id];
+   }
+   
+   static create(size) {
+      const wEdgeArray = {
+         sharpness: Float32PixelArray.create(1, 1, size),         // crease weights is per wEdge, sharpness is float, (int is enough, but subdivision will create fraction, so needs float)
+         id: Int32PixelArray.create(1, 1, size),                  // realID, exist as side of polygon. no id then it internal edges.
+         half: HalfEdgeArray.create(size),
+      };
+      
+      return new WholeEdgeArray(wEdgeArray, {});
+   }
+   
+   _rehydrate(self) {
+      super._rehydrate(self);
+      this.half = HalfEdgeArray.rehydrate(self.half);
+   }
+   
+   static rehydrate(self) {
+      const ret = new WholeEdgeArray({}, {});
+      ret._rehydrate(self);
+      return ret;
+   }
+
+   getDehydrate(obj) {
+      super.getDehydrate(obj);
+
+      obj.half = this.half.getDehydrate({});
+
+      return obj;
+   }
+
+   compactBuffer(hole) {
+      const b = this.half.b.compactBuffer(hole, this);
+      // TODO: comppact all other buffer
+
+      return {b};
+   }
+   
+   // memory routines
+   computeBufferSize(length) {
+      return super.computeBufferSize(length) +
+              this.half.computeBufferSize(length*2);
+   }
+   
+   setBuffer(bufferInfo, byteOffset, length) {
+      byteOffset = super.setBuffer(bufferInfo, byteOffset, length);
+      if (!bufferInfo) {   // get the newly located one.
+         bufferInfo = this._sharpness._blob.bufferInfo;
+      }
+
+      return this.half.setBuffer(bufferInfo, byteOffset, length*2);
+   }
+   
+   _allocArray(count) {
+      this.half._allocArray(count*2);
+      return super._allocArray(count);
+   }
+   
+   free(whEdge) {
+      super.free(whEdge);
+      const left = whEdge*2;
+      // free handling needs is taken by WholeEdgeArray
+      this.half.setFace(left, HoleK.end);
+      this.half.setFace(left+1, HoleK.end);
+   }
+   
+   isFree(whEdge) {
+      const left = whEdge*2;
+      return this.half.face(left) === this.half.face(left+1);
+   }
+
+
+   *[Symbol.iterator] () {
+      yield* this.rangeIter(0, this.length());
+   }
+   
+   /**
+    * walk over the wholeEdgeArray
+    */
+   * rangeIter(start, stop) {
+      stop = Math.min(this.length(), stop);
+      let leftRight = [0, 0];
+      for (let i = start; i < stop; i++) {
+         const sharpness = this._sharpness.get(i, 0);
+         if (sharpness >= 0) {  // existed.
+            this.half._edge.getVec2(i*2, 0, leftRight);
+            yield [i, leftRight[0], leftRight[1]];
+         }
+      }
    }
    
    _left(wEdge) {
@@ -692,14 +808,6 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    left(wEdge) {
       return wEdge * 2;
-   }
-
-   _pair(hEdge) {
-      return this._edge._get( hEdge ^ 1 );   // left to right, right to left
-   }
-   
-   pair(hEdge) {
-      return hEdge ^ 1;
    }
    
    _right(wEdge) {
@@ -710,41 +818,25 @@ class WholeEdgeArray extends PixelArrayGroup {
       return (wEdge * 2) + 1;
    }
    
-   face(hEdge) {
-      return this._face._get(hEdge);
-   }
-
-   setFace(hEdge, face) {
-      this._face._set(hEdge, face);
-   }
-   
-   whole(wEdge, value=[0,0]) {
-      this._edge.getVec2(wEdge, 0, value);
-      return value;
-   }
-   
-   half(hfEdge) {
-      return this._edge._get(hfEdge);
-   }
-   
-   setHalf(hfEdge, value) {
-      this._edge._set(hfEdge, value);
-   }
-   
-   setWhole(wEdge, left, right) {
-      this._edge.setValue2(wEdge, 0, left, right);
-   }
-   
-   setWhole2(wEdge, leftRight) {
-      this._edge.setVec2(wEdge, 0, leftRight);
-   }
-   
    sharpness(wEdge) {
       return this._sharpness.get(wEdge, 0);
    }
    
    setSharpness(wEdge, sharpness) {
       this._sharpness.set(wEdge, 0, sharpness);
+   }
+   
+   whole(wEdge, value=[0,0]) {
+      this.half._edge.getVec2(wEdge*2, 0, value);
+      return value;
+   }  
+    
+   setWhole(wEdge, left, right) {
+      this.half._edge.setValue2(wEdge*2, 0, left, right);
+   }
+   
+   setWhole2(wEdge, leftRight) {
+      this.half._edge.setVec2(wEdge*2, 0, leftRight);
    }
 
    _computeLeftRight(hEdge, pair) {
@@ -771,24 +863,20 @@ class WholeEdgeArray extends PixelArrayGroup {
       this._setHEdgeWEdge(leftRight[0], wEdge * 2 + wEdgeK.left, leftRight[1]);
       this._setHEdgeWEdge(leftRight[1], wEdge * 2 + wEdgeK.right, leftRight[0]);
       this._wEdgeArray.setWhole2(wEdge, leftRight);
-   }
+   }  
    
-   stat() {
-      return "WholeEdge Count: " + this.length() + ";\nDirectedEdge Count: " + this.d.length()*3 + ";\n";
-   }
-
+   
    sanityCheck() {
-      this._boundary.sanityCheck();
       for (let [i, left, right] of this) {
          i *= 2;
-         let half = this._dEdge.halfEdge(left);
+         let half = this.half._dEdge.halfEdge(left);
          if (half !== i) {
             console.log("DirectedEdge inconsistent HalfEdge");
          }
          if (right < 0) {
-            half = this._boundary.halfEdge(-(right+1));
+            half = this.half._boundary.halfEdge(-(right+1));
          } else {
-            half = this._dEdge.halfEdge(right);
+            half = this.half._dEdge.halfEdge(right);
          }
          if (half !== (i+1)) {
             console.log("Internal Edge's halfEdge is inconsistent");
@@ -816,10 +904,15 @@ class WholeEdgeArray extends PixelArrayGroup {
       return true;
    }
    
-   static addUV(halfEdgeArray, index=0) {
-      return TriangleEdgeArray.addUV(halfEdgeArray._dEdge, index);
+   stat() {
+      return "WholeEdge Count: " + this.length() + ";\nDirectedEdge Count: " + this.half.d.length()*3 + ";\n";
+   }
+   
+   static addUV(wholeEdgeArray, index=0) {
+      return TriangleEdgeArray.addUV(wholeEdgeArray.half._dEdge, index);
    }
 }
+
 
 
 export {

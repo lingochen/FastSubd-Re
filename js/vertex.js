@@ -210,7 +210,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
             let creaseCount = 0;
             do {
                if (creaseCount < 3) {
-                  let value = hEdgeContainer.sharpness(current/2);      // whEdge
+                  let value = hEdgeContainer.sharpness(current>>1);      // whEdge
                   if (value > 0) {
                      if (sharpness !== 0) {  // get minimum excluding zero
                         sharpness = Math.min(sharpness, value);
@@ -223,7 +223,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
                   }
                }
                const pair = hEdgeContainer.half.pair(current);
-               current = hEdgeContainer.half._next( pair );
+               current = hEdgeContainer.half.next( pair );
                count++;
             } while (current !== start);
             if (count > valenceMax) {

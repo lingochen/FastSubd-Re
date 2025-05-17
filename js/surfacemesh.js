@@ -114,7 +114,7 @@ class HoleArray extends ExtensiblePixelArrayGroup {
       let sanity = true;
       for (let hole of this) {
          const hfEdge = this.halfEdge(hole);
-         for (let hEdge of hEdgeContainer.circulator(hfEdge, hfEdge, hEdgeContainer._next)) {
+         for (let hEdge of hEdgeContainer.aroundF(hfEdge, hfEdge)) {
             const holeCheck = -(hEdgeContainer.face(hEdge)+1);
             if (holeCheck !== hole) {
                sanity = false;
@@ -312,12 +312,11 @@ class TriangleMesh {
    * inHalfEdgeAroundVertex(vert, noHop=true) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vertices);
-         let stepAround = this._hEdges._stepHopAround;
+         const inEdge = outEdge ^ 1;
          if (noHop) {
-            stepAround = this._hEdges._stepAround;
-         }
-         for (let out of this._hEdges.circulator(outEdge, outEdge, stepAround)) {
-            yield this._hEdges.pair(out);
+            yield* this._hEdges.half.inAroundV(inEdge, inEdge);
+         } else {
+            yield* this._hEdges.inAroundV(inEdge, inEdge);
          }
       }
    }
@@ -328,30 +327,27 @@ class TriangleMesh {
    * outHalfEdgeAroundVertex(vert, noHop=true) {
       if (this._vertices.hasHalfEdge(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
-         const half = this._hEdges.half;
-         let stepAround = half._stepHopAround;
          if (noHop) {
-            stepAround = half._stepAround;
+            yield* this._hEdges.half.outAroundV(outEdge, outEdge);
+         } else {
+            yield* this._hEdges.outAroundV(outEdge, outEdge);
          }
-         yield* half.circulator(outEdge, outEdge, stepAround);
       }
    }
    
    * vertexAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      const half = this._hEdges.half;
-      for (let hfEdge of half.circulator(start, start, half.next)) {
-         yield half.origin(hfEdge);
+      for (let hfEdge of this._hEdges.aroundF(start, start)) {
+         yield this._hEdges.half.origin(hfEdge);
       }
    }
    
    /**
     * simple wrapper around FaceArray.halfEdgeLoop 
     */ 
-   halfEdgeAroundFace(face) {
+   * halfEdgeAroundFace(face) {
       const hfEdge = this._faces.halfEdge(face);
-      const half = this._hEdges.half;
-      return half.circulator(hfEdge, hfEdge, half.next);
+      yield* this._hEdges.aroundF(hfEdge, hfEdge);
    }
    
    /**
@@ -364,9 +360,8 @@ class TriangleMesh {
    
    * faceAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      const half = this._hEdges.half;
-      for (let hfEdge of half.circulator(start, start, half.next)) {
-         yield half.face( hfEdge ^ 1 );
+      for (let hfEdge of this._hEdges.aroundF(start, start)) {
+         yield this._hEdges.half.face( hfEdge ^ 1 );
       }
    }
   
@@ -447,7 +442,7 @@ class TriangleMesh {
             this._holes.setHalfEdge(hole, boundary);
             let sides = 0;
             // assigned holeFace to whole group
-            for (let current of half.circulator(boundary, boundary, half._next)) {
+            for (let current of half.aroundF(boundary, boundary)) {
                this._hEdges.setSharpness(current/2, -1);    // boundary is infinite crease.
                half.setFace(current, -(hole+1));
                sides++;
@@ -656,7 +651,7 @@ class TriangleMesh {
             if (half.isBoundary(current)) {
                return current;
             }
-            current = half.pair( half._next(current) );
+            current = half.pair( half.next(current) );
          } while (current !== andBefore);
       }
 
@@ -666,12 +661,12 @@ class TriangleMesh {
    
    makeAdjacent(inEdge, outEdge) {
       const half = this.h.half;
-      let b = half._next(inEdge);
+      let b = half.next(inEdge);
       if (b === outEdge) {   // adjacency is already correct.
          return true;
       }
 
-      let d = half._prev(outEdge);
+      let d = half.prev(outEdge);
       // Find a free incident half edge
       // after 'out' and before 'in'.
       let g = this.findFreeInEdge(outEdge, inEdge);
@@ -681,7 +676,7 @@ class TriangleMesh {
          if (g === d) {
             half._linkNext(d, b);
          } else {
-            let h = half._next(g);
+            let h = half.next(g);
          
             half._linkNext(g, b);
 

@@ -484,18 +484,6 @@ class HalfEdgeArray extends PixelArrayGroup {
    }
    
    /**
-    * generic circulator, for aroundFace, aroundVertex, and
-    */
-   * circulator(current, end, step) {
-      //if (current !== HalfEdgeK.end) {
-      do {
-         yield current;
-         current = step.call(this, current);
-      } while (current !== end);
-      //}
-   }
-   
-   /**
     * iterate over faces's inner halfEdge starting from input hEdge to end hEdge
     * @param {number} current - start of face hfEdge loop.
     * @param {number) end - end of face hfEdge loop.
@@ -504,97 +492,29 @@ class HalfEdgeArray extends PixelArrayGroup {
       //if (start !== HalfEdgeK.end) {
          do {
             yield current;
-            current = this._next(current);
+            current = this.next(current);
          } while (current !== end);
       //}
-   }
-   
-   * hopAroundF(current, end) {
-      do {
-         yield current;
-         current = this.next(current);
-      } while (current !== end);
    }
       
    * inAroundV(currentIn, end) {
       //if (currentIn !== HalfEdgeK.end) {
          do {
             yield currentIn;
-            currentIn = this.pair( this._next( currentIn ) );
+            currentIn = this.pair( this.next( currentIn ) );
          } while (currentIn !== end);
       //}
-   }
-   
-   * inHopAroundV(currentIn, end) {
-      do {
-         yield currentIn;
-         currentIn = this.pair( this.next( currentIn ) );
-      } while (currentIn !== end);
    }
 
    * outAroundV(currentOut, end) {
       //if (currentOut !== HalfEdgeK.end) {
          do {
             yield currentOut;
-            currentOut = this._next( this.pair(currentOut) );         
+            currentOut = this.next( this.pair(currentOut) );         
          } while (currentOut !== end);
       //}
-   }   
-   
-   * outHopAroundV(currentOut, end) {
-      do {
-         yield currentOut;
-         currentOut = this.next( this.pair(currentOut) );
-      } while (currentOut !== end);
    }
    
-   /**
-    * used for circling over vertex, skipped over internal edge  if any
-    */
-   _stepHopAround(hEdge) {
-      hEdge = hEdge ^ 1;      // get pair
-      return this._stepHop(hEdge, this._dEdge.next, this._boundary.next);
-   }
-   
-   /**
-    * used for circling over vertex
-    */
-   _stepAround(hEdge) {
-      hEdge = hEdge ^ 1;      // get pair
-      return this._step(hEdge, this._dEdge.next, this._boundary.next);
-   }
-   
-   /**
-    * looping over face.
-    * next()/prev(). skip over the internal edge if any.
-    * consolidated as internal function.
-    * 
-    */
-   _stepHop(hEdge, stepTri, stepB) {
-      const start = hEdge;
-      do {
-         hEdge = this._step(hEdge, stepTri, stepB);
-         if (!this.isInterior(hEdge)) {
-            return hEdge;
-         }
-         // skip interior edge
-         hEdge = hEdge ^ 1;            // halfEdge twin.
-      } while (start !== hEdge);
-   }
-   
-   _step(hEdge, stepTri, stepB) {
-      let privyHfEdge = this._edge._get( hEdge );
-      
-      if (privyHfEdge >= 0) {
-         privyHfEdge = stepTri.call(this._dEdge, privyHfEdge);
-         return this._dEdge.halfEdge(privyHfEdge);
-      } else {
-         privyHfEdge = stepB.call(this._boundary, -(privyHfEdge+1));
-         return this._boundary.halfEdge(privyHfEdge);
-      }
-   }
-
-
    // 
    // end of iterator
    //
@@ -649,27 +569,36 @@ class HalfEdgeArray extends PixelArrayGroup {
       this._boundary.linkNext(a, b);
    }
    
-   _next(hEdge) {
-      return this._step(hEdge, this._dEdge.next, this._boundary.next);
-   }
    
    /**
     * next polygon edge. skip over the internal edge if any
     * 
     */
    next(hEdge) {
-      return this._stepHop(hEdge, this._dEdge.next, this._boundary.next);
-   }
-   
-   _prev(hEdge) {
-      return this._step(hEdge, this._dEdge.prev, this._boundary.prev);
+      let privyHfEdge = this._edge._get( hEdge );
+      
+      if (privyHfEdge >= 0) {
+         privyHfEdge = this._dEdge.next(privyHfEdge);
+         return this._dEdge.halfEdge(privyHfEdge);
+      } else {
+         privyHfEdge = this._boundary.next( -(privyHfEdge+1) );
+         return this._boundary.halfEdge(privyHfEdge);
+      }
    }
    
    /**
     * skip over the internal edge.
     */
    prev(hEdge) {
-      return this._stepHop(hEdge, this._dEdge.prev, this._boundary.prev);
+      let privyHfEdge = this._edge._get( hEdge );
+      
+      if (privyHfEdge >= 0) {
+         privyHfEdge = this._dEdge.prev( privyHfEdge );
+         return this._dEdge.halfEdge(privyHfEdge);
+      } else {
+         privyHfEdge = this._boundary.prev(-(privyHfEdge+1));
+         return this._boundary.halfEdge(privyHfEdge);
+      }
    }
 
    pair(hEdge) {
@@ -757,7 +686,7 @@ class WholeEdgeArray extends PixelArrayGroup {
    
    setBuffer(bufferInfo, byteOffset, length) {
       byteOffset = super.setBuffer(bufferInfo, byteOffset, length);
-      if (!bufferInfo) {   // get the newly located one.
+      if (!bufferInfo) {   // get the newly located one from super.setBuffer.
          bufferInfo = this._sharpness._blob.bufferInfo;
       }
 
@@ -802,18 +731,65 @@ class WholeEdgeArray extends PixelArrayGroup {
       }
    }
    
-   _left(wEdge) {
-      return this._edge.get(wEdge, wEdgeK.left);
+   /**
+    * iterate over faces's inner halfEdge starting from input hEdge to end hEdge
+    * @param {number} current - start of face hfEdge loop.
+    * @param {number) end - end of face hfEdge loop.
+    */
+   * aroundF(current, end) {
+      //if (start !== HalfEdgeK.end) {
+         do {
+            yield current;
+            current = this.next(current);
+         } while (current !== end);
+      //}
    }
+      
+   * inAroundV(currentIn, end) {
+      //if (currentIn !== HalfEdgeK.end) {
+         do {
+            yield currentIn;
+            currentIn = this.next( currentIn ) ^ 1;
+         } while (currentIn !== end);
+      //}
+   }
+
+   * outAroundV(currentOut, end) {
+      //if (currentOut !== HalfEdgeK.end) {
+         do {
+            yield currentOut;
+            currentOut = this.next( currentOut ^ 1 );         
+         } while (currentOut !== end);
+      //}
+   }
+   
+   /**
+    * looping over face.
+    * next()/prev(). skip over the internal edge if any.
+    * consolidated as internal function.
+    * 
+    */
+   next(hEdge) {
+      const end = hEdge;
+      do {
+         hEdge = this.half.next(hEdge);
+         if (!this.isInterior(hEdge)) {
+            return hEdge;
+         }
+         // skip interior edge
+         hEdge = hEdge ^ 1;            // halfEdge twin.
+      } while (hEdge !== end);
+      throw("something went wrong in skipHop");
+   }
+
+   //
+   // end of iterator
+   //
    
    left(wEdge) {
       return wEdge * 2;
    }
-   
-   _right(wEdge) {
-      return this._edge.get(wEdge, wEdgeK.right);
-   }
-   
+
    right(wEdge) {
       return (wEdge * 2) + 1;
    }

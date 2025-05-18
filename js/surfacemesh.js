@@ -310,7 +310,7 @@ class TriangleMesh {
     * 
     */
    * inHalfEdgeAroundVertex(vert, noHop=true) {
-      if (this._vertices.hasHalfEdge(vert)) {
+      if (!this._vertices.isFree(vert)) {
          const outEdge = this._vertices.halfEdge(vertices);
          const inEdge = outEdge ^ 1;
          if (noHop) {
@@ -325,7 +325,7 @@ class TriangleMesh {
     * circle around vertex, return outEdge.
     */
    * outHalfEdgeAroundVertex(vert, noHop=true) {
-      if (this._vertices.hasHalfEdge(vert)) {
+      if (!this._vertices.isFree(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
          if (noHop) {
             yield* this._hEdges.half.outAroundV(outEdge, outEdge);

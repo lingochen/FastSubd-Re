@@ -123,18 +123,18 @@ class VertexArray extends ExtensiblePixelArrayGroup {
    * rangeIter(start, stop) {
       stop = Math.min(this._hfEdge.length(), stop);
       for (let i = start; i < stop; i++) {
-         if (this.hasHalfEdge(i)) {
+         if (!this.isFree(i)) {
             yield i;
          }
       }
    }
    
-   halfEdge(vert) {
-      return this._hfEdge.get(vert, 0);
+   isFree(vert) {
+      return this._valence.get(vert, 0) === 0;       // >= 3> valid config
    }
    
-   hasHalfEdge(vert) {
-      return this._valence.get(vert, 0) > 0;       // >= 3> valid config
+   halfEdge(vert) {
+      return this._hfEdge.get(vert, 0);
    }
    
    setHalfEdge(vert, hEdge) {

@@ -6,6 +6,8 @@
 
 - <s>webworker parallel subidivision support. </s>, @done (2023/08/26)[insight](multithread.md)
 
+- redo subdivision, edge index compute on the fly for each level of subdivision. save on memory cost. @start (2025/5/19)
+
 - refactor to have a sane API. write documentation, @onGoing (2023/09/04)[api](api.md)
 
 - <s>finish boundaryLoop subdivide support</s> @done (2023/09/16)
@@ -14,7 +16,7 @@
 
 - <s>Pixel buffer reorganization and rethinking [Pixel Buffer](pixelmemory.md)</s> @done (2024/02/20)
 
-- <s>refactor DirectedEdgeArray. add (pair/twin) data memeber since it a fairly common operation to refernce pair.</s> @done (2024/08/10)- no speedup, going to drop it.
+- <s>refactor DirectedEdgeArray. add (pair/twin) data memeber since it a fairly common operation to reference pair.</s> @done (2024/08/10)- no speedup, going to drop it.
 
 - [MeshColors PatchTexture](meshcolors.md)
 

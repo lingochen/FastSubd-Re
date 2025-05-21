@@ -17,6 +17,8 @@ Subdivision surfaces(Catmull-Clark, Loop) are generalization of spline curves/su
 
 Subdivision surface use small amount of data. We want ot optimize for data size since compute improve faster than memory bandwidth for the forseeable future.
 
+This really should be called FastSubdTri, FastSubdCC should be call FastSubd:Re
+
 ## Implementation Goals
 Manifold polygon meshes used directly as subdivision surfaces.
 

@@ -501,7 +501,7 @@ class HalfEdgeArray extends PixelArrayGroup {
       //if (currentIn !== HalfEdgeK.end) {
          do {
             yield currentIn;
-            currentIn = this.pair( this.next( currentIn ) );
+            currentIn = this.next( currentIn ) ^ 1;
          } while (currentIn !== end);
       //}
    }
@@ -510,7 +510,7 @@ class HalfEdgeArray extends PixelArrayGroup {
       //if (currentOut !== HalfEdgeK.end) {
          do {
             yield currentOut;
-            currentOut = this.next( this.pair(currentOut) );         
+            currentOut = this.next( currentOut ^ 1 );
          } while (currentOut !== end);
       //}
    }
@@ -736,50 +736,27 @@ class WholeEdgeArray extends PixelArrayGroup {
     * @param {number} current - start of face hfEdge loop.
     * @param {number) end - end of face hfEdge loop.
     */
-   * aroundF(current, end) {
-      //if (start !== HalfEdgeK.end) {
-         do {
-            yield current;
-            current = this.next(current);
-         } while (current !== end);
-      //}
-   }
-      
-   * inAroundV(currentIn, end) {
-      //if (currentIn !== HalfEdgeK.end) {
-         do {
-            yield currentIn;
-            currentIn = this.next( currentIn ) ^ 1;
-         } while (currentIn !== end);
-      //}
-   }
-
-   * outAroundV(currentOut, end) {
-      //if (currentOut !== HalfEdgeK.end) {
-         do {
-            yield currentOut;
-            currentOut = this.next( currentOut ^ 1 );         
-         } while (currentOut !== end);
-      //}
+   
+   isInterior(edge) {
+      return false;
    }
    
    /**
-    * looping over face.
-    * next()/prev(). skip over the internal edge if any.
+    * nextHop()/prevHop(). skip over the internal edge if any.
     * consolidated as internal function.
     * 
     */
-   next(hEdge) {
+   nextHop(hEdge) {
       const end = hEdge;
       do {
          hEdge = this.half.next(hEdge);
          if (!this.isInterior(hEdge)) {
             return hEdge;
          }
-         // skip interior edge
-         hEdge = hEdge ^ 1;            // halfEdge twin.
+         // skip over interior edge
+         hEdge = hEdge ^ 1;
       } while (hEdge !== end);
-      throw("something went wrong in skipHop");
+      throw("something went wrong in nextHop");
    }
 
    //
@@ -892,6 +869,8 @@ class WholeEdgeArray extends PixelArrayGroup {
 
 
 export {
+//   BoundaryArray,
+//   TriangleEdgeArray,
 //   HalfEdgeArray,
    WholeEdgeArray,
 }

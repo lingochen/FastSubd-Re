@@ -1,6 +1,8 @@
 /**
  * Only triangle mesh here, general polygon is better handle by traditional HalfEdge. (2024/08/14)
- * Now handle general polygon. Use triangles to fill the polygon. (2025/03/03)
+ * Now handle general polygon. Use triangles to fill the polygon. (2025/03/03) - started
+ * 
+ * 
  * 
  * Provided 7 classes.
 
@@ -215,7 +217,7 @@ function isSame(as, bs) {
 }
 
 /** 
- * abstract class representing Mesh. base SurfaceMesh, managing material,
+ * TriangleMesh, managing material,
  * vertex, hEdge, face, and boundaryLoop.
  */
 class TriangleMesh {
@@ -309,45 +311,51 @@ class TriangleMesh {
     * circle around vertex, return inEdge(point toward vertex).
     * 
     */
-   * inHalfEdgeAroundVertex(vert, noHop=true) {
+   * inHalfEdgeAroundVertex(vert) {
       if (!this._vertices.isFree(vert)) {
          const outEdge = this._vertices.halfEdge(vertices);
          const inEdge = outEdge ^ 1;
-         if (noHop) {
-            yield* this._hEdges.half.inAroundV(inEdge, inEdge);
-         } else {
-            yield* this._hEdges.inAroundV(inEdge, inEdge);
-         }
+         let currentIn = inEdge;
+         do {
+            yield currentIn;
+            currentIn = this._hEdges.nextHop(currentIn) ^ 1;
+         } while (currentIn !== inEdge); 
       }
    }
    
    /**
     * circle around vertex, return outEdge.
     */
-   * outHalfEdgeAroundVertex(vert, noHop=true) {
+   * outHalfEdgeAroundVertex(vert) {
       if (!this._vertices.isFree(vert)) {
          const outEdge = this._vertices.halfEdge(vert);
-         if (noHop) {
-            yield* this._hEdges.half.outAroundV(outEdge, outEdge);
-         } else {
-            yield* this._hEdges.outAroundV(outEdge, outEdge);
-         }
+         let currentOut = outEdge;
+         do {
+            yield currentOut;
+            currentOut = this._hEdges.nextHop( currentOut ^ 1 );
+         } while (currentOut !== outEdge);
       }
    }
    
    * vertexAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      for (let hfEdge of this._hEdges.aroundF(start, start)) {
-         yield this._hEdges.half.origin(hfEdge);
-      }
+      let current = start;
+      do {
+         yield this._hEdges.half.origin(current);
+         current = this._hEdges.nextHop(current);
+      } while (current !== start);
    }
    
    /**
-    * simple wrapper around FaceArray.halfEdgeLoop 
+    * walk around the faces's edges.
     */ 
    * halfEdgeAroundFace(face) {
-      const hfEdge = this._faces.halfEdge(face);
-      yield* this._hEdges.aroundF(hfEdge, hfEdge);
+      const start = this._faces.halfEdge(face);
+      let current = start;
+      do {
+         yield current;
+         current = this._hEdges.nextHop(current);
+      } while (current !== start);
    }
    
    /**
@@ -360,9 +368,11 @@ class TriangleMesh {
    
    * faceAroundFace(face) {
       const start = this._faces.halfEdge(face);
-      for (let hfEdge of this._hEdges.aroundF(start, start)) {
-         yield this._hEdges.half.face( hfEdge ^ 1 );
-      }
+      let current = start;
+      do {
+         yield this._hEdges.half.face( current ^ 1);
+         current = this._hEdges.nextHop(current);
+      } while (current !== start);
    }
   
    get f() {

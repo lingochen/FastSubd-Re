@@ -379,9 +379,13 @@ class TriangleMesh {
       return this._faces;
    }
    
-   get h() {
+   get e() {
       return this._hEdges;
    }
+   
+/*   get h() {
+      return this._edges.half;
+   } */
    
    get v() {
       return this._vertices;
@@ -398,10 +402,10 @@ class TriangleMesh {
    makePullBuffer(gl) {
       //this.v.computeNormal(this.h);
    
-      const vertexTexture = this.h.half.createVertexTexture(gl);
+      const vertexTexture = this.e.half.createVertexTexture(gl);
       const positionTexture = this.v.createPositionTexture(gl);
       const normalTexture = this.v.createNormalTexture(gl);
-      const uvsTexture = this.h.half.d.createPropertyTexture('uv0', gl);
+      const uvsTexture = this.e.half.d.createPropertyTexture('uv0', gl);
       const materialTexture = this.f.createMaterialTexture(gl);
       
 /*      const materials = [];
@@ -409,7 +413,7 @@ class TriangleMesh {
          materials.push( this._material.depot.getUniforms(handle) );
       }*/
       
-      return {pullLength: this.h.half.d.length()*3,
+      return {pullLength: this.e.half.d.length()*3,
               vertex: {type:"isampler2D", value: vertexTexture},
               position: {type:"sampler2D", value: positionTexture}, 
               normal: {type:"sampler2D", value: normalTexture},
@@ -437,7 +441,7 @@ class TriangleMesh {
       const changed = {};
       //changed.v = this.v.compactBuffer();
       //changed.f = this.f.compactBuffer();
-      changed.h = this.h.compactBuffer(this.o);
+      changed.h = this.e.compactBuffer(this.o);
       
       return changed;
    }
@@ -469,7 +473,7 @@ class TriangleMesh {
    finalizeEdit() {
       this.fillBoundary();
       // now compute valence, crease 
-      this.v.computeValence(this.h);
+      this.v.computeValence(this.e);
       this._computeNormal();       // and normal?
       // commpaction
       this.compactBuffer();
@@ -652,7 +656,7 @@ class TriangleMesh {
     * @returns {integer} - the gap index, or -1 if not founded.
     */
    findFreeInEdge(inner_next, inner_prev) {
-      const half = this.h.half;
+      const half = this.e.half;
       const startingFrom = half.pair(inner_next);
       const andBefore = inner_prev;
       if (andBefore !== startingFrom) {
@@ -670,7 +674,7 @@ class TriangleMesh {
    }
    
    makeAdjacent(inEdge, outEdge) {
-      const half = this.h.half;
+      const half = this.e.half;
       let b = half.next(inEdge);
       if (b === outEdge) {   // adjacency is already correct.
          return true;
@@ -706,7 +710,7 @@ class TriangleMesh {
    }
     
    sanityCheck() { 
-      const hOk = this.h.sanityCheck();
+      const hOk = this.e.sanityCheck();
       const vOk = this.v.sanityCheck(this);
       const fOk = this.f.sanityCheck(this.h);
       const oOk = this.o.sanityCheck(this.h);
@@ -715,7 +719,7 @@ class TriangleMesh {
    
    stat() {
       let status = this.v.stat();
-      status += this.h.stat();
+      status += this.e.stat();
       status += this.f.stat();
       status += this.o.stat();
       return status;
@@ -726,7 +730,7 @@ class TriangleMesh {
    }
    
    static addUV(mesh, index=0) {
-      return WholeEdgeArray.addUV(mesh.h, index);
+      return WholeEdgeArray.addUV(mesh.e, index);
    }
 
    // for debugging purpose.

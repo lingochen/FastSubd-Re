@@ -175,7 +175,7 @@ class VertexArray extends ExtensiblePixelArrayGroup {
       const tangentR = [0, 0, 0];
       const temp = [0, 0, 0];
       const handle = {face: 0};
-      const hEdgeContainer = mesh.h;
+      const hEdgeContainer = mesh.e;
       const pt = this._pt.getBuffer();
       for (let v of this) {     
          const valence = this.valence(v);
@@ -250,14 +250,14 @@ class VertexArray extends ExtensiblePixelArrayGroup {
          if (outEdge < 0) {   // not initialized yet
             break;
          }
-         let expect = mesh.h.half.origin(outEdge);
+         let expect = mesh.e.half.origin(outEdge);
          if (expect !== vertex) {
             console.log("vertex " + vertex + "'s outEdge " + outEdge + " is wrong, expected: " + expect);
             sanity = false;
          } else { // check prev,next are the same. 
             let iterationCount = 0;    // make sure, no infinite loop
             for (let outEdge of mesh.outHalfEdgeAroundVertex(vertex)) {
-               const orig = mesh.h.half.origin(outEdge);
+               const orig = mesh.e.half.origin(outEdge);
                if (orig !== vertex) {
                   console.log("vertex: " + vertex + "'s circulator is broken");
                   sanity = false;

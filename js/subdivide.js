@@ -44,7 +44,7 @@ async function loopSubdivide(subd, source) {
 
 
 function createNextLevelTriMesh(source) {
-   const subd = TriangleMesh.create(source._material.depot);
+   const subd = TriangleMesh.create(0);
    subd.v._valenceMax = source.v.valenceMax();
    // remember to add "uvs" dynamic property
    TriangleMesh.addUV(subd, 0);

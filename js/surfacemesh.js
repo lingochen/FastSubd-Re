@@ -243,9 +243,9 @@ class TriangleMesh {
       if (self._hEdges && self._vertices && self._faces && self._holes) {
          const params = [null, null];
          const hEdges = WholeEdgeArray.rehydrate(self._hEdges);
-         const vertices = VertexArray.rehydrate(self._vertices, dEdges);
-         const faces = FaceArray.rehydrate(self._faces, dEdges);
-         const holes = HoleArray.rehydrate(self._holes, dEdges);
+         const vertices = VertexArray.rehydrate(self._vertices);
+         const faces = FaceArray.rehydrate(self._faces);
+         const holes = HoleArray.rehydrate(self._holes);
 
          return new TriangleMesh(hEdges, vertices, faces, holes, ...params);
       }
@@ -313,7 +313,7 @@ class TriangleMesh {
     */
    * inHalfEdgeAroundVertex(vert) {
       if (!this._vertices.isFree(vert)) {
-         const outEdge = this._vertices.halfEdge(vertices);
+         const outEdge = this._vertices.halfEdge(vert);
          const inEdge = outEdge ^ 1;
          let currentIn = inEdge;
          do {

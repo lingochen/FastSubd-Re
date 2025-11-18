@@ -410,17 +410,30 @@ class HalfEdgeArray extends PixelArrayGroup {
       ret._rehydrate(self);
       return ret;
    }
+   
+   getDehydrate(obj) {
+      super.getDehydrate(obj);
 
-   whEdgeBuffer() {
-      return this._edge.getBuffer();
+      obj._dEdge = this._dEdge.getDehydrate({});
+      obj._boundary = this._boundary.getDehydrate({});
+
+      return obj;
    }
    
    createVertexTexture(gl) {
        return this._dEdge.createVertexTexture(gl);
    }
+
+   whEdgeBuffer() {
+      return this._edge.getBuffer();
+   }
    
    vBuffer() {
       return this._dEdge.vBuffer();
+   }
+   
+   wBuffer() {
+      return this._dEdge.wBuffer();
    }
 
    /**

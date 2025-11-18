@@ -272,16 +272,16 @@ class TriangleMesh {
       // padded to rectData dimension.
       nVertices = this._vertices.textureAlignLen(nVertices);
       nEdges = this._hEdges.textureAlignLen(nEdges);
-      nTris  = this._hEdges.d.textureAlignLen(nTris);
-      nBoundaries = this._hEdges.b.textureAlignLen(nBoundaries);
+      nTris  = this._hEdges.half.d.textureAlignLen(nTris);
+      nBoundaries = this._hEdges.half.b.textureAlignLen(nBoundaries);
       nFaces = this._faces.textureAlignLen(nFaces);
       nHoles = this._holes.textureAlignLen(nHoles);
       
       if (isStatic) {
          const totalBytes = this._vertices.computeBufferSize(nVertices)
                           + this._hEdges.computeBufferSize(nEdges)
-                          + this._hEdges.d.computeBufferSize(nTris)
-                          + this._hEdges.b.computeBufferSize(nBoundaries)
+                          + this._hEdges.half.d.computeBufferSize(nTris)
+                          + this._hEdges.half.b.computeBufferSize(nBoundaries)
                           + this._faces.computeBufferSize(nFaces)
                           + this._holes.computeBufferSize(nHoles);
       
@@ -291,8 +291,8 @@ class TriangleMesh {
          let byteOffset = this._vertices.setBuffer(newBuffer, 0, nVertices);
          //console.log("offset: " + byteOffset);
          byteOffset = this._hEdges.setBuffer(newBuffer, byteOffset, nEdges);
-         byteOffset = this._hEdges.setBuffer(newBuffer, byteOffset, nTris);
-         byteOffset = this._hEdges.setBuffer(newBuffer, byteOffset, nBoundaries);
+         byteOffset = this._hEdges.half.d.setBuffer(newBuffer, byteOffset, nTris);
+         byteOffset = this._hEdges.half.b.setBuffer(newBuffer, byteOffset, nBoundaries);
          //console.log("offet: " + byteOffset);
          byteOffset = this._faces.setBuffer(newBuffer, byteOffset, nFaces);
          //console.log("offset: " + byteOffset);
@@ -300,8 +300,8 @@ class TriangleMesh {
       } else { // reserve linear memory separately for dynamic resizing
          this._vertices.setBuffer(null, 0, nVertices);
          this._hEdges.setBuffer(null, 0, nEdges);
-         this._hEdges.d.setBuffer(null, 0, nTris);
-         this._hEdges.b.setBuffer(null, 0, nBoundaries);
+         this._hEdges.half.d.setBuffer(null, 0, nTris);
+         this._hEdges.half.b.setBuffer(null, 0, nBoundaries);
          this._faces.setBuffer(null, 0, nFaces);
          this._holes.setBuffer(null, 0, nHoles);
       }
